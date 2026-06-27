@@ -11,7 +11,6 @@ export async function POST(req: NextRequest) {
   try {
     const supabase = createServiceClient();
     const body = await req.json().catch(() => ({}));
-
     const rawJson: string | null = body.conversationJson || null;
 
     if (!rawJson) {
@@ -21,12 +20,40 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const conversations = parseConversationExport(rawJson);
+    // Parse conversations from the uploaded file
+    let conversations = parseConversationExport(rawJson);
+
     if (conversations.length === 0) {
-      return NextResponse.json({ added: 0, updated: 0, skipped: 0, total: 0 });
+      return NextResponse.json({
+        added: 0, updated: 0, skipped: 0, total: 0,
+        already_synced: 0,
+        message: 'No conversations found in this file. Make sure you are uploading a valid Claude export JSON.',
+      });
     }
 
-    const batches = batchConversations(conversations);
+    // --- Incremental sync: skip conversations we've already processed ---
+    const { data: syncedRows } = await supabase
+      .from('synced_conversations')
+      .select('conversation_uuid')
+      .eq('user_id', 'favour');
+
+    const alreadySyncedUuids = new Set(
+      (syncedRows || []).map((r: { conversation_uuid: string }) => r.conversation_uuid)
+    );
+
+    const newConversations = conversations.filter((c) => !alreadySyncedUuids.has(c.uuid));
+    const alreadySyncedCount = conversations.length - newConversations.length;
+
+    if (newConversations.length === 0) {
+      return NextResponse.json({
+        added: 0, updated: 0, skipped: 0, total: 0,
+        already_synced: alreadySyncedCount,
+        message: `All ${alreadySyncedCount} conversation(s) in this file were already synced previously.`,
+      });
+    }
+
+    // Batch and extract ideas via Claude
+    const batches = batchConversations(newConversations);
     let allExtracted: Partial<Idea>[] = [];
 
     for (const batch of batches) {
@@ -37,7 +64,7 @@ export async function POST(req: NextRequest) {
       allExtracted = allExtracted.concat(extracted);
     }
 
-    // Load existing ideas for fuzzy matching
+    // Load existing ideas for fuzzy duplicate matching
     const { data: existingIdeas } = await supabase
       .from('ideas')
       .select('id, title')
@@ -48,13 +75,13 @@ export async function POST(req: NextRequest) {
     let added = 0, updated = 0, skipped = 0;
 
     for (const idea of allExtracted) {
-      if (!idea.title) { skipped++; continue; }
+      if (!idea.title?.trim()) { skipped++; continue; }
 
       const match = existing.find((e) => fuzzyMatchTitle(e.title, idea.title!));
 
       const payload = {
         user_id: 'favour',
-        title: idea.title,
+        title: idea.title.trim(),
         description: idea.description || null,
         sector: idea.sector || null,
         idea_type: idea.idea_type || null,
@@ -76,25 +103,51 @@ export async function POST(req: NextRequest) {
       };
 
       if (match) {
-        await supabase.from('ideas').update(payload).eq('id', match.id);
-        updated++;
+        const { error } = await supabase.from('ideas').update(payload).eq('id', match.id);
+        if (!error) updated++;
+        else { console.error('Update error:', error); skipped++; }
       } else {
-        await supabase.from('ideas').insert(payload);
-        added++;
-        existing.push({ id: 'new', title: idea.title });
+        const { error } = await supabase.from('ideas').insert(payload);
+        if (!error) {
+          added++;
+          existing.push({ id: 'new', title: idea.title });
+        } else { console.error('Insert error:', error); skipped++; }
       }
     }
 
+    // Mark these conversations as synced so we skip them next time
+    if (newConversations.length > 0) {
+      const upsertRows = newConversations.map((c) => ({
+        conversation_uuid: c.uuid,
+        user_id: 'favour',
+        ideas_extracted: allExtracted.length > 0
+          ? Math.round(allExtracted.length / newConversations.length)
+          : 0,
+      }));
+
+      await supabase
+        .from('synced_conversations')
+        .upsert(upsertRows, { onConflict: 'conversation_uuid,user_id' });
+    }
+
+    // Record sync log entry
     await supabase.from('sync_log').insert({
       user_id: 'favour',
       source: 'claude_export',
       ideas_found: allExtracted.length,
       ideas_added: added,
       ideas_updated: updated,
-      notes: `Processed ${conversations.length} conversations in ${batches.length} batch(es)`,
+      notes: `${newConversations.length} new conversation(s), ${alreadySyncedCount} skipped (already synced). ${batches.length} batch(es) sent to Claude.`,
     });
 
-    return NextResponse.json({ added, updated, skipped, total: allExtracted.length });
+    return NextResponse.json({
+      added,
+      updated,
+      skipped,
+      total: allExtracted.length,
+      already_synced: alreadySyncedCount,
+      conversations_processed: newConversations.length,
+    });
   } catch (err) {
     console.error('Sync error:', err);
     return NextResponse.json(

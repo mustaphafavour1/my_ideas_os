@@ -17,6 +17,7 @@ interface FileEntry {
   content: string;
   status: FileStatus;
   error?: string;
+  subLabel?: string;
 }
 
 export function SyncUploader({ onComplete }: SyncUploaderProps) {
@@ -75,7 +76,7 @@ export function SyncUploader({ onComplete }: SyncUploaderProps) {
     if (pending.length === 0) return;
 
     setSyncing(true);
-    let totalAdded = 0, totalUpdated = 0, totalSkipped = 0;
+    let totalAdded = 0, totalUpdated = 0, totalSkipped = 0, totalAlreadySynced = 0;
 
     for (const file of pending) {
       setFiles((prev) =>
@@ -83,8 +84,7 @@ export function SyncUploader({ onComplete }: SyncUploaderProps) {
       );
 
       try {
-        // Validate JSON first
-        JSON.parse(file.content);
+        JSON.parse(file.content); // validate JSON first
 
         const res = await fetch('/api/sync', {
           method: 'POST',
@@ -92,18 +92,21 @@ export function SyncUploader({ onComplete }: SyncUploaderProps) {
           body: JSON.stringify({ conversationJson: file.content }),
         });
 
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.error || 'Sync failed');
-        }
+        const result = await res.json();
 
-        const result: SyncResult = await res.json();
-        totalAdded += result.added;
-        totalUpdated += result.updated;
-        totalSkipped += result.skipped;
+        if (!res.ok) throw new Error(result.error || 'Sync failed');
+
+        totalAdded += result.added ?? 0;
+        totalUpdated += result.updated ?? 0;
+        totalSkipped += result.skipped ?? 0;
+        totalAlreadySynced += result.already_synced ?? 0;
+
+        const subLabel = result.already_synced > 0
+          ? `done — ${result.already_synced} conversation(s) already synced`
+          : 'Synced successfully';
 
         setFiles((prev) =>
-          prev.map((f) => (f.name === file.name ? { ...f, status: 'done' } : f))
+          prev.map((f) => (f.name === file.name ? { ...f, status: 'done', subLabel } : f))
         );
       } catch (err) {
         setFiles((prev) =>
@@ -118,12 +121,14 @@ export function SyncUploader({ onComplete }: SyncUploaderProps) {
 
     setSyncing(false);
 
-    const result = { added: totalAdded, updated: totalUpdated, skipped: totalSkipped, total: totalAdded + totalUpdated + totalSkipped };
-    toast.success(
-      `Sync complete — ${totalAdded} new ideas, ${totalUpdated} updated`,
-      { duration: 5000 }
-    );
-    onComplete?.(result);
+    const parts = [];
+    if (totalAdded > 0) parts.push(`${totalAdded} new idea${totalAdded !== 1 ? 's' : ''}`);
+    if (totalUpdated > 0) parts.push(`${totalUpdated} updated`);
+    if (totalAlreadySynced > 0) parts.push(`${totalAlreadySynced} conversations already synced`);
+    if (parts.length === 0) parts.push('nothing new to add');
+
+    toast.success(`Sync complete — ${parts.join(', ')}`, { duration: 5000 });
+    onComplete?.({ added: totalAdded, updated: totalUpdated, skipped: totalSkipped, total: totalAdded + totalUpdated });
   };
 
   const pendingCount = files.filter((f) => f.status === 'pending').length;
@@ -203,7 +208,7 @@ export function SyncUploader({ onComplete }: SyncUploaderProps) {
           <motion.div
             initial={{ opacity: 0, y: 4 }}
             animate={{ opacity: 1, y: 0 }}
-            className="space-y-2"
+            className="space-y-2 max-h-[280px] overflow-y-auto pr-1"
           >
             {files.map((file) => (
               <motion.div
@@ -245,7 +250,9 @@ export function SyncUploader({ onComplete }: SyncUploaderProps) {
                     <p className="text-[10px] text-[#F7C948] mt-0.5">Analysing with Claude…</p>
                   )}
                   {file.status === 'done' && (
-                    <p className="text-[10px] text-[#4ADE80] mt-0.5">Synced successfully</p>
+                    <p className="text-[10px] text-[#4ADE80] mt-0.5">
+                      {file.subLabel || 'Synced successfully'}
+                    </p>
                   )}
                 </div>
 

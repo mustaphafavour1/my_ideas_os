@@ -27,23 +27,42 @@ export function parseConversationExport(raw: string): ParsedConversation[] {
     throw new Error('Invalid JSON in conversation export');
   }
 
-  const conversations: ClaudeConversation[] = Array.isArray(data)
-    ? (data as ClaudeConversation[])
-    : (data as { conversations: ClaudeConversation[] }).conversations || [];
+  let conversations: ClaudeConversation[] = [];
 
-  return conversations.map((conv) => {
-    const messages = conv.chat_messages || [];
-    const fullText = messages
-      .map((m) => `[${m.sender}]: ${m.text}`)
-      .join('\n\n');
+  if (Array.isArray(data)) {
+    // Full export: array of conversations
+    conversations = data as ClaudeConversation[];
+  } else if (data && typeof data === 'object') {
+    const obj = data as Record<string, unknown>;
+    if (obj.conversations && Array.isArray(obj.conversations)) {
+      // Wrapped: { conversations: [...] }
+      conversations = obj.conversations as ClaudeConversation[];
+    } else if (obj.uuid && Array.isArray(obj.chat_messages)) {
+      // Single conversation file (UUID-named files from the export ZIP)
+      conversations = [data as ClaudeConversation];
+    } else if (obj.chat_messages && !obj.uuid) {
+      // Some exports omit uuid at top level
+      conversations = [data as ClaudeConversation];
+    }
+  }
 
-    return {
-      uuid: conv.uuid,
-      name: conv.name || 'Unnamed Conversation',
-      created_at: conv.created_at,
-      fullText,
-    };
-  });
+  return conversations
+    .filter((conv) => conv && Array.isArray(conv.chat_messages) && conv.chat_messages.length > 0)
+    .map((conv) => {
+      const messages = conv.chat_messages || [];
+      const fullText = messages
+        .filter((m) => m.text && m.text.trim().length > 0)
+        .map((m) => `[${m.sender}]: ${m.text}`)
+        .join('\n\n');
+
+      return {
+        uuid: conv.uuid || `unknown-${Date.now()}`,
+        name: conv.name || 'Unnamed Conversation',
+        created_at: conv.created_at || new Date().toISOString(),
+        fullText,
+      };
+    })
+    .filter((c) => c.fullText.trim().length > 50); // skip trivially short conversations
 }
 
 export function batchConversations(
@@ -77,7 +96,6 @@ export function fuzzyMatchTitle(a: string, b: string): boolean {
   if (na === nb) return true;
   if (na.includes(nb) || nb.includes(na)) return true;
 
-  // Simple Levenshtein for short strings
   if (Math.abs(na.length - nb.length) > 10) return false;
   const longer = na.length > nb.length ? na : nb;
   const shorter = na.length > nb.length ? nb : na;
