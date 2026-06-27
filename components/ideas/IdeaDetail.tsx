@@ -400,17 +400,25 @@ ${idea.ai_suggestions || 'No AI suggestion yet.'}
             </Button>
           </div>
 
-          {/* Quick Status */}
+          {/* Status */}
           <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-5">
-            <h3 className="text-sm font-semibold text-[#F0F0F5] mb-3">Quick Status</h3>
-            <div className="flex flex-wrap gap-1.5">
-              {STATUSES.filter(s => s !== idea.status).slice(0, 4).map((s) => (
+            <h3 className="text-[11px] font-mono text-[#4A4A60] uppercase tracking-widest mb-3">Status</h3>
+            <div className="space-y-0.5">
+              {STATUSES.map((s) => (
                 <button
                   key={s}
-                  onClick={() => quickStatus(s)}
-                  className="text-[10px] font-mono px-2 py-1 rounded-md bg-[#1E1E2E] text-[#8888A0] hover:text-[#F0F0F5] hover:bg-[#2A2A3A] transition-colors"
+                  onClick={() => s !== idea.status && quickStatus(s)}
+                  disabled={s === idea.status}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-colors ${
+                    s === idea.status
+                      ? 'bg-[#1A1A28] cursor-default'
+                      : 'hover:bg-[#141420] cursor-pointer'
+                  }`}
                 >
-                  → {s.replace(/_/g, ' ')}
+                  <StatusChip status={s} size="sm" />
+                  {s === idea.status && (
+                    <span className="ml-auto text-[9px] font-mono text-[#3A3A55] tracking-wide">current</span>
+                  )}
                 </button>
               ))}
             </div>

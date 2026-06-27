@@ -30,9 +30,9 @@ export function TopBar({ title, subtitle, lastSynced }: TopBarProps) {
       <header className="sticky top-0 z-30 bg-[#0A0A0F]/90 backdrop-blur-md border-b border-[#1E1E2E]">
         <div className="flex items-center justify-between px-4 lg:px-8 h-14">
           <div>
-            <h1 className="text-base font-semibold text-[#F0F0F5] leading-tight">{title}</h1>
+            <h1 className="text-[13px] font-semibold text-[#D0D0DA] leading-tight tracking-tight">{title}</h1>
             {subtitle && (
-              <p className="text-xs text-[#4A4A60] font-mono">{subtitle}</p>
+              <p className="text-[10px] text-[#3A3A55] font-mono mt-0.5">{subtitle}</p>
             )}
           </div>
 
