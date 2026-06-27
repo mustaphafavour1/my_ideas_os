@@ -30,9 +30,12 @@ async function getDashboardData() {
 
   const recent = allIdeas.slice(0, 6);
   const needsAttention = allIdeas.filter(
-    (i) => i.status === 'paused' || (i.blockers && i.blockers.length > 0)
+    (i) => i.status !== 'completed' && i.status !== 'archived' &&
+      (i.status === 'paused' || (i.blockers && i.blockers.length > 0))
   ).slice(0, 5);
-  const withSuggestions = allIdeas.filter((i) => i.ai_suggestions).slice(0, 5);
+  const withSuggestions = allIdeas.filter(
+    (i) => i.status !== 'completed' && i.status !== 'archived' && i.ai_suggestions
+  ).slice(0, 5);
 
   const withBlockers = allIdeas.filter((i) => i.blockers && i.blockers.length > 0).length;
   const paused = allIdeas.filter((i) => i.status === 'paused').length;

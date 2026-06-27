@@ -4,7 +4,11 @@ import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 
-export function DemoButton() {
+interface DemoButtonProps {
+  variant?: 'sidebar' | 'settings';
+}
+
+export function DemoButton({ variant = 'sidebar' }: DemoButtonProps) {
   const [active, setActive] = useState(false);
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
@@ -43,6 +47,30 @@ export function DemoButton() {
   };
 
   if (checking) return null;
+
+  if (variant === 'settings') {
+    return (
+      <div className="flex items-center justify-between py-3.5">
+        <div>
+          <p className="text-[12px] text-[#D0D0DA] font-medium">Demo Mode</p>
+          <p className="text-[11px] text-[#4A4A60] font-mono mt-0.5">
+            {active ? 'Sample ideas are loaded' : 'Load sample ideas to explore the app'}
+          </p>
+        </div>
+        <button
+          onClick={toggle}
+          disabled={loading}
+          className={`text-[11px] font-mono px-3 py-1.5 rounded-lg border transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
+            active
+              ? 'bg-[#F7C948]/10 border-[#F7C948]/30 text-[#F7C948] hover:bg-[#F7C948]/15'
+              : 'bg-transparent border-[#1E1E2E] text-[#6A6A80] hover:text-[#D0D0DA] hover:border-[#2A2A3A]'
+          }`}
+        >
+          {loading ? '…' : active ? 'Clear demo' : 'Load demo'}
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="px-5 py-3 border-t border-[#1E1E2E]">

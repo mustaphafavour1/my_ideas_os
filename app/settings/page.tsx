@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { TopBar } from '@/components/layout/TopBar';
+import { DemoButton } from '@/components/layout/DemoButton';
 import { toast } from 'sonner';
 
 const SETTINGS_KEY = 'ideas-os-settings';
@@ -166,6 +167,16 @@ export default function SettingsPage() {
       <TopBar title="Settings" subtitle="Customise your workspace" />
 
       <main className="flex-1 px-4 lg:px-8 pt-12 pb-10 max-w-3xl mx-auto w-full space-y-10">
+
+        {/* Demo */}
+        <section>
+          <div className="mb-5">
+            <h2 className="text-[10px] font-mono text-[#4A4A60] uppercase tracking-widest mb-1">Demo</h2>
+          </div>
+          <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl px-5">
+            <DemoButton variant="settings" />
+          </div>
+        </section>
 
         <section>
           <div className="mb-5">
