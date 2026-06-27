@@ -29,55 +29,79 @@ interface ClientConversation {
   fullText: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-function extractMsgText(m: any): string {
+/* eslint-disable @typescript-eslint/no-explicit-any */
+function extractOldMsgText(m: any): string {
   if (typeof m.text === 'string' && m.text.trim()) return m.text.trim();
   if (Array.isArray(m.content)) {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     return m.content.filter((c: any) => c.type === 'text' && c.text?.trim()).map((c: any) => c.text).join('\n').trim();
   }
   if (typeof m.content === 'string' && m.content.trim()) return m.content.trim();
   return '';
 }
 
+function extractNewMsgText(m: any): string {
+  const parts: string[] = [];
+  if (typeof m.content?.content === 'string' && m.content.content.trim()) {
+    parts.push(m.content.content.trim());
+  }
+  if (Array.isArray(m.content?.contentBlocks)) {
+    for (const b of m.content.contentBlocks) {
+      if (b.type === 'text' && b.text?.trim()) parts.push(b.text.trim());
+    }
+  }
+  if (parts.length === 0 && Array.isArray(m.content?.attachments)) {
+    for (const a of m.content.attachments) {
+      if (a.content?.trim()) parts.push(a.content.trim().slice(0, 3000));
+    }
+  }
+  return parts.join('\n\n');
+}
+
 function parseConversationsClient(content: string): ClientConversation[] {
   try {
     const data = JSON.parse(content);
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let convs: any[] = [];
+    const results: ClientConversation[] = [];
 
-    if (Array.isArray(data)) {
-      convs = data;
-    } else if (data?.conversations && Array.isArray(data.conversations)) {
-      convs = data.conversations;
-    } else if (data?.uuid && Array.isArray(data?.chat_messages)) {
-      convs = [data];
-    } else if (data?.chat_messages) {
-      convs = [data];
+    function parseItem(item: any, idx: number): ClientConversation | null {
+      if (!item || typeof item !== 'object') return null;
+
+      // Old format: chat_messages array
+      if (Array.isArray(item.chat_messages) && item.chat_messages.length > 0) {
+        const fullText = item.chat_messages
+          .map((m: any) => { const t = extractOldMsgText(m); return t ? `[${m.sender}]: ${t}` : null; })
+          .filter(Boolean).join('\n\n');
+        if (fullText.trim().length <= 50) return null;
+        return { uuid: item.uuid || `unknown-${Date.now()}-${idx}`, name: item.name || 'Unnamed', created_at: item.created_at || new Date().toISOString(), fullText };
+      }
+
+      // New format: messages array (Projects / Design chats)
+      if (Array.isArray(item.messages) && item.messages.length > 0) {
+        const fullText = item.messages
+          .map((m: any) => { const t = extractNewMsgText(m); return t ? `[${m.role}]: ${t}` : null; })
+          .filter(Boolean).join('\n\n');
+        if (fullText.trim().length <= 50) return null;
+        const name = item.title || item.name || item.project?.name || 'Unnamed';
+        return { uuid: item.uuid || `unknown-${Date.now()}-${idx}`, name, created_at: item.created_at || new Date().toISOString(), fullText };
+      }
+
+      return null;
     }
 
-    return convs
-      .filter((c) => c && Array.isArray(c.chat_messages) && c.chat_messages.length > 0)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      .map((c: any, i: number) => {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const messages: any[] = c.chat_messages || [];
-        const fullText = messages
-          .map((m) => { const t = extractMsgText(m); return t ? `[${m.sender}]: ${t}` : null; })
-          .filter(Boolean)
-          .join('\n\n');
-        return {
-          uuid: c.uuid || `unknown-${Date.now()}-${i}`,
-          name: c.name || 'Unnamed Conversation',
-          created_at: c.created_at || new Date().toISOString(),
-          fullText,
-        };
-      })
-      .filter((c) => c.fullText.trim().length > 50);
+    if (Array.isArray(data)) {
+      data.forEach((item, i) => { const p = parseItem(item, i); if (p) results.push(p); });
+    } else if (data?.conversations && Array.isArray(data.conversations)) {
+      data.conversations.forEach((item: any, i: number) => { const p = parseItem(item, i); if (p) results.push(p); });
+    } else {
+      const p = parseItem(data, 0);
+      if (p) results.push(p);
+    }
+
+    return results;
   } catch {
     return [];
   }
 }
+/* eslint-enable @typescript-eslint/no-explicit-any */
 
 const BATCH_SIZE = 8;
 
@@ -191,12 +215,12 @@ export function SyncUploader({ onComplete }: SyncUploaderProps) {
       let hadError = false;
 
       for (let i = 0; i < batches.length; i++) {
-        // Update label BEFORE the call so the user sees which batch is running
+        // Update label BEFORE the call so the user sees which batch is being analysed
         const prePct = Math.round((i / totalBatches) * 100);
         setFiles((prev) =>
           prev.map((f) =>
             f.name === file.name
-              ? { ...f, progress: prePct, progressLabel: `Batch ${i + 1}/${totalBatches} · ${prePct}%` }
+              ? { ...f, progress: prePct, progressLabel: `Batch ${i + 1}/${totalBatches} · asking Claude…` }
               : f
           )
         );

@@ -1,25 +1,21 @@
-interface ClaudeMessageContent {
-  type: string;
-  text?: string;
-}
+// ─── Old export format (conversations.json) ──────────────────────────────────
 
-interface ClaudeMessage {
+interface OldMessage {
   sender: string;
   text?: string | null;
-  // Newer export format and design chats use a content array instead of text
-  content?: ClaudeMessageContent[] | string | null;
+  content?: Array<{ type: string; text?: string }> | string | null;
   created_at?: string;
 }
 
-interface ClaudeConversation {
-  uuid: string;
-  name: string;
-  created_at: string;
-  chat_messages: ClaudeMessage[];
+interface OldConversation {
+  uuid?: string;
+  name?: string;
+  created_at?: string;
+  chat_messages: OldMessage[];
 }
 
-function extractMessageText(m: ClaudeMessage): string {
-  if (m.text?.trim()) return m.text.trim();
+function extractOldMessageText(m: OldMessage): string {
+  if (typeof m.text === 'string' && m.text.trim()) return m.text.trim();
   if (Array.isArray(m.content)) {
     return m.content
       .filter((c) => c.type === 'text' && c.text?.trim())
@@ -31,6 +27,109 @@ function extractMessageText(m: ClaudeMessage): string {
   return '';
 }
 
+function parseOldConversation(conv: OldConversation): ParsedConversation | null {
+  if (!Array.isArray(conv.chat_messages) || conv.chat_messages.length === 0) return null;
+
+  const fullText = conv.chat_messages
+    .map((m) => {
+      const text = extractOldMessageText(m);
+      return text ? `[${m.sender}]: ${text}` : null;
+    })
+    .filter(Boolean)
+    .join('\n\n') as string;
+
+  if (fullText.trim().length <= 50) return null;
+
+  return {
+    uuid: conv.uuid || `unknown-${Date.now()}`,
+    name: conv.name || 'Unnamed Conversation',
+    created_at: conv.created_at || new Date().toISOString(),
+    fullText,
+  };
+}
+
+// ─── New export format (Claude Projects / Design / Artifacts chats) ───────────
+
+interface NewMessage {
+  uuid?: string;
+  role: string;
+  content: {
+    content?: string;
+    attachments?: Array<{ content?: string; name?: string; type?: string }>;
+    contentBlocks?: Array<{ type: string; text?: string }>;
+  };
+  created_at?: string;
+}
+
+interface NewConversation {
+  uuid?: string;
+  title?: string;
+  name?: string;
+  project?: { uuid?: string; name?: string };
+  created_at?: string;
+  messages: NewMessage[];
+}
+
+function extractNewMessageText(m: NewMessage): string {
+  const parts: string[] = [];
+
+  // Main message text
+  if (typeof m.content?.content === 'string' && m.content.content.trim()) {
+    parts.push(m.content.content.trim());
+  }
+
+  // Content blocks (assistant messages may have text blocks alongside tool calls)
+  if (Array.isArray(m.content?.contentBlocks)) {
+    for (const block of m.content.contentBlocks) {
+      if (block.type === 'text' && block.text?.trim()) {
+        parts.push(block.text.trim());
+      }
+    }
+  }
+
+  // Attachments — include text only if the main content field was empty
+  if (parts.length === 0 && Array.isArray(m.content?.attachments)) {
+    for (const att of m.content.attachments) {
+      const attText = att.content || '';
+      if (attText.trim()) {
+        // Cap attachment length to avoid drowning the conversation in system prompts
+        parts.push(attText.trim().slice(0, 3000));
+      }
+    }
+  }
+
+  return parts.join('\n\n');
+}
+
+function parseNewConversation(conv: NewConversation): ParsedConversation | null {
+  if (!Array.isArray(conv.messages) || conv.messages.length === 0) return null;
+
+  const fullText = conv.messages
+    .map((m) => {
+      const text = extractNewMessageText(m);
+      return text ? `[${m.role}]: ${text}` : null;
+    })
+    .filter(Boolean)
+    .join('\n\n') as string;
+
+  if (fullText.trim().length <= 50) return null;
+
+  const name =
+    conv.title ||
+    conv.name ||
+    conv.project?.name ||
+    'Unnamed Conversation';
+
+  return {
+    uuid: conv.uuid || `unknown-${Date.now()}`,
+    name,
+    created_at: conv.created_at || new Date().toISOString(),
+    fullText,
+  };
+}
+
+// ─── Public API ───────────────────────────────────────────────────────────────
+
 export interface ParsedConversation {
   uuid: string;
   name: string;
@@ -38,54 +137,55 @@ export interface ParsedConversation {
   fullText: string;
 }
 
+function parseSingleItem(item: unknown): ParsedConversation | null {
+  if (!item || typeof item !== 'object') return null;
+  const obj = item as Record<string, unknown>;
+
+  if (Array.isArray(obj.chat_messages)) {
+    return parseOldConversation(obj as unknown as OldConversation);
+  }
+  if (Array.isArray(obj.messages)) {
+    return parseNewConversation(obj as unknown as NewConversation);
+  }
+  return null;
+}
+
 export function parseConversationExport(raw: string): ParsedConversation[] {
   let data: unknown;
-
   try {
     data = JSON.parse(raw);
   } catch {
     throw new Error('Invalid JSON in conversation export');
   }
 
-  let conversations: ClaudeConversation[] = [];
+  const results: ParsedConversation[] = [];
 
   if (Array.isArray(data)) {
-    // Full export: array of conversations
-    conversations = data as ClaudeConversation[];
-  } else if (data && typeof data === 'object') {
-    const obj = data as Record<string, unknown>;
-    if (obj.conversations && Array.isArray(obj.conversations)) {
-      // Wrapped: { conversations: [...] }
-      conversations = obj.conversations as ClaudeConversation[];
-    } else if (obj.uuid && Array.isArray(obj.chat_messages)) {
-      // Single conversation file (UUID-named files from the export ZIP)
-      conversations = [data as ClaudeConversation];
-    } else if (obj.chat_messages && !obj.uuid) {
-      // Some exports omit uuid at top level
-      conversations = [data as ClaudeConversation];
+    for (const item of data) {
+      const parsed = parseSingleItem(item);
+      if (parsed) results.push(parsed);
     }
+    return results;
   }
 
-  return conversations
-    .filter((conv) => conv && Array.isArray(conv.chat_messages) && conv.chat_messages.length > 0)
-    .map((conv) => {
-      const messages = conv.chat_messages || [];
-      const fullText = messages
-        .map((m) => {
-          const text = extractMessageText(m);
-          return text ? `[${m.sender}]: ${text}` : null;
-        })
-        .filter(Boolean)
-        .join('\n\n') as string;
+  if (data && typeof data === 'object') {
+    const obj = data as Record<string, unknown>;
 
-      return {
-        uuid: conv.uuid || `unknown-${Date.now()}`,
-        name: conv.name || 'Unnamed Conversation',
-        created_at: conv.created_at || new Date().toISOString(),
-        fullText,
-      };
-    })
-    .filter((c) => c.fullText.trim().length > 50); // skip trivially short conversations
+    // Wrapped array: { conversations: [...] }
+    if (Array.isArray(obj.conversations)) {
+      for (const item of obj.conversations) {
+        const parsed = parseSingleItem(item);
+        if (parsed) results.push(parsed);
+      }
+      return results;
+    }
+
+    // Single conversation (old or new format)
+    const single = parseSingleItem(data);
+    if (single) results.push(single);
+  }
+
+  return results;
 }
 
 export function batchConversations(
