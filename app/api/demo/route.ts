@@ -3,6 +3,20 @@ import { createServiceClient } from '@/lib/supabase';
 
 export const dynamic = 'force-dynamic';
 
+export async function GET() {
+  try {
+    const supabase = createServiceClient();
+    const { count } = await supabase
+      .from('ideas')
+      .select('id', { count: 'exact', head: true })
+      .eq('user_id', 'favour')
+      .eq('source_ref', DEMO_SOURCE_REF);
+    return NextResponse.json({ active: (count ?? 0) > 0, count: count ?? 0 });
+  } catch (err) {
+    return NextResponse.json({ active: false, count: 0, error: (err as Error).message });
+  }
+}
+
 const DEMO_SOURCE_REF = 'demo_mode';
 
 const DEMO_IDEAS = [

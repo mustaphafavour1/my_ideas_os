@@ -27,15 +27,22 @@ For each idea found, return a JSON array. Each item must have:
 If no clear ideas are present, return an empty array [].
 Return only valid JSON array, no markdown, no explanation.`;
 
+// Cap each conversation at ~1 250 tokens to keep costs low.
+// Idea-relevant content is almost always in the first few exchanges.
+const MAX_CONV_CHARS = 5000;
+
 export async function extractIdeasFromConversations(
   conversationTexts: string[]
 ): Promise<Partial<Idea>[]> {
   const client = getClient();
-  const batched = conversationTexts.join('\n\n---NEXT CONVERSATION---\n\n');
+  const truncated = conversationTexts.map((t) =>
+    t.length > MAX_CONV_CHARS ? t.slice(0, MAX_CONV_CHARS) + '\n[…truncated]' : t
+  );
+  const batched = truncated.join('\n\n---NEXT CONVERSATION---\n\n');
 
   const message = await client.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 16000,
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 4096,
     system: EXTRACTION_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: batched }],
   });
@@ -84,8 +91,8 @@ export async function refreshSuggestions(
     .join('\n\n---\n\n');
 
   const message = await client.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 4096,
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 2048,
     system: SUGGESTIONS_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: prompt }],
   });
@@ -125,8 +132,8 @@ export async function processInboxItems(items: string[]): Promise<Partial<Idea>[
   const prompt = items.map((item, i) => `Item ${i + 1}: ${item}`).join('\n\n');
 
   const message = await client.messages.create({
-    model: 'claude-sonnet-4-6',
-    max_tokens: 4096,
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 2048,
     system: INBOX_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: prompt }],
   });
