@@ -283,7 +283,7 @@ const DEMO_IDEAS = [
     description: 'An AI assistant that suggests Nigerian and West African recipes based on what ingredients you have at home, with substitutions for unavailable items and adaptations for diaspora cooking environments.',
     sector: 'food-tech',
     idea_type: 'experiment',
-    status: 'experiment',
+    status: 'lightly_researched',
     grade_novelty: 3,
     grade_feasibility: 5,
     grade_personal_fit: 3,

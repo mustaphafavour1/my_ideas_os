@@ -1,6 +1,13 @@
+interface ClaudeMessageContent {
+  type: string;
+  text?: string;
+}
+
 interface ClaudeMessage {
   sender: string;
-  text: string;
+  text?: string | null;
+  // Newer export format and design chats use a content array instead of text
+  content?: ClaudeMessageContent[] | string | null;
   created_at?: string;
 }
 
@@ -9,6 +16,19 @@ interface ClaudeConversation {
   name: string;
   created_at: string;
   chat_messages: ClaudeMessage[];
+}
+
+function extractMessageText(m: ClaudeMessage): string {
+  if (m.text?.trim()) return m.text.trim();
+  if (Array.isArray(m.content)) {
+    return m.content
+      .filter((c) => c.type === 'text' && c.text?.trim())
+      .map((c) => c.text!)
+      .join('\n')
+      .trim();
+  }
+  if (typeof m.content === 'string' && m.content.trim()) return m.content.trim();
+  return '';
 }
 
 export interface ParsedConversation {
@@ -51,9 +71,12 @@ export function parseConversationExport(raw: string): ParsedConversation[] {
     .map((conv) => {
       const messages = conv.chat_messages || [];
       const fullText = messages
-        .filter((m) => m.text && m.text.trim().length > 0)
-        .map((m) => `[${m.sender}]: ${m.text}`)
-        .join('\n\n');
+        .map((m) => {
+          const text = extractMessageText(m);
+          return text ? `[${m.sender}]: ${text}` : null;
+        })
+        .filter(Boolean)
+        .join('\n\n') as string;
 
       return {
         uuid: conv.uuid || `unknown-${Date.now()}`,

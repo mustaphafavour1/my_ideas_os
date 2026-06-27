@@ -30,6 +30,16 @@ interface ClientConversation {
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
+function extractMsgText(m: any): string {
+  if (typeof m.text === 'string' && m.text.trim()) return m.text.trim();
+  if (Array.isArray(m.content)) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    return m.content.filter((c: any) => c.type === 'text' && c.text?.trim()).map((c: any) => c.text).join('\n').trim();
+  }
+  if (typeof m.content === 'string' && m.content.trim()) return m.content.trim();
+  return '';
+}
+
 function parseConversationsClient(content: string): ClientConversation[] {
   try {
     const data = JSON.parse(content);
@@ -53,8 +63,8 @@ function parseConversationsClient(content: string): ClientConversation[] {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const messages: any[] = c.chat_messages || [];
         const fullText = messages
-          .filter((m) => m.text?.trim())
-          .map((m) => `[${m.sender}]: ${m.text}`)
+          .map((m) => { const t = extractMsgText(m); return t ? `[${m.sender}]: ${t}` : null; })
+          .filter(Boolean)
           .join('\n\n');
         return {
           uuid: c.uuid || `unknown-${Date.now()}-${i}`,
@@ -172,7 +182,7 @@ export function SyncUploader({ onComplete }: SyncUploaderProps) {
       setFiles((prev) =>
         prev.map((f) =>
           f.name === file.name
-            ? { ...f, status: 'processing', progress: 0, progressLabel: `Starting — ${conversations.length} conversation${conversations.length !== 1 ? 's' : ''}` }
+            ? { ...f, status: 'processing', progress: 0, progressLabel: `Batch 1/${totalBatches} · 0%` }
             : f
         )
       );
@@ -181,6 +191,16 @@ export function SyncUploader({ onComplete }: SyncUploaderProps) {
       let hadError = false;
 
       for (let i = 0; i < batches.length; i++) {
+        // Update label BEFORE the call so the user sees which batch is running
+        const prePct = Math.round((i / totalBatches) * 100);
+        setFiles((prev) =>
+          prev.map((f) =>
+            f.name === file.name
+              ? { ...f, progress: prePct, progressLabel: `Batch ${i + 1}/${totalBatches} · ${prePct}%` }
+              : f
+          )
+        );
+
         try {
           const res = await fetch('/api/sync', {
             method: 'POST',
