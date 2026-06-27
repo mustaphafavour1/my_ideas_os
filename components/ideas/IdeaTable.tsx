@@ -36,50 +36,33 @@ function StatusSelect({ ideaId, status, onUpdate }: { ideaId: string; status: Id
       if (res.ok) {
         onUpdate(s);
         toast.success(`→ ${s.replace(/_/g, ' ')}`);
-      } else {
-        toast.error('Update failed');
       }
-    } catch {
-      toast.error('Update failed');
     } finally {
       setSaving(false);
     }
   };
 
   return (
-    <div
-      className="relative"
-      onClick={(e) => e.stopPropagation()}
-    >
+    <div className="relative" onClick={(e) => e.stopPropagation()}>
       <button
         onClick={() => setOpen((o) => !o)}
         disabled={saving}
         className="flex items-center gap-1 group rounded px-1 py-0.5 hover:bg-[#1A1A28] transition-colors disabled:opacity-40"
       >
         <StatusChip status={status} size="sm" />
-        <svg
-          className="w-2.5 h-2.5 text-[#3A3A55] group-hover:text-[#5E5E7A] transition-colors"
-          viewBox="0 0 8 8"
-          fill="currentColor"
-        >
+        <svg className="w-2.5 h-2.5 text-[#2A2A40] group-hover:text-[#5E5E7A] transition-colors" viewBox="0 0 8 8" fill="currentColor">
           <path d="M4 5.5L1 2.5h6L4 5.5z" />
         </svg>
       </button>
-
       {open && (
         <>
-          <div
-            className="fixed inset-0 z-40"
-            onClick={(e) => { e.stopPropagation(); setOpen(false); }}
-          />
-          <div className="absolute z-50 top-full left-0 mt-1 min-w-[140px] bg-[#111118] border border-[#1E1E2E] rounded-xl overflow-hidden shadow-2xl">
+          <div className="fixed inset-0 z-40" onClick={(e) => { e.stopPropagation(); setOpen(false); }} />
+          <div className="absolute z-50 top-full left-0 mt-1 min-w-[150px] bg-[#111118] border border-[#1E1E2E] rounded-xl overflow-hidden shadow-2xl">
             {STATUSES.map((s) => (
               <button
                 key={s}
                 onClick={() => handlePick(s)}
-                className={`w-full flex items-center gap-2 px-3 py-2 text-left transition-colors hover:bg-[#1A1A25] ${
-                  s === status ? 'opacity-40 pointer-events-none' : ''
-                }`}
+                className={`w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-[#1A1A25] transition-colors ${s === status ? 'opacity-30 pointer-events-none' : ''}`}
               >
                 <StatusChip status={s} size="sm" />
               </button>
@@ -89,6 +72,70 @@ function StatusSelect({ ideaId, status, onUpdate }: { ideaId: string; status: Id
       )}
     </div>
   );
+}
+
+function printReport(idea: Idea) {
+  const grades = [
+    ['Novelty', idea.grade_novelty],
+    ['Feasibility', idea.grade_feasibility],
+    ['Personal Fit', idea.grade_personal_fit],
+    ['Market Potential', idea.grade_market_potential],
+    ['Urgency', idea.grade_urgency],
+    ['Overall', idea.grade_overall],
+  ];
+
+  const html = `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>${idea.title}</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Georgia', serif; color: #1a1a2e; max-width: 720px; margin: 40px auto; padding: 0 24px; line-height: 1.6; }
+  h1 { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+  .meta { font-size: 12px; color: #666; font-family: monospace; margin-bottom: 32px; display: flex; gap: 16px; flex-wrap: wrap; }
+  .badge { background: #f0f0f5; padding: 2px 8px; border-radius: 4px; }
+  h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #888; margin: 28px 0 10px; border-top: 1px solid #e8e8f0; padding-top: 16px; }
+  p, li { font-size: 14px; color: #333; }
+  ul { padding-left: 20px; }
+  li { margin-bottom: 4px; }
+  .grades { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 12px 0; }
+  .grade-item { background: #f8f8fc; border-radius: 8px; padding: 12px; text-align: center; }
+  .grade-val { font-size: 22px; font-weight: 700; color: #1a1a2e; }
+  .grade-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #888; margin-top: 2px; }
+  .suggestion { background: #fffdf0; border-left: 3px solid #f7c948; padding: 12px 16px; border-radius: 0 8px 8px 0; font-size: 13px; color: #555; }
+  .footer { margin-top: 40px; font-size: 11px; color: #aaa; font-family: monospace; border-top: 1px solid #e8e8f0; padding-top: 16px; }
+</style>
+</head>
+<body>
+<h1>${idea.title}</h1>
+<div class="meta">
+  ${idea.status ? `<span class="badge">${idea.status.replace(/_/g, ' ')}</span>` : ''}
+  ${idea.idea_type ? `<span class="badge">${idea.idea_type.replace(/_/g, ' ')}</span>` : ''}
+  ${idea.sector ? `<span class="badge">${idea.sector}</span>` : ''}
+  <span>Grade: ${idea.grade_overall ?? '—'}/5</span>
+</div>
+
+${idea.description ? `<h2>Description</h2><p>${idea.description}</p>` : ''}
+
+<h2>Grades</h2>
+<div class="grades">
+${grades.map(([l, v]) => `<div class="grade-item"><div class="grade-val">${v ?? '—'}</div><div class="grade-label">${l}</div></div>`).join('')}
+</div>
+
+${(idea.next_steps?.length ?? 0) > 0 ? `<h2>Next Steps</h2><ul>${idea.next_steps.map(s => `<li>${s}</li>`).join('')}</ul>` : ''}
+
+${(idea.blockers?.length ?? 0) > 0 ? `<h2>Blockers</h2><ul>${idea.blockers.map(b => `<li>${b}</li>`).join('')}</ul>` : ''}
+
+${idea.ai_suggestions ? `<h2>AI Suggestion</h2><div class="suggestion">${idea.ai_suggestions}</div>` : ''}
+
+<div class="footer">Idea OS · Generated ${new Date().toLocaleDateString('en-GB', { dateStyle: 'full' })}</div>
+<script>window.onload=()=>{ window.print(); }</script>
+</body>
+</html>`;
+
+  const w = window.open('', '_blank');
+  if (w) { w.document.write(html); w.document.close(); }
 }
 
 interface IdeaTableProps {
@@ -102,11 +149,24 @@ export function IdeaTable({ ideas: initialIdeas, onAddIdea }: IdeaTableProps) {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('');
   const [typeFilter, setTypeFilter] = useState<string>('');
-  const [sortKey, setSortKey] = useState<'created_at' | 'grade_overall' | 'title'>('created_at');
+  const [sortKey, setSortKey] = useState<'updated_at' | 'grade_overall' | 'title'>('updated_at');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
 
   const handleStatusUpdate = (ideaId: string, newStatus: IdeaStatus) => {
     setIdeas((prev) => prev.map((i) => i.id === ideaId ? { ...i, status: newStatus } : i));
+  };
+
+  const handleArchive = async (e: React.MouseEvent, idea: Idea) => {
+    e.stopPropagation();
+    const res = await fetch(`/api/ideas/${idea.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status: 'archived' }),
+    });
+    if (res.ok) {
+      setIdeas((prev) => prev.map((i) => i.id === idea.id ? { ...i, status: 'archived' } : i));
+      toast.success('Archived');
+    }
   };
 
   const filtered = ideas
@@ -118,8 +178,8 @@ export function IdeaTable({ ideas: initialIdeas, onAddIdea }: IdeaTableProps) {
       return true;
     })
     .sort((a, b) => {
-      let av: string | number | null = sortKey === 'title' ? a.title : sortKey === 'grade_overall' ? (a.grade_overall ?? 0) : a.created_at;
-      let bv: string | number | null = sortKey === 'title' ? b.title : sortKey === 'grade_overall' ? (b.grade_overall ?? 0) : b.created_at;
+      let av: string | number | null = sortKey === 'title' ? a.title : sortKey === 'grade_overall' ? (a.grade_overall ?? 0) : a.updated_at;
+      let bv: string | number | null = sortKey === 'title' ? b.title : sortKey === 'grade_overall' ? (b.grade_overall ?? 0) : b.updated_at;
       if (av === null) av = '';
       if (bv === null) bv = '';
       const cmp = av < bv ? -1 : av > bv ? 1 : 0;
@@ -132,7 +192,7 @@ export function IdeaTable({ ideas: initialIdeas, onAddIdea }: IdeaTableProps) {
   };
 
   const SortIcon = ({ k }: { k: typeof sortKey }) => (
-    <span className={`ml-1 text-[9px] ${sortKey === k ? 'text-[#F7C948]' : 'text-[#3A3A55]'}`}>
+    <span className={`ml-1 text-[9px] ${sortKey === k ? 'text-[#F7C948]' : 'text-[#2A2A40]'}`}>
       {sortKey === k ? (sortDir === 'asc' ? '↑' : '↓') : '↕'}
     </span>
   );
@@ -164,7 +224,7 @@ export function IdeaTable({ ideas: initialIdeas, onAddIdea }: IdeaTableProps) {
           <option value="">All types</option>
           {TYPES.map((t) => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}
         </select>
-        <span className="text-[11px] text-[#3A3A55] font-mono ml-auto">
+        <span className="text-[10px] text-[#3A3A55] font-mono ml-auto">
           {filtered.length} idea{filtered.length !== 1 ? 's' : ''}
         </span>
         {onAddIdea && (
@@ -172,88 +232,111 @@ export function IdeaTable({ ideas: initialIdeas, onAddIdea }: IdeaTableProps) {
         )}
       </div>
 
-      {/* Table */}
+      {/* Table — always horizontally scrollable */}
       <div className="overflow-x-auto rounded-xl border border-[#1E1E2E]">
-        <table className="w-full min-w-[700px]">
+        <table className="w-full" style={{ minWidth: '900px' }}>
           <thead>
             <tr className="border-b border-[#1E1E2E] bg-[#0D0D14]">
               <th
-                className="text-left px-5 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest cursor-pointer hover:text-[#6A6A80] sticky left-0 bg-[#0D0D14] min-w-[200px] transition-colors"
+                className="text-left px-5 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest cursor-pointer hover:text-[#6A6A80] transition-colors whitespace-nowrap"
+                style={{ minWidth: '200px' }}
                 onClick={() => toggleSort('title')}
               >
                 Title <SortIcon k="title" />
               </th>
-              <th className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest">Type</th>
-              <th className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest">Sector</th>
-              <th className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest">Status</th>
+              <th className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest whitespace-nowrap" style={{ minWidth: '110px' }}>Type</th>
+              <th className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest whitespace-nowrap" style={{ minWidth: '110px' }}>Sector</th>
+              <th className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest whitespace-nowrap" style={{ minWidth: '140px' }}>Status</th>
               <th
-                className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest cursor-pointer hover:text-[#6A6A80] transition-colors"
+                className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest cursor-pointer hover:text-[#6A6A80] transition-colors whitespace-nowrap"
+                style={{ minWidth: '80px' }}
                 onClick={() => toggleSort('grade_overall')}
               >
                 Grade <SortIcon k="grade_overall" />
               </th>
-              <th className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest">Steps</th>
-              <th className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest">Blocks</th>
+              <th className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest whitespace-nowrap" style={{ minWidth: '60px' }}>Steps</th>
               <th
-                className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest cursor-pointer hover:text-[#6A6A80] transition-colors"
-                onClick={() => toggleSort('created_at')}
+                className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest cursor-pointer hover:text-[#6A6A80] transition-colors whitespace-nowrap"
+                style={{ minWidth: '100px' }}
+                onClick={() => toggleSort('updated_at')}
               >
-                Date <SortIcon k="created_at" />
+                Updated <SortIcon k="updated_at" />
               </th>
+              <th className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest whitespace-nowrap" style={{ minWidth: '100px' }}>Actions</th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-5 py-16 text-center text-[#3A3A55] text-[12px]">
-                  {ideas.length === 0
-                    ? 'No ideas yet — run a sync or add one manually'
-                    : 'No ideas match your filters'}
+                <td colSpan={8} className="px-5 py-16 text-center text-[#3A3A55] text-[11px] font-mono">
+                  {ideas.length === 0 ? 'No ideas yet — run a sync or add one manually' : 'No ideas match your filters'}
                 </td>
               </tr>
             ) : (
               filtered.map((idea) => (
                 <tr
                   key={idea.id}
-                  className="border-b border-[#1E1E2E]/60 hover:bg-[#0F0F18] cursor-pointer transition-colors"
+                  className="border-b border-[#1E1E2E]/50 hover:bg-[#0F0F18] cursor-pointer transition-colors"
                   onClick={() => router.push(`/ideas/${idea.id}`)}
                 >
-                  <td className="px-5 py-4 sticky left-0 bg-[#0A0A0F] group-hover:bg-[#0F0F18]">
-                    <span className="text-[13px] text-[#E0E0EA] font-medium line-clamp-1 leading-snug">{idea.title}</span>
+                  <td className="px-5 py-3.5">
+                    <span className="text-[12px] text-[#E0E0EA] font-medium whitespace-nowrap overflow-hidden text-ellipsis block max-w-[240px]">{idea.title}</span>
                     {idea.description && (
-                      <span className="text-[11px] text-[#4A4A60] line-clamp-1 leading-snug mt-0.5 block">
+                      <span className="text-[10px] text-[#3A3A55] font-mono whitespace-nowrap overflow-hidden text-ellipsis block max-w-[240px]">
                         {idea.description}
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-4">
-                    {idea.idea_type ? <Badge type={idea.idea_type} size="sm" /> : <span className="text-[#3A3A55] text-[11px] font-mono">—</span>}
+                  <td className="px-4 py-3.5 whitespace-nowrap">
+                    {idea.idea_type ? <Badge type={idea.idea_type} size="sm" /> : <span className="text-[#2A2A40] text-[11px] font-mono">—</span>}
                   </td>
-                  <td className="px-4 py-4">
+                  <td className="px-4 py-3.5 whitespace-nowrap">
                     <span className="text-[11px] text-[#5E5E7A] font-mono capitalize">{idea.sector || '—'}</span>
                   </td>
-                  <td className="px-4 py-4">
-                    <StatusSelect
-                      ideaId={idea.id}
-                      status={idea.status}
-                      onUpdate={(s) => handleStatusUpdate(idea.id, s)}
-                    />
+                  <td className="px-4 py-3.5 whitespace-nowrap">
+                    <StatusSelect ideaId={idea.id} status={idea.status} onUpdate={(s) => handleStatusUpdate(idea.id, s)} />
                   </td>
-                  <td className="px-4 py-4">
+                  <td className="px-4 py-3.5 whitespace-nowrap">
                     <GradeRing grade={idea.grade_overall} size="sm" />
                   </td>
-                  <td className="px-4 py-4">
+                  <td className="px-4 py-3.5 whitespace-nowrap">
                     <span className="text-[11px] font-mono text-[#5E5E7A]">{idea.next_steps?.length ?? 0}</span>
+                    {(idea.blockers?.length ?? 0) > 0 && (
+                      <span className="ml-1.5 text-[10px] font-mono text-[#C06830]">
+                        {idea.blockers.length}✕
+                      </span>
+                    )}
                   </td>
-                  <td className="px-4 py-4">
-                    <span className={`text-[11px] font-mono ${idea.blockers?.length ? 'text-[#C06830]' : 'text-[#3A3A55]'}`}>
-                      {idea.blockers?.length ?? 0}
+                  <td className="px-4 py-3.5 whitespace-nowrap">
+                    <span className="text-[10px] font-mono text-[#3A3A55]">
+                      {new Date(idea.updated_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
                     </span>
                   </td>
-                  <td className="px-4 py-4">
-                    <span className="text-[11px] font-mono text-[#3A3A55]">
-                      {new Date(idea.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                    </span>
+                  <td className="px-4 py-3.5 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                    <div className="flex items-center gap-1.5">
+                      {/* Download PDF */}
+                      <button
+                        onClick={(e) => { e.stopPropagation(); printReport(idea); }}
+                        title="Download report"
+                        className="w-7 h-7 flex items-center justify-center rounded-lg text-[#3A3A55] hover:text-[#8888A0] hover:bg-[#1A1A28] transition-colors"
+                      >
+                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                        </svg>
+                      </button>
+                      {/* Archive */}
+                      {idea.status !== 'archived' && (
+                        <button
+                          onClick={(e) => handleArchive(e, idea)}
+                          title="Archive idea"
+                          className="w-7 h-7 flex items-center justify-center rounded-lg text-[#3A3A55] hover:text-[#C06830] hover:bg-[#1A1A28] transition-colors"
+                        >
+                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                          </svg>
+                        </button>
+                      )}
+                    </div>
                   </td>
                 </tr>
               ))

@@ -114,7 +114,10 @@ export function GradeDistributionChart({ ideas }: ChartsProps) {
 export function IdeasTimelineChart({ ideas }: ChartsProps) {
   const byMonth: Record<string, number> = {};
   ideas.forEach((i) => {
-    const d = new Date(i.created_at);
+    // Prefer the chat_date (actual conversation date) over created_at (upload date)
+    const dateStr = i.chat_date || i.created_at;
+    const d = new Date(dateStr);
+    if (isNaN(d.getTime())) return;
     const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
     byMonth[key] = (byMonth[key] || 0) + 1;
   });
@@ -126,7 +129,7 @@ export function IdeasTimelineChart({ ideas }: ChartsProps) {
       count,
     }));
 
-  if (data.length < 2) return <EmptyChart label="Not enough data for timeline" />;
+  if (data.length === 0) return <EmptyChart label="No timeline data yet" />;
 
   return (
     <ResponsiveContainer width="100%" height={180}>

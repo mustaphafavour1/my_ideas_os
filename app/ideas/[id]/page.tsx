@@ -27,7 +27,14 @@ export default async function IdeaDetailPage({ params }: Props) {
 
   return (
     <div className="flex flex-col flex-1">
-      <TopBar title={idea.title} />
+      <TopBar
+        title={idea.title}
+        subtitle={`${idea.status.replace(/_/g, ' ')} · ${idea.sector || 'no sector'}`}
+        breadcrumbs={[
+          { label: 'Ideas', href: '/ideas' },
+          { label: idea.title },
+        ]}
+      />
       <IdeaDetail initialIdea={idea} />
     </div>
   );

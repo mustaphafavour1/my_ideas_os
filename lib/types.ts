@@ -89,3 +89,16 @@ export interface DashboardStats {
   completed: number;
   avg_grade: number;
 }
+
+export type SignalType = 'strategy' | 'pattern' | 'principle' | 'risk' | 'opportunity' | 'lesson';
+
+export interface Signal {
+  id: string;
+  user_id: string;
+  idea_id: string | null;
+  idea_title?: string | null;
+  title: string;
+  content: string;
+  signal_type: SignalType;
+  created_at: string;
+}
