@@ -2,8 +2,6 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
 import { extractIdeasFromConversations } from '@/lib/claude';
 import { parseConversationExport, batchConversations, fuzzyMatchTitle } from '@/lib/parser';
-import { readFileSync, existsSync } from 'fs';
-import { join } from 'path';
 import { Idea } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -12,21 +10,13 @@ export const maxDuration = 300;
 export async function POST(req: NextRequest) {
   try {
     const supabase = createServiceClient();
-    let rawJson: string | null = null;
-
     const body = await req.json().catch(() => ({}));
-    if (body.conversationJson) {
-      rawJson = body.conversationJson;
-    } else {
-      const filePath = join(process.cwd(), 'data', 'conversations.json');
-      if (existsSync(filePath)) {
-        rawJson = readFileSync(filePath, 'utf-8');
-      }
-    }
+
+    const rawJson: string | null = body.conversationJson || null;
 
     if (!rawJson) {
       return NextResponse.json(
-        { error: 'No conversation data found. Drop conversations.json in /data or pass conversationJson in the request body.' },
+        { error: 'No conversation data provided. Upload a conversations.json export file.' },
         { status: 400 }
       );
     }

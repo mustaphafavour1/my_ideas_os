@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { notFound } from 'next/navigation';
 import { TopBar } from '@/components/layout/TopBar';
 import { IdeaDetail } from '@/components/ideas/IdeaDetail';

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { TopBar } from '@/components/layout/TopBar';
 import { StatCards } from '@/components/dashboard/StatCards';
 import { IdeaCard } from '@/components/ideas/IdeaCard';
