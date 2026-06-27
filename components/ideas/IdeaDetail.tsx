@@ -59,7 +59,7 @@ function StatusDropdown({ idea, onUpdate }: { idea: Idea; onUpdate: (s: IdeaStat
       <button
         onClick={() => setOpen((o) => !o)}
         disabled={saving}
-        className="flex items-center gap-1.5 rounded-lg px-2 py-1 hover:bg-[#1A1A28] transition-colors disabled:opacity-40"
+        className="flex items-center gap-1.5 rounded-lg pl-2 pr-3.5 py-1 hover:bg-[#1A1A28] transition-colors disabled:opacity-40"
       >
         <StatusChip status={idea.status} />
         <svg className="w-2.5 h-2.5 text-[#2A2A40] transition-colors" viewBox="0 0 8 8" fill="currentColor">
@@ -236,16 +236,18 @@ ${idea.ai_suggestions ? `<h2>AI Suggestion</h2><div class="suggestion">${idea.ai
         animate={{ opacity: 1, y: 0 }}
         className="flex-1 flex flex-col"
       >
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 p-4 lg:p-8 max-w-6xl mx-auto w-full">
+        {/* Breadcrumbs — outside grid so sidebar aligns with header card */}
+        <div className="px-4 lg:px-8 pt-8 lg:pt-10 pb-0 max-w-6xl mx-auto w-full">
+          <nav className="flex items-center gap-1 text-[10px] font-mono">
+            <Link href="/ideas" className="text-[#3A3A55] hover:text-[#6A6A80] transition-colors">Ideas</Link>
+            <span className="text-[#252540] mx-0.5">/</span>
+            <span className="text-[#5E5E7A] truncate max-w-[200px]">{idea.title}</span>
+          </nav>
+        </div>
+
+        <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 px-4 lg:px-8 pt-5 pb-8 lg:pb-10 max-w-6xl mx-auto w-full">
           {/* Main column */}
           <div className="space-y-5">
-            {/* Breadcrumbs */}
-            <nav className="flex items-center gap-1 text-[10px] font-mono">
-              <Link href="/ideas" className="text-[#3A3A55] hover:text-[#6A6A80] transition-colors">Ideas</Link>
-              <span className="text-[#252540] mx-0.5">/</span>
-              <span className="text-[#5E5E7A] truncate max-w-[200px]">{idea.title}</span>
-            </nav>
-
             {/* Header card — title + status + description + metadata */}
             <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-6">
               <div className="flex items-start justify-between gap-4 mb-4">
@@ -328,8 +330,8 @@ ${idea.ai_suggestions ? `<h2>AI Suggestion</h2><div class="suggestion">${idea.ai
                 {[
                   { label: 'Sector', value: idea.sector, editing: true, field: 'sector' },
                   { label: 'Source', value: idea.source_type?.replace(/_/g, ' ') || '—' },
-                  { label: 'Chat Date', value: idea.chat_date ? new Date(idea.chat_date).toLocaleDateString('en-GB') : '—' },
-                  { label: 'Last Updated', value: new Date(idea.updated_at).toLocaleDateString('en-GB') },
+                  { label: 'Chat Date', value: idea.chat_date ? new Date(idea.chat_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '—' },
+                  { label: 'Last Updated', value: new Date(idea.updated_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) },
                 ].map(({ label, value, editing: isEditable, field }) => (
                   <div key={label}>
                     <p className="text-[#3A3A55] mb-1 uppercase tracking-widest text-[9px]">{label}</p>
@@ -369,16 +371,19 @@ ${idea.ai_suggestions ? `<h2>AI Suggestion</h2><div class="suggestion">${idea.ai
                   <span className="text-[11px] font-mono text-[#3A3A55]">thinking…</span>
                 </div>
               )}
-              <div className="flex gap-2">
-                <input
+              <div className="space-y-2">
+                <textarea
                   value={askInput}
                   onChange={(e) => setAskInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && !askLoading && askAboutIdea()}
-                  placeholder="What's the fastest way to validate this?…"
+                  onKeyDown={(e) => e.key === 'Enter' && !e.shiftKey && !askLoading && (e.preventDefault(), askAboutIdea())}
+                  placeholder="What's the fastest way to validate this?… (Enter to send)"
                   disabled={askLoading}
-                  className={`${inputClass} flex-1`}
+                  rows={4}
+                  className={`${inputClass} resize-none leading-relaxed`}
                 />
-                <Button size="sm" loading={askLoading} onClick={askAboutIdea} disabled={!askInput.trim()}>Ask</Button>
+                <div className="flex justify-end">
+                  <Button size="sm" loading={askLoading} onClick={askAboutIdea} disabled={!askInput.trim()}>Ask</Button>
+                </div>
               </div>
             </div>
 
@@ -418,66 +423,67 @@ ${idea.ai_suggestions ? `<h2>AI Suggestion</h2><div class="suggestion">${idea.ai
               </div>
             )}
 
-            {/* Next Steps */}
-            <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-6">
-              <h2 className="text-[10px] font-mono text-[#4A4A60] uppercase tracking-widest mb-4">Next Steps</h2>
-              <div className="space-y-2.5 mb-4">
-                {(editing ? form.next_steps : idea.next_steps)?.map((step, i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <div className="w-4 h-4 mt-0.5 rounded border border-[#2A2A3A] shrink-0" />
-                    <span className="text-[12px] text-[#7A7A90] flex-1 leading-snug">{step}</span>
-                    {editing && (
-                      <button onClick={() => removeStep(i)} className="text-[#3A3A55] hover:text-[#F87171] text-[10px] shrink-0">✕</button>
-                    )}
+            {/* Next Steps + Blockers side by side */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-6">
+                <h2 className="text-[10px] font-mono text-[#4A4A60] uppercase tracking-widest mb-4">Next Steps</h2>
+                <div className="space-y-2.5 mb-4">
+                  {(editing ? form.next_steps : idea.next_steps)?.map((step, i) => (
+                    <div key={i} className="flex items-start gap-3">
+                      <div className="w-4 h-4 mt-0.5 rounded border border-[#2A2A3A] shrink-0" />
+                      <span className="text-[12px] text-[#7A7A90] flex-1 leading-snug">{step}</span>
+                      {editing && (
+                        <button onClick={() => removeStep(i)} className="text-[#3A3A55] hover:text-[#F87171] text-[10px] shrink-0">✕</button>
+                      )}
+                    </div>
+                  ))}
+                  {(editing ? form.next_steps : idea.next_steps)?.length === 0 && (
+                    <p className="text-[11px] text-[#3A3A55] font-mono">No next steps yet.</p>
+                  )}
+                </div>
+                {editing && (
+                  <div className="flex gap-2">
+                    <input
+                      value={newStep}
+                      onChange={(e) => setNewStep(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addStep())}
+                      placeholder="Add a next step…"
+                      className={`${inputClass} flex-1`}
+                    />
+                    <Button size="sm" variant="secondary" onClick={addStep}>Add</Button>
                   </div>
-                ))}
-                {(editing ? form.next_steps : idea.next_steps)?.length === 0 && (
-                  <p className="text-[11px] text-[#3A3A55] font-mono">No next steps yet.</p>
                 )}
               </div>
-              {editing && (
-                <div className="flex gap-2">
-                  <input
-                    value={newStep}
-                    onChange={(e) => setNewStep(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addStep())}
-                    placeholder="Add a next step…"
-                    className={`${inputClass} flex-1`}
-                  />
-                  <Button size="sm" variant="secondary" onClick={addStep}>Add</Button>
-                </div>
-              )}
-            </div>
 
-            {/* Blockers */}
-            <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-6">
-              <h2 className="text-[10px] font-mono text-[#4A4A60] uppercase tracking-widest mb-4">Blockers</h2>
-              <div className="space-y-2.5 mb-4">
-                {(editing ? form.blockers : idea.blockers)?.map((b, i) => (
-                  <div key={i} className="flex items-start gap-3">
-                    <span className="text-[#C06830] text-[10px] mt-1 shrink-0">●</span>
-                    <span className="text-[12px] text-[#7A7A90] flex-1 leading-snug">{b}</span>
-                    {editing && (
-                      <button onClick={() => removeBlocker(i)} className="text-[#3A3A55] hover:text-[#F87171] text-[10px] shrink-0">✕</button>
-                    )}
+              <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-6">
+                <h2 className="text-[10px] font-mono text-[#4A4A60] uppercase tracking-widest mb-4">Blockers</h2>
+                <div className="space-y-2.5 mb-4">
+                  {(editing ? form.blockers : idea.blockers)?.map((b, i) => (
+                    <div key={i} className="flex items-start gap-3">
+                      <span className="text-[#C06830] text-[10px] mt-1 shrink-0">●</span>
+                      <span className="text-[12px] text-[#7A7A90] flex-1 leading-snug">{b}</span>
+                      {editing && (
+                        <button onClick={() => removeBlocker(i)} className="text-[#3A3A55] hover:text-[#F87171] text-[10px] shrink-0">✕</button>
+                      )}
+                    </div>
+                  ))}
+                  {(editing ? form.blockers : idea.blockers)?.length === 0 && (
+                    <p className="text-[11px] text-[#3AB870]/60 font-mono">No blockers — clear runway!</p>
+                  )}
+                </div>
+                {editing && (
+                  <div className="flex gap-2">
+                    <input
+                      value={newBlocker}
+                      onChange={(e) => setNewBlocker(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addBlocker())}
+                      placeholder="Add a blocker…"
+                      className={`${inputClass} flex-1`}
+                    />
+                    <Button size="sm" variant="secondary" onClick={addBlocker}>Add</Button>
                   </div>
-                ))}
-                {(editing ? form.blockers : idea.blockers)?.length === 0 && (
-                  <p className="text-[11px] text-[#3AB870]/60 font-mono">No blockers — clear runway!</p>
                 )}
               </div>
-              {editing && (
-                <div className="flex gap-2">
-                  <input
-                    value={newBlocker}
-                    onChange={(e) => setNewBlocker(e.target.value)}
-                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addBlocker())}
-                    placeholder="Add a blocker…"
-                    className={`${inputClass} flex-1`}
-                  />
-                  <Button size="sm" variant="secondary" onClick={addBlocker}>Add</Button>
-                </div>
-              )}
             </div>
 
             {/* Tags */}

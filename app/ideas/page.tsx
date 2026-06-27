@@ -31,7 +31,7 @@ export default function IdeasPage() {
     <div className="flex flex-col flex-1">
       <TopBar title="Ideas" />
 
-      <main className="flex-1 px-4 lg:px-8 py-6 max-w-6xl mx-auto w-full">
+      <main className="flex-1 px-4 lg:px-8 pt-10 pb-6 max-w-6xl mx-auto w-full">
         {/* Count header outside TopBar */}
         <div className="flex items-baseline justify-between mb-6">
           <div>

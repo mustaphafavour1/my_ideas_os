@@ -38,6 +38,12 @@ export interface DashboardContentProps {
   topType: string | null;
   topTypeCount: number;
   completionPct: number;
+  mostPausedSector: string | null;
+  mostPausedCount: number;
+  mostCompletedType: string | null;
+  mostCompletedCount: number;
+  mostBlockersType: string | null;
+  mostBlockersCount: number;
 }
 
 function SectionLabel({ label, href, linkText }: { label: string; href?: string; linkText?: string }) {
@@ -56,6 +62,7 @@ function SectionLabel({ label, href, linkText }: { label: string; href?: string;
 export function DashboardContent({
   stats, recent, needsAttention, withSuggestions, unprocessedCount,
   withBlockers, paused, topSector, topSectorCount, topType, topTypeCount, completionPct,
+  mostPausedSector, mostPausedCount, mostCompletedType, mostCompletedCount, mostBlockersType, mostBlockersCount,
 }: DashboardContentProps) {
   const [vis, setVis] = useState<SectionVisibility>(DEFAULT_VIS);
 
@@ -79,9 +86,12 @@ export function DashboardContent({
   ];
 
   const secondaryMetrics = [
-    topType   ? { label: 'Top Category',    main: topType.replace(/_/g, ' '), count: topTypeCount }   : null,
-    topSector ? { label: 'Top Sector',      main: topSector,                  count: topSectorCount } : null,
-    { label: 'Completion Rate', main: `${completionPct}%`, count: null },
+    topType          ? { label: 'Top Category',     main: topType.replace(/_/g, ' '),          count: topTypeCount }     : null,
+    topSector        ? { label: 'Top Sector',        main: topSector,                           count: topSectorCount }   : null,
+    { label: 'Completion',       main: `${completionPct}%`,                              count: null },
+    mostPausedSector ? { label: 'Most Paused',       main: mostPausedSector,                    count: mostPausedCount }  : null,
+    mostCompletedType? { label: 'Most Completed',    main: mostCompletedType.replace(/_/g, ' '), count: mostCompletedCount } : null,
+    mostBlockersType ? { label: 'Most Blocked',      main: mostBlockersType.replace(/_/g, ' '),  count: mostBlockersCount } : null,
   ].filter(Boolean) as { label: string; main: string; count: number | null }[];
 
   const showAttentionSection =
@@ -89,7 +99,7 @@ export function DashboardContent({
     (vis.showAISuggestions && withSuggestions.length > 0);
 
   return (
-    <main className="flex-1 px-4 lg:px-8 py-10 max-w-6xl mx-auto w-full space-y-14">
+    <main className="flex-1 px-4 lg:px-8 pt-14 pb-10 max-w-6xl mx-auto w-full space-y-14">
       {/* Stats */}
       {vis.showStats && (
         <section>
@@ -117,7 +127,7 @@ export function DashboardContent({
           </div>
 
           {secondaryMetrics.length > 0 && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-3">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 mt-3">
               {secondaryMetrics.map(({ label, main, count }) => (
                 <div key={label} className="bg-[#111118] border border-[#1E1E2E] rounded-xl px-4 py-3.5">
                   <p className="text-[9px] font-mono text-[#3A3A55] uppercase tracking-widest mb-1.5">{label}</p>
@@ -160,7 +170,7 @@ export function DashboardContent({
               <p className="text-[10px] text-[#2A2A40] font-mono">Run a sync or add ideas manually to get started</p>
             </div>
           ) : (
-            <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4 lg:-mx-8 lg:px-8 snap-x scroll-smooth">
+            <div className="flex gap-4 overflow-x-auto pb-2 snap-x scroll-smooth">
               {recent.map((idea) => (
                 <div key={idea.id} className="w-[280px] shrink-0 snap-start">
                   <IdeaCard idea={idea} showDescription />
@@ -175,7 +185,7 @@ export function DashboardContent({
       {vis.showAskAI && (
         <section>
           <SectionLabel label="Ask AI" />
-          <div className="w-full lg:w-3/4">
+          <div className="max-w-2xl mx-auto">
             <AskBox />
           </div>
         </section>
@@ -193,10 +203,10 @@ export function DashboardContent({
                     {needsAttention.length}
                   </span>
                 </div>
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {needsAttention.map((idea) => (
                     <Link key={idea.id} href={`/ideas/${idea.id}`}>
-                      <div className="bg-[#111118] border border-[#1E1E2E] hover:border-[#252535] rounded-xl px-5 py-4 transition-all card-glow">
+                      <div className="bg-[#111118] border border-[#1E1E2E] hover:border-[#252535] rounded-xl px-5 py-4 min-h-[96px] flex flex-col justify-center transition-all card-glow">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <p className="text-[12px] text-[#D0D0DA] font-medium truncate mb-1.5">{idea.title}</p>
@@ -234,10 +244,10 @@ export function DashboardContent({
                     All →
                   </Link>
                 </div>
-                <div className="space-y-4">
+                <div className="space-y-3">
                   {withSuggestions.map((idea) => (
                     <Link key={idea.id} href={`/ideas/${idea.id}`}>
-                      <div className="bg-[#111118] border border-[#1E1E2E] hover:border-[#252535] rounded-xl px-5 py-4 transition-all card-glow">
+                      <div className="bg-[#111118] border border-[#1E1E2E] hover:border-[#252535] rounded-xl px-5 py-4 min-h-[96px] flex flex-col justify-center transition-all card-glow">
                         <p className="text-[12px] font-medium text-[#D0D0DA] mb-1.5 truncate">{idea.title}</p>
                         <p className="text-[11px] text-[#5E5E7A] line-clamp-2 leading-relaxed">{idea.ai_suggestions}</p>
                       </div>

@@ -104,7 +104,7 @@ export default async function AnalyticsPage() {
     <div className="flex flex-col flex-1">
       <TopBar title="Analytics" subtitle={`${ideas.length} ideas · ${inProgress} active · ${completed} shipped`} />
 
-      <main className="flex-1 px-4 lg:px-8 py-8 max-w-6xl mx-auto w-full">
+      <main className="flex-1 px-4 lg:px-8 pt-12 pb-10 max-w-6xl mx-auto w-full">
         {ideas.length === 0 ? (
           <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-16 text-center">
             <p className="text-[12px] text-[#3A3A55] font-mono">No data yet — sync your ideas to see analytics</p>

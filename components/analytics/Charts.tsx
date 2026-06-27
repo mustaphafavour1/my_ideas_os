@@ -116,30 +116,31 @@ export function IdeasByStatusChart({ ideas }: ChartsProps) {
 }
 
 export function GradeDistributionChart({ ideas }: ChartsProps) {
-  const graded = ideas.filter((i) => i.grade_overall !== null);
-  const maxVal = Math.max(graded.length, 1);
-  // Dynamic max: round up to nearest multiple of 4, minimum 8
-  const dataMax = Math.max(8, Math.ceil(maxVal / 4) * 4);
-
   const buckets = [
-    { range: '1–2', min: 1, max: 2 },
-    { range: '2–3', min: 2, max: 3 },
-    { range: '3–4', min: 3, max: 4 },
-    { range: '4–5', min: 4, max: 5 },
-    { range: '5', min: 5, max: 5.1 },
+    { range: '1.0', min: 1.0, max: 1.5 },
+    { range: '1.5', min: 1.5, max: 2.0 },
+    { range: '2.0', min: 2.0, max: 2.5 },
+    { range: '2.5', min: 2.5, max: 3.0 },
+    { range: '3.0', min: 3.0, max: 3.5 },
+    { range: '3.5', min: 3.5, max: 4.0 },
+    { range: '4.0', min: 4.0, max: 4.5 },
+    { range: '4.5', min: 4.5, max: 5.0 },
+    { range: '5.0', min: 5.0, max: 5.1 },
   ];
   const data = buckets.map((b) => ({
     range: b.range,
     count: ideas.filter((i) => i.grade_overall !== null && i.grade_overall >= b.min && i.grade_overall < b.max).length,
   }));
 
-  // Generate ticks as multiples of 4 up to dataMax
+  const maxBucket = Math.max(...data.map((d) => d.count), 1);
+  const dataMax = Math.max(4, Math.ceil(maxBucket / 2) * 2);
+
   const ticks: number[] = [];
-  for (let t = 0; t <= dataMax; t += 4) ticks.push(t);
+  for (let t = 0; t <= dataMax; t += 2) ticks.push(t);
 
   return (
-    <ResponsiveContainer width="100%" height={270}>
-      <BarChart data={data} margin={{ top: 12, bottom: 4, left: 4, right: 12 }}>
+    <ResponsiveContainer width="100%" height={380}>
+      <BarChart data={data} margin={{ top: 12, bottom: 4, left: 4, right: 12 }} barCategoryGap="45%">
         <CartesianGrid strokeDasharray="2 4" stroke="#1A1A28" vertical={false} />
         <XAxis dataKey="range" tick={{ fill: '#3A3A55', fontSize: 10 }} tickLine={false} axisLine={false} />
         <YAxis
@@ -149,9 +150,10 @@ export function GradeDistributionChart({ ideas }: ChartsProps) {
           ticks={ticks}
           domain={[0, dataMax]}
           interval={0}
+          width={20}
         />
         <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(247,201,72,0.04)' }} />
-        <Bar dataKey="count" fill="#F7C948" radius={[3, 3, 0, 0]} opacity={0.85} />
+        <Bar dataKey="count" fill="#F7C948" radius={[3, 3, 0, 0]} opacity={0.85} maxBarSize={28} />
       </BarChart>
     </ResponsiveContainer>
   );
@@ -170,7 +172,7 @@ export function IdeasTimelineChart({ ideas }: ChartsProps) {
     .sort((a, b) => a[0].localeCompare(b[0]))
     .slice(-12)
     .map(([month, count]) => ({
-      month: new Date(month + '-01').toLocaleDateString('en-GB', { month: 'short', year: '2-digit' }),
+      month: new Date(month + '-01').toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }),
       count,
     }));
 

@@ -132,7 +132,7 @@ export default function SettingsPage() {
     <div className="flex flex-col flex-1">
       <TopBar title="Settings" subtitle="Customise your workspace" />
 
-      <main className="flex-1 px-4 lg:px-8 py-10 max-w-3xl mx-auto w-full space-y-10">
+      <main className="flex-1 px-4 lg:px-8 pt-12 pb-10 max-w-3xl mx-auto w-full space-y-10">
 
         {/* Dashboard sections */}
         <section>

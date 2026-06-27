@@ -47,6 +47,24 @@ async function getDashboardData() {
 
   const completionPct = stats.total > 0 ? Math.round((stats.completed / stats.total) * 100) : 0;
 
+  const pausedSectorCounts: Record<string, number> = {};
+  allIdeas.filter((i) => i.status === 'paused').forEach((i) => {
+    if (i.sector) pausedSectorCounts[i.sector] = (pausedSectorCounts[i.sector] || 0) + 1;
+  });
+  const mostPausedEntry = Object.entries(pausedSectorCounts).sort((a, b) => b[1] - a[1])[0];
+
+  const completedTypeCounts: Record<string, number> = {};
+  allIdeas.filter((i) => i.status === 'completed').forEach((i) => {
+    if (i.idea_type) completedTypeCounts[i.idea_type] = (completedTypeCounts[i.idea_type] || 0) + 1;
+  });
+  const mostCompletedEntry = Object.entries(completedTypeCounts).sort((a, b) => b[1] - a[1])[0];
+
+  const blockedTypeCounts: Record<string, number> = {};
+  allIdeas.filter((i) => i.blockers && i.blockers.length > 0).forEach((i) => {
+    if (i.idea_type) blockedTypeCounts[i.idea_type] = (blockedTypeCounts[i.idea_type] || 0) + 1;
+  });
+  const mostBlockersEntry = Object.entries(blockedTypeCounts).sort((a, b) => b[1] - a[1])[0];
+
   return {
     lastSynced,
     stats,
@@ -61,6 +79,12 @@ async function getDashboardData() {
     topType: topTypeEntry?.[0] || null,
     topTypeCount: topTypeEntry?.[1] || 0,
     completionPct,
+    mostPausedSector: mostPausedEntry?.[0] || null,
+    mostPausedCount: mostPausedEntry?.[1] || 0,
+    mostCompletedType: mostCompletedEntry?.[0] || null,
+    mostCompletedCount: mostCompletedEntry?.[1] || 0,
+    mostBlockersType: mostBlockersEntry?.[0] || null,
+    mostBlockersCount: mostBlockersEntry?.[1] || 0,
   };
 }
 

@@ -46,7 +46,7 @@ function StatusSelect({ ideaId, status, onUpdate }: { ideaId: string; status: Id
       <button
         onClick={() => setOpen((o) => !o)}
         disabled={saving}
-        className="flex items-center gap-1 group rounded px-1 py-0.5 hover:bg-[#1A1A28] transition-colors disabled:opacity-40"
+        className="flex items-center gap-1 group rounded pl-1.5 pr-3 py-0.5 hover:bg-[#1A1A28] transition-colors disabled:opacity-40"
       >
         <StatusChip status={status} size="sm" />
         <svg className="w-2.5 h-2.5 text-[#2A2A40] group-hover:text-[#5E5E7A] transition-colors" viewBox="0 0 8 8" fill="currentColor">
@@ -169,7 +169,7 @@ const DEFAULT_COLS: ColumnVisibility = { type: true, sector: true, grade: true, 
 
 function fmtDate(d: string | null | undefined) {
   if (!d) return '—';
-  return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' });
+  return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
 function getPaginationPages(current: number, total: number): (number | '...')[] {
