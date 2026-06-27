@@ -38,7 +38,24 @@ async function getDashboardData() {
   ).slice(0, 5);
   const withSuggestions = allIdeas.filter((i) => i.ai_suggestions).slice(0, 5);
 
-  return { stats, recent, needsAttention, withSuggestions, lastSynced, unprocessedCount };
+  // Extra metrics
+  const topSector = (() => {
+    const counts: Record<string, number> = {};
+    allIdeas.forEach((i) => { if (i.sector) counts[i.sector] = (counts[i.sector] || 0) + 1; });
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    return sorted[0]?.[0] || null;
+  })();
+
+  const topType = (() => {
+    const counts: Record<string, number> = {};
+    allIdeas.forEach((i) => { if (i.idea_type) counts[i.idea_type] = (counts[i.idea_type] || 0) + 1; });
+    const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+    return sorted[0]?.[0] || null;
+  })();
+
+  const withBlockers = allIdeas.filter((i) => i.blockers && i.blockers.length > 0).length;
+
+  return { stats, recent, needsAttention, withSuggestions, lastSynced, unprocessedCount, topSector, topType, withBlockers };
 }
 
 function SectionLabel({ label, href, linkText }: { label: string; href?: string; linkText?: string }) {
@@ -55,7 +72,7 @@ function SectionLabel({ label, href, linkText }: { label: string; href?: string;
 }
 
 export default async function DashboardPage() {
-  const { stats, recent, needsAttention, withSuggestions, lastSynced, unprocessedCount } =
+  const { stats, recent, needsAttention, withSuggestions, lastSynced, unprocessedCount, topSector, topType, withBlockers } =
     await getDashboardData();
 
   return (
@@ -66,11 +83,30 @@ export default async function DashboardPage() {
         lastSynced={lastSynced}
       />
 
-      <main className="flex-1 px-4 lg:px-8 py-10 max-w-6xl mx-auto w-full space-y-16">
+      <main className="flex-1 px-4 lg:px-8 py-10 max-w-6xl mx-auto w-full space-y-14">
         {/* Stats */}
         <section>
           <StatCards stats={stats} />
         </section>
+
+        {/* Extra metrics row */}
+        {stats.total > 0 && (
+          <section>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {[
+                { label: 'Top Sector', value: topSector ? topSector.replace(/_/g, ' ') : '—', mono: true },
+                { label: 'Top Type', value: topType ? topType.replace(/_/g, ' ') : '—', mono: true },
+                { label: 'With Blockers', value: String(withBlockers), mono: false, accent: withBlockers > 0 },
+                { label: 'Paused', value: String(stats.total - stats.in_progress - stats.completed - (stats.total > 0 ? 0 : 0)), mono: false },
+              ].map(({ label, value, mono, accent }) => (
+                <div key={label} className="bg-[#111118] border border-[#1E1E2E] rounded-xl px-4 py-3.5">
+                  <p className="text-[9px] font-mono text-[#3A3A55] uppercase tracking-widest mb-1.5">{label}</p>
+                  <p className={`text-[15px] font-semibold ${accent ? 'text-[#C06830]' : 'text-[#D0D0DA]'} ${mono ? 'capitalize' : ''}`}>{value}</p>
+                </div>
+              ))}
+            </div>
+          </section>
+        )}
 
         {/* Inbox alert */}
         {unprocessedCount > 0 && (
@@ -88,12 +124,7 @@ export default async function DashboardPage() {
           </div>
         )}
 
-        {/* AI Ask Box */}
-        <section>
-          <AskBox />
-        </section>
-
-        {/* Recent Ideas — horizontal scroll row of 4 */}
+        {/* Recent Ideas — 2×2 grid */}
         <section>
           <SectionLabel label="Recent Ideas" href="/ideas" linkText="All ideas" />
           {recent.length === 0 ? (
@@ -102,11 +133,9 @@ export default async function DashboardPage() {
               <p className="text-[10px] text-[#2A2A40] font-mono">Run a sync or add ideas manually to get started</p>
             </div>
           ) : (
-            <div className="flex gap-4 overflow-x-auto pb-1 -mx-4 px-4 lg:-mx-8 lg:px-8 snap-x scroll-smooth">
+            <div className="grid grid-cols-2 gap-4">
               {recent.map((idea) => (
-                <div key={idea.id} className="w-[280px] shrink-0 snap-start">
-                  <IdeaCard idea={idea} />
-                </div>
+                <IdeaCard key={idea.id} idea={idea} />
               ))}
             </div>
           )}
@@ -125,14 +154,14 @@ export default async function DashboardPage() {
                       {needsAttention.length}
                     </span>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {needsAttention.map((idea) => (
                       <Link key={idea.id} href={`/ideas/${idea.id}`}>
                         <div className="bg-[#111118] border border-[#1E1E2E] hover:border-[#252535] rounded-xl px-5 py-4 transition-all card-glow">
                           <div className="flex items-start justify-between gap-3">
                             <div className="min-w-0">
                               <p className="text-[12px] text-[#D0D0DA] font-medium truncate mb-1.5">{idea.title}</p>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-2 mb-2">
                                 <StatusChip status={idea.status} size="sm" />
                                 {idea.blockers && idea.blockers.length > 0 && (
                                   <span className="text-[10px] font-mono text-[#C06830]">
@@ -140,6 +169,11 @@ export default async function DashboardPage() {
                                   </span>
                                 )}
                               </div>
+                              {idea.next_steps && idea.next_steps.length > 0 && (
+                                <p className="text-[11px] text-[#4A4A60] font-mono truncate">
+                                  → {idea.next_steps[0]}
+                                </p>
+                              )}
                             </div>
                             <span className="text-[#3A3A55] text-[11px] shrink-0 mt-0.5">→</span>
                           </div>
@@ -162,7 +196,7 @@ export default async function DashboardPage() {
                       All →
                     </Link>
                   </div>
-                  <div className="space-y-2">
+                  <div className="space-y-3">
                     {withSuggestions.map((idea) => (
                       <Link key={idea.id} href={`/ideas/${idea.id}`}>
                         <div className="bg-[#111118] border border-[#1E1E2E] hover:border-[#252535] rounded-xl px-5 py-4 transition-all card-glow">
@@ -177,6 +211,12 @@ export default async function DashboardPage() {
             </div>
           </section>
         )}
+
+        {/* AI Ask Box — below the fold */}
+        <section className="pb-8">
+          <SectionLabel label="Ask AI" />
+          <AskBox />
+        </section>
       </main>
     </div>
   );

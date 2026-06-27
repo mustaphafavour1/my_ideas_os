@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/Button';
 import { TransmuteModal } from './TransmuteModal';
 import { SaveSignalModal } from './SaveSignalModal';
 import { toast } from 'sonner';
+import Link from 'next/link';
 
 const STATUSES: IdeaStatus[] = [
   'captured', 'lightly_researched', 'prototyping', 'validated',
@@ -29,6 +30,61 @@ const GRADE_LABELS = [
   { key: 'grade_market_potential', label: 'Market Potential' },
   { key: 'grade_urgency', label: 'Urgency' },
 ];
+
+function StatusDropdown({ idea, onUpdate }: { idea: Idea; onUpdate: (s: IdeaStatus) => void }) {
+  const [open, setOpen] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  const handlePick = async (s: IdeaStatus) => {
+    if (s === idea.status) { setOpen(false); return; }
+    setSaving(true);
+    setOpen(false);
+    try {
+      const res = await fetch(`/api/ideas/${idea.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: s }),
+      });
+      if (res.ok) {
+        onUpdate(s);
+        toast.success(`Status → ${s.replace(/_/g, ' ')}`);
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        disabled={saving}
+        className="flex items-center gap-1.5 rounded-lg px-2 py-1 hover:bg-[#1A1A28] transition-colors disabled:opacity-40"
+      >
+        <StatusChip status={idea.status} />
+        <svg className="w-2.5 h-2.5 text-[#2A2A40] transition-colors" viewBox="0 0 8 8" fill="currentColor">
+          <path d="M4 5.5L1 2.5h6L4 5.5z" />
+        </svg>
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute z-50 top-full left-0 mt-1 min-w-[160px] bg-[#111118] border border-[#1E1E2E] rounded-xl overflow-hidden shadow-2xl">
+            {STATUSES.map((s) => (
+              <button
+                key={s}
+                onClick={() => handlePick(s)}
+                className={`w-full flex items-center gap-2 px-3 py-2 text-left hover:bg-[#1A1A25] transition-colors ${s === idea.status ? 'opacity-30 pointer-events-none' : ''}`}
+              >
+                <StatusChip status={s} size="sm" />
+              </button>
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
 
 function computeHighlights(idea: Idea) {
   const pros: string[] = [];
@@ -92,23 +148,16 @@ export function IdeaDetail({ initialIdea }: IdeaDetailProps) {
     }
   };
 
-  const quickStatus = async (status: IdeaStatus) => {
+  const archiveIdea = async () => {
     const res = await fetch(`/api/ideas/${idea.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ status }),
+      body: JSON.stringify({ status: 'archived' }),
     });
     if (res.ok) {
-      const updated = await res.json();
-      setIdea(updated);
-      setForm(updated);
-      toast.success(`Status → ${status.replace(/_/g, ' ')}`);
+      toast.success('Archived');
+      router.push('/ideas');
     }
-  };
-
-  const archiveIdea = async () => {
-    await quickStatus('archived');
-    router.push('/ideas');
   };
 
   const askAboutIdea = async () => {
@@ -135,23 +184,18 @@ export function IdeaDetail({ initialIdea }: IdeaDetailProps) {
     const grades = GRADE_LABELS.map((g) => [g.label, idea[g.key as keyof Idea]]);
     const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${idea.title}</title>
 <style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Georgia,serif;color:#1a1a2e;max-width:720px;margin:40px auto;padding:0 24px;line-height:1.6}h1{font-size:26px;font-weight:700;margin-bottom:6px}.meta{font-size:12px;color:#666;font-family:monospace;margin-bottom:32px;display:flex;gap:16px;flex-wrap:wrap}.badge{background:#f0f0f5;padding:2px 8px;border-radius:4px}h2{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#888;margin:28px 0 10px;border-top:1px solid #e8e8f0;padding-top:16px}p,li{font-size:14px;color:#333}ul{padding-left:20px}li{margin-bottom:4px}.grades{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:12px 0}.grade-item{background:#f8f8fc;border-radius:8px;padding:12px;text-align:center}.grade-val{font-size:22px;font-weight:700;color:#1a1a2e}.grade-label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-top:2px}.suggestion{background:#fffdf0;border-left:3px solid #f7c948;padding:12px 16px;border-radius:0 8px 8px 0;font-size:13px;color:#555}.footer{margin-top:40px;font-size:11px;color:#aaa;font-family:monospace;border-top:1px solid #e8e8f0;padding-top:16px}</style>
-</head><body>
-<h1>${idea.title}</h1>
-<div class="meta">
+</head><body><h1>${idea.title}</h1><div class="meta">
 ${idea.status ? `<span class="badge">${idea.status.replace(/_/g, ' ')}</span>` : ''}
 ${idea.idea_type ? `<span class="badge">${idea.idea_type.replace(/_/g, ' ')}</span>` : ''}
 ${idea.sector ? `<span class="badge">${idea.sector}</span>` : ''}
-<span>Overall Grade: ${idea.grade_overall ?? '—'}/5</span>
-</div>
+<span>Overall Grade: ${idea.grade_overall ?? '—'}/5</span></div>
 ${idea.description ? `<h2>Description</h2><p>${idea.description}</p>` : ''}
-<h2>Grades</h2>
-<div class="grades">${grades.map(([l, v]) => `<div class="grade-item"><div class="grade-val">${v ?? '—'}</div><div class="grade-label">${l}</div></div>`).join('')}</div>
+<h2>Grades</h2><div class="grades">${grades.map(([l, v]) => `<div class="grade-item"><div class="grade-val">${v ?? '—'}</div><div class="grade-label">${l}</div></div>`).join('')}</div>
 ${(idea.next_steps?.length ?? 0) > 0 ? `<h2>Next Steps</h2><ul>${idea.next_steps.map(s => `<li>${s}</li>`).join('')}</ul>` : ''}
 ${(idea.blockers?.length ?? 0) > 0 ? `<h2>Blockers</h2><ul>${idea.blockers.map(b => `<li>${b}</li>`).join('')}</ul>` : ''}
 ${idea.ai_suggestions ? `<h2>AI Suggestion</h2><div class="suggestion">${idea.ai_suggestions}</div>` : ''}
 <div class="footer">Idea OS · ${new Date().toLocaleDateString('en-GB', { dateStyle: 'full' })}</div>
-<script>window.onload=()=>window.print();</script>
-</body></html>`;
+<script>window.onload=()=>window.print();</script></body></html>`;
     const w = window.open('', '_blank');
     if (w) { w.document.write(html); w.document.close(); }
   };
@@ -195,9 +239,16 @@ ${idea.ai_suggestions ? `<h2>AI Suggestion</h2><div class="suggestion">${idea.ai
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 p-4 lg:p-8 max-w-6xl mx-auto w-full">
           {/* Main column */}
           <div className="space-y-5">
-            {/* Header card */}
+            {/* Breadcrumbs */}
+            <nav className="flex items-center gap-1 text-[10px] font-mono">
+              <Link href="/ideas" className="text-[#3A3A55] hover:text-[#6A6A80] transition-colors">Ideas</Link>
+              <span className="text-[#252540] mx-0.5">/</span>
+              <span className="text-[#5E5E7A] truncate max-w-[200px]">{idea.title}</span>
+            </nav>
+
+            {/* Header card — title + status + description + metadata */}
             <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-6">
-              <div className="flex items-start justify-between gap-4 mb-5">
+              <div className="flex items-start justify-between gap-4 mb-4">
                 {editing ? (
                   <input
                     className={`${inputClass} text-[15px] font-semibold flex-1`}
@@ -227,7 +278,8 @@ ${idea.ai_suggestions ? `<h2>AI Suggestion</h2><div class="suggestion">${idea.ai
                 </div>
               </div>
 
-              <div className="flex flex-wrap gap-2 mb-5">
+              {/* Status inline + type badges */}
+              <div className="flex flex-wrap items-center gap-2 mb-5">
                 {editing ? (
                   <>
                     <select
@@ -249,12 +301,30 @@ ${idea.ai_suggestions ? `<h2>AI Suggestion</h2><div class="suggestion">${idea.ai
                 ) : (
                   <>
                     {idea.idea_type && <Badge type={idea.idea_type} />}
-                    <StatusChip status={idea.status} />
+                    <StatusDropdown idea={idea} onUpdate={(s) => setIdea((i) => ({ ...i, status: s }))} />
                   </>
                 )}
               </div>
 
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-[11px] font-mono">
+              {/* Description inside header card */}
+              <div className="mb-5">
+                {editing ? (
+                  <textarea
+                    rows={3}
+                    value={form.description || ''}
+                    onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
+                    className={`${inputClass} resize-none`}
+                    placeholder="Describe the idea…"
+                  />
+                ) : (
+                  <p className="text-[13px] text-[#7A7A90] leading-relaxed">
+                    {idea.description || <span className="text-[#3A3A55] italic">No description yet.</span>}
+                  </p>
+                )}
+              </div>
+
+              {/* Metadata grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 text-[11px] font-mono pt-4 border-t border-[#1A1A28]">
                 {[
                   { label: 'Sector', value: idea.sector, editing: true, field: 'sector' },
                   { label: 'Source', value: idea.source_type?.replace(/_/g, ' ') || '—' },
@@ -274,6 +344,41 @@ ${idea.ai_suggestions ? `<h2>AI Suggestion</h2><div class="suggestion">${idea.ai
                     )}
                   </div>
                 ))}
+              </div>
+            </div>
+
+            {/* Ask about this idea — directly below header */}
+            <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-5">
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-[#F7C948]">✦</span>
+                <h2 className="text-[10px] font-mono text-[#4A4A60] uppercase tracking-widest">Ask about this idea</h2>
+              </div>
+              {askResponse && (
+                <div className="bg-[#0D0D18] border border-[#1A1A28] rounded-xl p-4 mb-3 relative">
+                  <button onClick={() => setAskResponse(null)} className="absolute top-3 right-3 text-[#3A3A55] hover:text-[#5E5E7A] text-[10px]">✕</button>
+                  <p className="text-[12px] text-[#8888A0] leading-relaxed whitespace-pre-wrap pr-4">{askResponse}</p>
+                </div>
+              )}
+              {askLoading && (
+                <div className="flex items-center gap-2 py-2 mb-2">
+                  <div className="flex gap-1">
+                    {[0, 1, 2].map((i) => (
+                      <div key={i} className="w-1.5 h-1.5 rounded-full bg-[#F7C948]/50 animate-bounce" style={{ animationDelay: `${i * 0.15}s` }} />
+                    ))}
+                  </div>
+                  <span className="text-[11px] font-mono text-[#3A3A55]">thinking…</span>
+                </div>
+              )}
+              <div className="flex gap-2">
+                <input
+                  value={askInput}
+                  onChange={(e) => setAskInput(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && !askLoading && askAboutIdea()}
+                  placeholder="What's the fastest way to validate this?…"
+                  disabled={askLoading}
+                  className={`${inputClass} flex-1`}
+                />
+                <Button size="sm" loading={askLoading} onClick={askAboutIdea} disabled={!askInput.trim()}>Ask</Button>
               </div>
             </div>
 
@@ -308,55 +413,6 @@ ${idea.ai_suggestions ? `<h2>AI Suggestion</h2><div class="suggestion">${idea.ai
                 )}
               </div>
             )}
-
-            {/* Description */}
-            <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-6">
-              <h2 className="text-[10px] font-mono text-[#4A4A60] uppercase tracking-widest mb-3">Description</h2>
-              {editing ? (
-                <textarea
-                  rows={4}
-                  value={form.description || ''}
-                  onChange={(e) => setForm((f) => ({ ...f, description: e.target.value }))}
-                  className={`${inputClass} resize-none`}
-                  placeholder="Describe the idea…"
-                />
-              ) : (
-                <p className="text-[13px] text-[#7A7A90] leading-relaxed">
-                  {idea.description || 'No description yet.'}
-                </p>
-              )}
-            </div>
-
-            {/* Grades */}
-            <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-6">
-              <h2 className="text-[10px] font-mono text-[#4A4A60] uppercase tracking-widest mb-5">Grade Breakdown</h2>
-              <div className="flex flex-wrap gap-6 items-end justify-around">
-                <div className="flex flex-col items-center gap-2">
-                  <GradeRing grade={idea.grade_overall} size="lg" />
-                  <span className="text-[9px] font-mono text-[#3A3A55] uppercase tracking-widest">Overall</span>
-                </div>
-                {GRADE_LABELS.map((g) => {
-                  const val = idea[g.key as keyof Idea] as number | null;
-                  return (
-                    <div key={g.key} className="flex flex-col items-center gap-2">
-                      {editing ? (
-                        <select
-                          value={String(form[g.key as keyof typeof form] || '')}
-                          onChange={(e) => setForm((f) => ({ ...f, [g.key]: e.target.value ? parseInt(e.target.value) : null }))}
-                          className="w-14 text-center bg-[#0A0A0F] border border-[#1E1E2E] rounded text-[11px] text-[#F0F0F5] py-1"
-                        >
-                          <option value="">—</option>
-                          {[1,2,3,4,5].map(n => <option key={n} value={n}>{n}</option>)}
-                        </select>
-                      ) : (
-                        <GradeRing grade={val} size="md" />
-                      )}
-                      <span className="text-[9px] font-mono text-[#3A3A55] uppercase tracking-widest text-center">{g.label}</span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
 
             {/* Next Steps */}
             <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-6">
@@ -420,31 +476,6 @@ ${idea.ai_suggestions ? `<h2>AI Suggestion</h2><div class="suggestion">${idea.ai
               )}
             </div>
 
-            {/* Ask about this idea */}
-            <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-6">
-              <div className="flex items-center gap-2 mb-4">
-                <span className="text-[#F7C948]">✦</span>
-                <h2 className="text-[10px] font-mono text-[#4A4A60] uppercase tracking-widest">Ask about this idea</h2>
-              </div>
-              {askResponse && (
-                <div className="bg-[#0D0D18] border border-[#1A1A28] rounded-xl p-4 mb-4 relative">
-                  <button onClick={() => setAskResponse(null)} className="absolute top-3 right-3 text-[#3A3A55] hover:text-[#5E5E7A] text-[10px]">✕</button>
-                  <p className="text-[12px] text-[#8888A0] leading-relaxed whitespace-pre-wrap pr-4">{askResponse}</p>
-                </div>
-              )}
-              <div className="flex gap-2">
-                <input
-                  value={askInput}
-                  onChange={(e) => setAskInput(e.target.value)}
-                  onKeyDown={(e) => e.key === 'Enter' && !askLoading && askAboutIdea()}
-                  placeholder="What's the fastest way to validate this? What should I do first?…"
-                  disabled={askLoading}
-                  className={`${inputClass} flex-1`}
-                />
-                <Button size="sm" loading={askLoading} onClick={askAboutIdea} disabled={!askInput.trim()}>Ask</Button>
-              </div>
-            </div>
-
             {/* Tags */}
             {idea.tags && idea.tags.length > 0 && (
               <div className="flex flex-wrap gap-2">
@@ -466,6 +497,52 @@ ${idea.ai_suggestions ? `<h2>AI Suggestion</h2><div class="suggestion">${idea.ai
               </p>
             </div>
 
+            {/* Grade Breakdown — horizontal bars like By Type chart */}
+            <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-[10px] font-mono text-[#4A4A60] uppercase tracking-widest">Grade Breakdown</h3>
+                <div className="flex items-center gap-1.5">
+                  <GradeRing grade={idea.grade_overall} size="sm" />
+                  <span className="text-[10px] font-mono text-[#3A3A55]">overall</span>
+                </div>
+              </div>
+              <div className="space-y-3">
+                {GRADE_LABELS.map((g) => {
+                  const val = idea[g.key as keyof Idea] as number | null;
+                  return (
+                    <div key={g.key}>
+                      <div className="flex justify-between items-baseline mb-1.5">
+                        <span className="text-[10px] font-mono text-[#6A6A80]">{g.label}</span>
+                        {editing ? (
+                          <select
+                            value={String(form[g.key as keyof typeof form] || '')}
+                            onChange={(e) => setForm((f) => ({ ...f, [g.key]: e.target.value ? parseInt(e.target.value) : null }))}
+                            className="w-10 text-center bg-[#0A0A0F] border border-[#1E1E2E] rounded text-[10px] text-[#F0F0F5] py-0.5"
+                            onClick={(e) => e.stopPropagation()}
+                          >
+                            <option value="">—</option>
+                            {[1,2,3,4,5].map(n => <option key={n} value={n}>{n}</option>)}
+                          </select>
+                        ) : (
+                          <span className="text-[10px] font-mono text-[#4A4A60]">{val ?? '—'}</span>
+                        )}
+                      </div>
+                      <div className="h-[3px] bg-[#1A1A28] rounded-full overflow-hidden">
+                        <div
+                          className="h-full rounded-full"
+                          style={{
+                            width: val ? `${(val / 5) * 100}%` : '0%',
+                            background: 'linear-gradient(90deg, #F7C948 0%, rgba(247,201,72,0.4) 100%)',
+                            transition: 'width 0.5s ease',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
             {/* AI Next Steps */}
             {idea.ai_next_steps && idea.ai_next_steps.length > 0 && (
               <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-5">
@@ -480,28 +557,6 @@ ${idea.ai_suggestions ? `<h2>AI Suggestion</h2><div class="suggestion">${idea.ai
                 </ul>
               </div>
             )}
-
-            {/* Status */}
-            <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-5">
-              <h3 className="text-[10px] font-mono text-[#4A4A60] uppercase tracking-widest mb-3">Status</h3>
-              <div className="space-y-0.5">
-                {STATUSES.map((s) => (
-                  <button
-                    key={s}
-                    onClick={() => s !== idea.status && quickStatus(s)}
-                    disabled={s === idea.status}
-                    className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-left transition-colors ${
-                      s === idea.status ? 'bg-[#1A1A28] cursor-default' : 'hover:bg-[#141420] cursor-pointer'
-                    }`}
-                  >
-                    <StatusChip status={s} size="sm" />
-                    {s === idea.status && (
-                      <span className="ml-auto text-[9px] font-mono text-[#3A3A55] tracking-wide">current</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
 
             {/* Actions */}
             <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-5 space-y-2">

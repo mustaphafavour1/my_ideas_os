@@ -1,12 +1,11 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { Idea, IdeaStatus, IdeaType } from '@/lib/types';
 import { Badge } from '@/components/ui/Badge';
 import { StatusChip } from '@/components/ui/StatusChip';
 import { GradeRing } from '@/components/ui/GradeRing';
-import { Button } from '@/components/ui/Button';
 import { toast } from 'sonner';
 
 const STATUSES: IdeaStatus[] = [
@@ -83,67 +82,91 @@ function printReport(idea: Idea) {
     ['Urgency', idea.grade_urgency],
     ['Overall', idea.grade_overall],
   ];
-
-  const html = `<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8">
-<title>${idea.title}</title>
-<style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Georgia', serif; color: #1a1a2e; max-width: 720px; margin: 40px auto; padding: 0 24px; line-height: 1.6; }
-  h1 { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
-  .meta { font-size: 12px; color: #666; font-family: monospace; margin-bottom: 32px; display: flex; gap: 16px; flex-wrap: wrap; }
-  .badge { background: #f0f0f5; padding: 2px 8px; border-radius: 4px; }
-  h2 { font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.08em; color: #888; margin: 28px 0 10px; border-top: 1px solid #e8e8f0; padding-top: 16px; }
-  p, li { font-size: 14px; color: #333; }
-  ul { padding-left: 20px; }
-  li { margin-bottom: 4px; }
-  .grades { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin: 12px 0; }
-  .grade-item { background: #f8f8fc; border-radius: 8px; padding: 12px; text-align: center; }
-  .grade-val { font-size: 22px; font-weight: 700; color: #1a1a2e; }
-  .grade-label { font-size: 10px; text-transform: uppercase; letter-spacing: 0.08em; color: #888; margin-top: 2px; }
-  .suggestion { background: #fffdf0; border-left: 3px solid #f7c948; padding: 12px 16px; border-radius: 0 8px 8px 0; font-size: 13px; color: #555; }
-  .footer { margin-top: 40px; font-size: 11px; color: #aaa; font-family: monospace; border-top: 1px solid #e8e8f0; padding-top: 16px; }
-</style>
-</head>
-<body>
-<h1>${idea.title}</h1>
-<div class="meta">
-  ${idea.status ? `<span class="badge">${idea.status.replace(/_/g, ' ')}</span>` : ''}
-  ${idea.idea_type ? `<span class="badge">${idea.idea_type.replace(/_/g, ' ')}</span>` : ''}
-  ${idea.sector ? `<span class="badge">${idea.sector}</span>` : ''}
-  <span>Grade: ${idea.grade_overall ?? '—'}/5</span>
-</div>
-
+  const html = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>${idea.title}</title>
+<style>*{box-sizing:border-box;margin:0;padding:0}body{font-family:Georgia,serif;color:#1a1a2e;max-width:720px;margin:40px auto;padding:0 24px;line-height:1.6}h1{font-size:26px;font-weight:700;margin-bottom:6px}.meta{font-size:12px;color:#666;font-family:monospace;margin-bottom:32px;display:flex;gap:16px;flex-wrap:wrap}.badge{background:#f0f0f5;padding:2px 8px;border-radius:4px}h2{font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.08em;color:#888;margin:28px 0 10px;border-top:1px solid #e8e8f0;padding-top:16px}p,li{font-size:14px;color:#333}ul{padding-left:20px}li{margin-bottom:4px}.grades{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:12px 0}.grade-item{background:#f8f8fc;border-radius:8px;padding:12px;text-align:center}.grade-val{font-size:22px;font-weight:700;color:#1a1a2e}.grade-label{font-size:10px;text-transform:uppercase;letter-spacing:.08em;color:#888;margin-top:2px}.suggestion{background:#fffdf0;border-left:3px solid #f7c948;padding:12px 16px;border-radius:0 8px 8px 0;font-size:13px;color:#555}.footer{margin-top:40px;font-size:11px;color:#aaa;font-family:monospace;border-top:1px solid #e8e8f0;padding-top:16px}</style>
+</head><body><h1>${idea.title}</h1><div class="meta">
+${idea.status ? `<span class="badge">${idea.status.replace(/_/g, ' ')}</span>` : ''}
+${idea.idea_type ? `<span class="badge">${idea.idea_type.replace(/_/g, ' ')}</span>` : ''}
+${idea.sector ? `<span class="badge">${idea.sector}</span>` : ''}
+<span>Overall Grade: ${idea.grade_overall ?? '—'}/5</span></div>
 ${idea.description ? `<h2>Description</h2><p>${idea.description}</p>` : ''}
-
-<h2>Grades</h2>
-<div class="grades">
-${grades.map(([l, v]) => `<div class="grade-item"><div class="grade-val">${v ?? '—'}</div><div class="grade-label">${l}</div></div>`).join('')}
-</div>
-
+<h2>Grades</h2><div class="grades">${grades.map(([l, v]) => `<div class="grade-item"><div class="grade-val">${v ?? '—'}</div><div class="grade-label">${l}</div></div>`).join('')}</div>
 ${(idea.next_steps?.length ?? 0) > 0 ? `<h2>Next Steps</h2><ul>${idea.next_steps.map(s => `<li>${s}</li>`).join('')}</ul>` : ''}
-
 ${(idea.blockers?.length ?? 0) > 0 ? `<h2>Blockers</h2><ul>${idea.blockers.map(b => `<li>${b}</li>`).join('')}</ul>` : ''}
-
 ${idea.ai_suggestions ? `<h2>AI Suggestion</h2><div class="suggestion">${idea.ai_suggestions}</div>` : ''}
-
-<div class="footer">Idea OS · Generated ${new Date().toLocaleDateString('en-GB', { dateStyle: 'full' })}</div>
-<script>window.onload=()=>{ window.print(); }</script>
-</body>
-</html>`;
-
+<div class="footer">Idea OS · ${new Date().toLocaleDateString('en-GB', { dateStyle: 'full' })}</div>
+<script>window.onload=()=>window.print();</script></body></html>`;
   const w = window.open('', '_blank');
   if (w) { w.document.write(html); w.document.close(); }
 }
 
-interface IdeaTableProps {
-  ideas: Idea[];
-  onAddIdea?: () => void;
+function ActionsMenu({ idea, onArchive }: { idea: Idea; onArchive: () => void }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!open) return;
+    const handler = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative" onClick={(e) => e.stopPropagation()}>
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-7 h-7 flex items-center justify-center rounded-lg text-[#3A3A55] hover:text-[#8888A0] hover:bg-[#1A1A28] transition-colors"
+        title="Actions"
+      >
+        <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+          <circle cx="12" cy="5" r="1.5" />
+          <circle cx="12" cy="12" r="1.5" />
+          <circle cx="12" cy="19" r="1.5" />
+        </svg>
+      </button>
+      {open && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setOpen(false)} />
+          <div className="absolute z-50 right-0 top-full mt-1 w-40 bg-[#111118] border border-[#1E1E2E] rounded-xl overflow-hidden shadow-2xl">
+            <button
+              onClick={() => { setOpen(false); printReport(idea); }}
+              className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[11px] text-[#8888A0] hover:bg-[#1A1A25] hover:text-[#D0D0DA] transition-colors"
+            >
+              <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+              </svg>
+              Export PDF
+            </button>
+            {idea.status !== 'archived' && (
+              <button
+                onClick={() => { setOpen(false); onArchive(); }}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-left text-[11px] text-[#C06830] hover:bg-[#1A1A25] transition-colors"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                </svg>
+                Archive
+              </button>
+            )}
+          </div>
+        </>
+      )}
+    </div>
+  );
 }
 
-export function IdeaTable({ ideas: initialIdeas, onAddIdea }: IdeaTableProps) {
+function fmtDate(d: string | null | undefined) {
+  if (!d) return '—';
+  return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' });
+}
+
+interface IdeaTableProps {
+  ideas: Idea[];
+}
+
+export function IdeaTable({ ideas: initialIdeas }: IdeaTableProps) {
   const router = useRouter();
   const [ideas, setIdeas] = useState<Idea[]>(initialIdeas);
   const [search, setSearch] = useState('');
@@ -156,8 +179,7 @@ export function IdeaTable({ ideas: initialIdeas, onAddIdea }: IdeaTableProps) {
     setIdeas((prev) => prev.map((i) => i.id === ideaId ? { ...i, status: newStatus } : i));
   };
 
-  const handleArchive = async (e: React.MouseEvent, idea: Idea) => {
-    e.stopPropagation();
+  const handleArchive = async (idea: Idea) => {
     const res = await fetch(`/api/ideas/${idea.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -198,7 +220,7 @@ export function IdeaTable({ ideas: initialIdeas, onAddIdea }: IdeaTableProps) {
   );
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       {/* Filters */}
       <div className="flex flex-wrap gap-2 items-center">
         <input
@@ -225,16 +247,13 @@ export function IdeaTable({ ideas: initialIdeas, onAddIdea }: IdeaTableProps) {
           {TYPES.map((t) => <option key={t} value={t}>{t.replace(/_/g, ' ')}</option>)}
         </select>
         <span className="text-[10px] text-[#3A3A55] font-mono ml-auto">
-          {filtered.length} idea{filtered.length !== 1 ? 's' : ''}
+          {filtered.length} of {ideas.length}
         </span>
-        {onAddIdea && (
-          <Button size="sm" onClick={onAddIdea}>+ Add Idea</Button>
-        )}
       </div>
 
       {/* Table — always horizontally scrollable */}
       <div className="overflow-x-auto rounded-xl border border-[#1E1E2E]">
-        <table className="w-full" style={{ minWidth: '900px' }}>
+        <table className="w-full" style={{ minWidth: '980px' }}>
           <thead>
             <tr className="border-b border-[#1E1E2E] bg-[#0D0D14]">
               <th
@@ -245,24 +264,26 @@ export function IdeaTable({ ideas: initialIdeas, onAddIdea }: IdeaTableProps) {
                 Title <SortIcon k="title" />
               </th>
               <th className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest whitespace-nowrap" style={{ minWidth: '110px' }}>Type</th>
-              <th className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest whitespace-nowrap" style={{ minWidth: '110px' }}>Sector</th>
+              <th className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest whitespace-nowrap" style={{ minWidth: '100px' }}>Sector</th>
               <th className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest whitespace-nowrap" style={{ minWidth: '140px' }}>Status</th>
               <th
                 className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest cursor-pointer hover:text-[#6A6A80] transition-colors whitespace-nowrap"
-                style={{ minWidth: '80px' }}
+                style={{ minWidth: '70px' }}
                 onClick={() => toggleSort('grade_overall')}
               >
                 Grade <SortIcon k="grade_overall" />
               </th>
-              <th className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest whitespace-nowrap" style={{ minWidth: '60px' }}>Steps</th>
+              <th className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest whitespace-nowrap" style={{ minWidth: '100px' }}>
+                Work Began
+              </th>
               <th
                 className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest cursor-pointer hover:text-[#6A6A80] transition-colors whitespace-nowrap"
-                style={{ minWidth: '100px' }}
+                style={{ minWidth: '110px' }}
                 onClick={() => toggleSort('updated_at')}
               >
-                Updated <SortIcon k="updated_at" />
+                Last Worked <SortIcon k="updated_at" />
               </th>
-              <th className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest whitespace-nowrap" style={{ minWidth: '100px' }}>Actions</th>
+              <th className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest whitespace-nowrap" style={{ minWidth: '60px' }}></th>
             </tr>
           </thead>
           <tbody>
@@ -279,7 +300,7 @@ export function IdeaTable({ ideas: initialIdeas, onAddIdea }: IdeaTableProps) {
                   className="border-b border-[#1E1E2E]/50 hover:bg-[#0F0F18] cursor-pointer transition-colors"
                   onClick={() => router.push(`/ideas/${idea.id}`)}
                 >
-                  <td className="px-5 py-3.5">
+                  <td className="px-5 py-4">
                     <span className="text-[12px] text-[#E0E0EA] font-medium whitespace-nowrap overflow-hidden text-ellipsis block max-w-[240px]">{idea.title}</span>
                     {idea.description && (
                       <span className="text-[10px] text-[#3A3A55] font-mono whitespace-nowrap overflow-hidden text-ellipsis block max-w-[240px]">
@@ -287,56 +308,26 @@ export function IdeaTable({ ideas: initialIdeas, onAddIdea }: IdeaTableProps) {
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-3.5 whitespace-nowrap">
+                  <td className="px-4 py-4 whitespace-nowrap">
                     {idea.idea_type ? <Badge type={idea.idea_type} size="sm" /> : <span className="text-[#2A2A40] text-[11px] font-mono">—</span>}
                   </td>
-                  <td className="px-4 py-3.5 whitespace-nowrap">
+                  <td className="px-4 py-4 whitespace-nowrap">
                     <span className="text-[11px] text-[#5E5E7A] font-mono capitalize">{idea.sector || '—'}</span>
                   </td>
-                  <td className="px-4 py-3.5 whitespace-nowrap">
+                  <td className="px-4 py-4 whitespace-nowrap">
                     <StatusSelect ideaId={idea.id} status={idea.status} onUpdate={(s) => handleStatusUpdate(idea.id, s)} />
                   </td>
-                  <td className="px-4 py-3.5 whitespace-nowrap">
+                  <td className="px-4 py-4 whitespace-nowrap">
                     <GradeRing grade={idea.grade_overall} size="sm" />
                   </td>
-                  <td className="px-4 py-3.5 whitespace-nowrap">
-                    <span className="text-[11px] font-mono text-[#5E5E7A]">{idea.next_steps?.length ?? 0}</span>
-                    {(idea.blockers?.length ?? 0) > 0 && (
-                      <span className="ml-1.5 text-[10px] font-mono text-[#C06830]">
-                        {idea.blockers.length}✕
-                      </span>
-                    )}
+                  <td className="px-4 py-4 whitespace-nowrap">
+                    <span className="text-[10px] font-mono text-[#3A3A55]">{fmtDate(idea.chat_date)}</span>
                   </td>
-                  <td className="px-4 py-3.5 whitespace-nowrap">
-                    <span className="text-[10px] font-mono text-[#3A3A55]">
-                      {new Date(idea.updated_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}
-                    </span>
+                  <td className="px-4 py-4 whitespace-nowrap">
+                    <span className="text-[10px] font-mono text-[#3A3A55]">{fmtDate(idea.updated_at)}</span>
                   </td>
-                  <td className="px-4 py-3.5 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center gap-1.5">
-                      {/* Download PDF */}
-                      <button
-                        onClick={(e) => { e.stopPropagation(); printReport(idea); }}
-                        title="Download report"
-                        className="w-7 h-7 flex items-center justify-center rounded-lg text-[#3A3A55] hover:text-[#8888A0] hover:bg-[#1A1A28] transition-colors"
-                      >
-                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                        </svg>
-                      </button>
-                      {/* Archive */}
-                      {idea.status !== 'archived' && (
-                        <button
-                          onClick={(e) => handleArchive(e, idea)}
-                          title="Archive idea"
-                          className="w-7 h-7 flex items-center justify-center rounded-lg text-[#3A3A55] hover:text-[#C06830] hover:bg-[#1A1A28] transition-colors"
-                        >
-                          <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
-                          </svg>
-                        </button>
-                      )}
-                    </div>
+                  <td className="px-4 py-4 whitespace-nowrap">
+                    <ActionsMenu idea={idea} onArchive={() => handleArchive(idea)} />
                   </td>
                 </tr>
               ))

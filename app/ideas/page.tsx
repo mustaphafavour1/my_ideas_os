@@ -29,9 +29,27 @@ export default function IdeasPage() {
 
   return (
     <div className="flex flex-col flex-1">
-      <TopBar title="Ideas" subtitle={loading ? '…' : `${ideas.length} total`} />
+      <TopBar title="Ideas" />
 
       <main className="flex-1 px-4 lg:px-8 py-6 max-w-6xl mx-auto w-full">
+        {/* Count header outside TopBar */}
+        <div className="flex items-baseline justify-between mb-6">
+          <div>
+            <h2 className="text-[22px] font-bold text-[#E8E8F0] leading-none">
+              {loading ? '—' : ideas.length}
+            </h2>
+            <p className="text-[11px] font-mono text-[#3A3A55] mt-1">
+              {loading ? 'Loading…' : `idea${ideas.length !== 1 ? 's' : ''} total`}
+            </p>
+          </div>
+          <button
+            onClick={() => setShowAdd(true)}
+            className="px-4 py-2 bg-[#F7C948] text-[#0A0A0F] text-[12px] font-semibold rounded-lg hover:bg-[#E6B830] transition-colors"
+          >
+            + New Idea
+          </button>
+        </div>
+
         <AnimatePresence mode="wait">
           {loading ? (
             <motion.div key="skeleton" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="space-y-3">
@@ -41,7 +59,6 @@ export default function IdeasPage() {
             <motion.div key="table" initial={{ opacity: 0 }} animate={{ opacity: 1 }}>
               <IdeaTable
                 ideas={ideas}
-                onAddIdea={() => setShowAdd(true)}
               />
             </motion.div>
           )}

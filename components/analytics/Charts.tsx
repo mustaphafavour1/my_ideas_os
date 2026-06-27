@@ -3,6 +3,7 @@
 import {
   AreaChart, Area,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  PieChart, Pie, Cell,
 } from 'recharts';
 import { Idea } from '@/lib/types';
 
@@ -54,38 +55,71 @@ export function IdeasByTypeChart({ ideas }: ChartsProps) {
   );
 }
 
+// Status order + graduated color from muted to full yellow
+const STATUS_ORDER = ['captured', 'lightly_researched', 'prototyping', 'validated', 'in_progress', 'paused', 'completed', 'archived'];
+const STATUS_COLORS = [
+  '#2A2A3A', // captured — most muted
+  '#3A3A50',
+  '#4A4060',
+  '#5A5040',
+  '#8A7030',
+  '#B09028', // paused
+  '#D4AE20', // completed
+  '#F7C948', // full yellow
+];
+
 export function IdeasByStatusChart({ ideas }: ChartsProps) {
-  const ORDER = ['captured', 'lightly_researched', 'prototyping', 'validated', 'in_progress', 'paused', 'completed', 'archived'];
   const counts: Record<string, number> = {};
   ideas.forEach((i) => { counts[i.status] = (counts[i.status] || 0) + 1; });
-  const data = ORDER.filter((s) => counts[s]).map((s) => ({
-    name: s.replace(/_/g, ' '),
-    count: counts[s] || 0,
-  }));
+  const data = STATUS_ORDER
+    .filter((s) => counts[s])
+    .map((s, idx) => ({
+      name: s.replace(/_/g, ' '),
+      value: counts[s] || 0,
+      color: STATUS_COLORS[STATUS_ORDER.indexOf(s)] || '#F7C948',
+    }));
 
   if (data.length === 0) return <EmptyChart label="No status data yet" />;
 
   return (
-    <ResponsiveContainer width="100%" height={220}>
-      <BarChart data={data} layout="vertical" margin={{ left: 8, right: 16 }}>
-        <CartesianGrid strokeDasharray="2 4" stroke="#1A1A28" horizontal={false} />
-        <XAxis type="number" tick={{ fill: '#3A3A55', fontSize: 10 }} tickLine={false} axisLine={false} />
-        <YAxis
-          dataKey="name"
-          type="category"
-          tick={{ fill: '#6A6A80', fontSize: 10 }}
-          width={100}
-          tickLine={false}
-          axisLine={false}
-        />
-        <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(247,201,72,0.04)' }} />
-        <Bar dataKey="count" fill="#F7C948" radius={[0, 3, 3, 0]} opacity={0.85} />
-      </BarChart>
-    </ResponsiveContainer>
+    <div className="flex flex-col items-center gap-4">
+      <ResponsiveContainer width="100%" height={200}>
+        <PieChart>
+          <Pie
+            data={data}
+            cx="50%"
+            cy="50%"
+            innerRadius={55}
+            outerRadius={85}
+            paddingAngle={2}
+            dataKey="value"
+          >
+            {data.map((entry, index) => (
+              <Cell key={`cell-${index}`} fill={entry.color} />
+            ))}
+          </Pie>
+          <Tooltip contentStyle={TOOLTIP_STYLE} />
+        </PieChart>
+      </ResponsiveContainer>
+      <div className="flex flex-wrap gap-x-4 gap-y-1.5 justify-center">
+        {data.map((entry) => (
+          <div key={entry.name} className="flex items-center gap-1.5">
+            <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
+            <span className="text-[10px] font-mono text-[#5E5E7A] capitalize">{entry.name}</span>
+            <span className="text-[10px] font-mono text-[#3A3A55]">{entry.value}</span>
+          </div>
+        ))}
+      </div>
+    </div>
   );
 }
 
 export function GradeDistributionChart({ ideas }: ChartsProps) {
+  const graded = ideas.filter((i) => i.grade_overall !== null);
+  const maxVal = Math.max(graded.length, 1);
+  // Dynamic max: round up to nearest multiple of 4, minimum 8
+  const dataMax = Math.max(8, Math.ceil(maxVal / 4) * 4);
+
   const buckets = [
     { range: '1–2', min: 1, max: 2 },
     { range: '2–3', min: 2, max: 3 },
@@ -98,12 +132,22 @@ export function GradeDistributionChart({ ideas }: ChartsProps) {
     count: ideas.filter((i) => i.grade_overall !== null && i.grade_overall >= b.min && i.grade_overall < b.max).length,
   }));
 
+  // Generate ticks as multiples of 4 up to dataMax
+  const ticks: number[] = [];
+  for (let t = 0; t <= dataMax; t += 4) ticks.push(t);
+
   return (
-    <ResponsiveContainer width="100%" height={180}>
-      <BarChart data={data} margin={{ top: 4, bottom: 4 }}>
+    <ResponsiveContainer width="100%" height={200}>
+      <BarChart data={data} margin={{ top: 16, bottom: 4, left: 0, right: 8 }}>
         <CartesianGrid strokeDasharray="2 4" stroke="#1A1A28" vertical={false} />
         <XAxis dataKey="range" tick={{ fill: '#3A3A55', fontSize: 10 }} tickLine={false} axisLine={false} />
-        <YAxis tick={{ fill: '#3A3A55', fontSize: 10 }} tickLine={false} axisLine={false} />
+        <YAxis
+          tick={{ fill: '#3A3A55', fontSize: 10 }}
+          tickLine={false}
+          axisLine={false}
+          ticks={ticks}
+          domain={[0, dataMax]}
+        />
         <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(247,201,72,0.04)' }} />
         <Bar dataKey="count" fill="#F7C948" radius={[3, 3, 0, 0]} opacity={0.85} />
       </BarChart>
@@ -114,7 +158,6 @@ export function GradeDistributionChart({ ideas }: ChartsProps) {
 export function IdeasTimelineChart({ ideas }: ChartsProps) {
   const byMonth: Record<string, number> = {};
   ideas.forEach((i) => {
-    // Prefer the chat_date (actual conversation date) over created_at (upload date)
     const dateStr = i.chat_date || i.created_at;
     const d = new Date(dateStr);
     if (isNaN(d.getTime())) return;
@@ -192,6 +235,43 @@ export function CompletionRing({ ideas }: ChartsProps) {
         {inProgress > 0 && (
           <p className="text-[10px] text-[#F7C948]/60 font-mono">{inProgress} in progress</p>
         )}
+      </div>
+    </div>
+  );
+}
+
+export function AvgGradeRing({ ideas }: ChartsProps) {
+  const graded = ideas.filter((i) => i.grade_overall !== null);
+  const avg = graded.length > 0
+    ? graded.reduce((s, i) => s + (i.grade_overall ?? 0), 0) / graded.length
+    : 0;
+  const pct = (avg / 5) * 100;
+  const r = 52;
+  const c = 2 * Math.PI * r;
+  const dash = (pct / 100) * c;
+  const strokeColor = avg >= 4 ? '#3AB870' : avg >= 3 ? '#F7C948' : '#C06830';
+
+  return (
+    <div className="flex flex-col items-center gap-4">
+      <div className="relative" style={{ width: 130, height: 130 }}>
+        <svg width={130} height={130} style={{ transform: 'rotate(-90deg)' }}>
+          <circle cx={65} cy={65} r={r} fill="none" stroke="#1A1A28" strokeWidth={8} />
+          <circle
+            cx={65} cy={65} r={r} fill="none"
+            stroke={strokeColor}
+            strokeWidth={8}
+            strokeDasharray={`${dash} ${c}`}
+            strokeLinecap="round"
+            style={{ transition: 'stroke-dasharray 0.6s ease' }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-0.5">
+          <span className="text-[28px] font-bold text-[#F0F0F5] leading-none">{avg > 0 ? avg.toFixed(1) : '—'}</span>
+          <span className="text-[9px] font-mono text-[#3A3A55] tracking-widest uppercase">avg grade</span>
+        </div>
+      </div>
+      <div className="text-center">
+        <p className="text-[11px] text-[#4A4A60] font-mono">{graded.length} of {ideas.length} graded</p>
       </div>
     </div>
   );

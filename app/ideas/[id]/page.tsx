@@ -30,10 +30,6 @@ export default async function IdeaDetailPage({ params }: Props) {
       <TopBar
         title={idea.title}
         subtitle={`${idea.status.replace(/_/g, ' ')} · ${idea.sector || 'no sector'}`}
-        breadcrumbs={[
-          { label: 'Ideas', href: '/ideas' },
-          { label: idea.title },
-        ]}
       />
       <IdeaDetail initialIdea={idea} />
     </div>
