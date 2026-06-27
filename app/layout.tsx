@@ -16,8 +16,17 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full`}>
       <body className="h-full bg-[#0A0A0F] text-[#F0F0F5] antialiased">
+        {/* Premium ambient glow — bottom-right corner */}
+        <div
+          className="pointer-events-none fixed bottom-0 right-0 z-0"
+          style={{
+            width: '700px',
+            height: '500px',
+            background: 'radial-gradient(ellipse at 100% 100%, rgba(247,201,72,0.055) 0%, rgba(247,201,72,0.025) 35%, rgba(247,201,72,0.008) 60%, transparent 80%)',
+          }}
+        />
         <Sidebar />
-        <div className="lg:pl-[220px] pb-16 lg:pb-0 min-h-full flex flex-col">
+        <div className="lg:pl-[220px] pb-16 lg:pb-0 min-h-full flex flex-col relative z-10">
           {children}
         </div>
         <Toaster

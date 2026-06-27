@@ -157,9 +157,29 @@ function ActionsMenu({ idea, onArchive }: { idea: Idea; onArchive: () => void })
   );
 }
 
+interface ColumnVisibility {
+  type: boolean;
+  sector: boolean;
+  grade: boolean;
+  workBegan: boolean;
+  lastWorked: boolean;
+}
+
+const DEFAULT_COLS: ColumnVisibility = { type: true, sector: true, grade: true, workBegan: true, lastWorked: true };
+
 function fmtDate(d: string | null | undefined) {
   if (!d) return '—';
   return new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: '2-digit' });
+}
+
+function getPaginationPages(current: number, total: number): (number | '...')[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const pages: (number | '...')[] = [1];
+  if (current > 3) pages.push('...');
+  for (let p = Math.max(2, current - 1); p <= Math.min(total - 1, current + 1); p++) pages.push(p);
+  if (current < total - 2) pages.push('...');
+  pages.push(total);
+  return pages;
 }
 
 interface IdeaTableProps {
@@ -174,6 +194,21 @@ export function IdeaTable({ ideas: initialIdeas }: IdeaTableProps) {
   const [typeFilter, setTypeFilter] = useState<string>('');
   const [sortKey, setSortKey] = useState<'updated_at' | 'grade_overall' | 'title'>('updated_at');
   const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+  const [page, setPage] = useState(1);
+  const [perPage, setPerPage] = useState(10);
+  const [cols, setCols] = useState<ColumnVisibility>(DEFAULT_COLS);
+
+  useEffect(() => { setPage(1); }, [search, statusFilter, typeFilter, sortKey]);
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('ideas-os-settings');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (parsed.table?.columns) setCols((c) => ({ ...c, ...parsed.table.columns }));
+      }
+    } catch {}
+  }, []);
 
   const handleStatusUpdate = (ideaId: string, newStatus: IdeaStatus) => {
     setIdeas((prev) => prev.map((i) => i.id === ideaId ? { ...i, status: newStatus } : i));
@@ -207,6 +242,10 @@ export function IdeaTable({ ideas: initialIdeas }: IdeaTableProps) {
       const cmp = av < bv ? -1 : av > bv ? 1 : 0;
       return sortDir === 'asc' ? cmp : -cmp;
     });
+
+  const totalPages = Math.ceil(filtered.length / perPage);
+  const paginated = filtered.slice((page - 1) * perPage, page * perPage);
+  const colSpan = 4 + [cols.type, cols.sector, cols.grade, cols.workBegan, cols.lastWorked].filter(Boolean).length;
 
   const toggleSort = (key: typeof sortKey) => {
     if (sortKey === key) setSortDir((d) => d === 'asc' ? 'desc' : 'asc');
@@ -256,6 +295,7 @@ export function IdeaTable({ ideas: initialIdeas }: IdeaTableProps) {
         <table className="w-full" style={{ minWidth: '980px' }}>
           <thead>
             <tr className="border-b border-[#1E1E2E] bg-[#0D0D14]">
+              <th className="text-left px-5 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest whitespace-nowrap" style={{ width: '44px' }}>#</th>
               <th
                 className="text-left px-5 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest cursor-pointer hover:text-[#6A6A80] transition-colors whitespace-nowrap"
                 style={{ minWidth: '200px' }}
@@ -263,43 +303,46 @@ export function IdeaTable({ ideas: initialIdeas }: IdeaTableProps) {
               >
                 Title <SortIcon k="title" />
               </th>
-              <th className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest whitespace-nowrap" style={{ minWidth: '110px' }}>Type</th>
-              <th className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest whitespace-nowrap" style={{ minWidth: '100px' }}>Sector</th>
+              {cols.type      && <th className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest whitespace-nowrap" style={{ minWidth: '110px' }}>Type</th>}
+              {cols.sector    && <th className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest whitespace-nowrap" style={{ minWidth: '100px' }}>Sector</th>}
               <th className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest whitespace-nowrap" style={{ minWidth: '140px' }}>Status</th>
-              <th
-                className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest cursor-pointer hover:text-[#6A6A80] transition-colors whitespace-nowrap"
-                style={{ minWidth: '70px' }}
-                onClick={() => toggleSort('grade_overall')}
-              >
-                Grade <SortIcon k="grade_overall" />
-              </th>
-              <th className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest whitespace-nowrap" style={{ minWidth: '100px' }}>
-                Work Began
-              </th>
-              <th
-                className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest cursor-pointer hover:text-[#6A6A80] transition-colors whitespace-nowrap"
-                style={{ minWidth: '110px' }}
-                onClick={() => toggleSort('updated_at')}
-              >
-                Last Worked <SortIcon k="updated_at" />
-              </th>
+              {cols.grade     && (
+                <th
+                  className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest cursor-pointer hover:text-[#6A6A80] transition-colors whitespace-nowrap"
+                  style={{ minWidth: '70px' }}
+                  onClick={() => toggleSort('grade_overall')}
+                >
+                  Grade <SortIcon k="grade_overall" />
+                </th>
+              )}
+              {cols.workBegan  && <th className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest whitespace-nowrap" style={{ minWidth: '100px' }}>Work Began</th>}
+              {cols.lastWorked && (
+                <th
+                  className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest cursor-pointer hover:text-[#6A6A80] transition-colors whitespace-nowrap"
+                  style={{ minWidth: '110px' }}
+                  onClick={() => toggleSort('updated_at')}
+                >
+                  Last Worked <SortIcon k="updated_at" />
+                </th>
+              )}
               <th className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest whitespace-nowrap" style={{ minWidth: '60px' }}></th>
             </tr>
           </thead>
           <tbody>
             {filtered.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-5 py-16 text-center text-[#3A3A55] text-[11px] font-mono">
+                <td colSpan={colSpan} className="px-5 py-16 text-center text-[#3A3A55] text-[11px] font-mono">
                   {ideas.length === 0 ? 'No ideas yet — run a sync or add one manually' : 'No ideas match your filters'}
                 </td>
               </tr>
             ) : (
-              filtered.map((idea) => (
+              paginated.map((idea, idx) => (
                 <tr
                   key={idea.id}
                   className="border-b border-[#1E1E2E]/50 hover:bg-[#0F0F18] cursor-pointer transition-colors"
                   onClick={() => router.push(`/ideas/${idea.id}`)}
                 >
+                  <td className="px-5 py-4 text-[10px] font-mono text-[#3A3A55] tabular-nums">{(page - 1) * perPage + idx + 1}</td>
                   <td className="px-5 py-4">
                     <span className="text-[12px] text-[#E0E0EA] font-medium whitespace-nowrap overflow-hidden text-ellipsis block max-w-[240px]">{idea.title}</span>
                     {idea.description && (
@@ -308,24 +351,34 @@ export function IdeaTable({ ideas: initialIdeas }: IdeaTableProps) {
                       </span>
                     )}
                   </td>
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    {idea.idea_type ? <Badge type={idea.idea_type} size="sm" /> : <span className="text-[#2A2A40] text-[11px] font-mono">—</span>}
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <span className="text-[11px] text-[#5E5E7A] font-mono capitalize">{idea.sector || '—'}</span>
-                  </td>
+                  {cols.type && (
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      {idea.idea_type ? <Badge type={idea.idea_type} size="sm" /> : <span className="text-[#2A2A40] text-[11px] font-mono">—</span>}
+                    </td>
+                  )}
+                  {cols.sector && (
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <span className="text-[11px] text-[#5E5E7A] font-mono capitalize">{idea.sector || '—'}</span>
+                    </td>
+                  )}
                   <td className="px-4 py-4 whitespace-nowrap">
                     <StatusSelect ideaId={idea.id} status={idea.status} onUpdate={(s) => handleStatusUpdate(idea.id, s)} />
                   </td>
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <GradeRing grade={idea.grade_overall} size="sm" />
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <span className="text-[10px] font-mono text-[#3A3A55]">{fmtDate(idea.chat_date)}</span>
-                  </td>
-                  <td className="px-4 py-4 whitespace-nowrap">
-                    <span className="text-[10px] font-mono text-[#3A3A55]">{fmtDate(idea.updated_at)}</span>
-                  </td>
+                  {cols.grade && (
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <GradeRing grade={idea.grade_overall} size="sm" />
+                    </td>
+                  )}
+                  {cols.workBegan && (
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <span className="text-[10px] font-mono text-[#3A3A55]">{fmtDate(idea.chat_date)}</span>
+                    </td>
+                  )}
+                  {cols.lastWorked && (
+                    <td className="px-4 py-4 whitespace-nowrap">
+                      <span className="text-[10px] font-mono text-[#3A3A55]">{fmtDate(idea.updated_at)}</span>
+                    </td>
+                  )}
                   <td className="px-4 py-4 whitespace-nowrap">
                     <ActionsMenu idea={idea} onArchive={() => handleArchive(idea)} />
                   </td>
@@ -335,6 +388,59 @@ export function IdeaTable({ ideas: initialIdeas }: IdeaTableProps) {
           </tbody>
         </table>
       </div>
+
+      {/* Pagination */}
+      {filtered.length > 0 && (
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] text-[#3A3A55] font-mono">
+            {(page - 1) * perPage + 1}–{Math.min(page * perPage, filtered.length)} of {filtered.length}
+          </span>
+          <div className="flex items-center gap-3">
+            <select
+              value={perPage}
+              onChange={(e) => { setPerPage(Number(e.target.value)); setPage(1); }}
+              className="bg-[#111118] border border-[#1E1E2E] rounded-lg px-2 py-1.5 text-[11px] text-[#5E5E7A] focus:outline-none focus:border-[#F7C948]/30 cursor-pointer"
+            >
+              {[10, 20, 50].map((n) => <option key={n} value={n}>{n} per page</option>)}
+            </select>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg text-[#3A3A55] hover:text-[#8888A0] hover:bg-[#1A1A28] disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-[13px]"
+                >
+                  ←
+                </button>
+                {getPaginationPages(page, totalPages).map((p, i) =>
+                  p === '...' ? (
+                    <span key={`ellipsis-${i}`} className="w-7 h-7 flex items-center justify-center text-[11px] text-[#3A3A55]">…</span>
+                  ) : (
+                    <button
+                      key={p}
+                      onClick={() => setPage(p as number)}
+                      className={`w-7 h-7 flex items-center justify-center rounded-lg text-[11px] font-mono transition-colors ${
+                        p === page
+                          ? 'bg-[#F7C948]/10 text-[#F7C948] border border-[#F7C948]/20'
+                          : 'text-[#3A3A55] hover:text-[#8888A0] hover:bg-[#1A1A28]'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  )
+                )}
+                <button
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className="w-7 h-7 flex items-center justify-center rounded-lg text-[#3A3A55] hover:text-[#8888A0] hover:bg-[#1A1A28] disabled:opacity-30 disabled:cursor-not-allowed transition-colors text-[13px]"
+                >
+                  →
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

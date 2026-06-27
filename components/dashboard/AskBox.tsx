@@ -36,7 +36,7 @@ export function AskBox() {
   };
 
   return (
-    <div className="max-w-xl mx-auto w-full">
+    <div className="w-full">
       <div className="bg-[#111118] border border-[#1E1E2E] rounded-2xl overflow-hidden">
         <div className="px-6 pt-5 pb-4 border-b border-[#1A1A28] flex items-center gap-2">
           <span className="text-[#F7C948] text-sm">✦</span>

@@ -55,47 +55,48 @@ export function IdeasByTypeChart({ ideas }: ChartsProps) {
   );
 }
 
-// Status order + graduated color from muted to full yellow
+// Status pipeline order — graduated shades of yellow from darkest (captured) → full yellow (completed)
+// archived is kept dark since it's inactive
 const STATUS_ORDER = ['captured', 'lightly_researched', 'prototyping', 'validated', 'in_progress', 'paused', 'completed', 'archived'];
-const STATUS_COLORS = [
-  '#2A2A3A', // captured — most muted
-  '#3A3A50',
-  '#4A4060',
-  '#5A5040',
-  '#8A7030',
-  '#B09028', // paused
-  '#D4AE20', // completed
-  '#F7C948', // full yellow
-];
+const STATUS_COLORS: Record<string, string> = {
+  captured:            '#1E1600',
+  lightly_researched:  '#3C2C00',
+  prototyping:         '#5C4400',
+  validated:           '#7C5C00',
+  in_progress:         '#B88A00',
+  paused:              '#8A6800',
+  completed:           '#F7C948',
+  archived:            '#2C2200',
+};
 
 export function IdeasByStatusChart({ ideas }: ChartsProps) {
   const counts: Record<string, number> = {};
   ideas.forEach((i) => { counts[i.status] = (counts[i.status] || 0) + 1; });
   const data = STATUS_ORDER
     .filter((s) => counts[s])
-    .map((s, idx) => ({
+    .map((s) => ({
       name: s.replace(/_/g, ' '),
       value: counts[s] || 0,
-      color: STATUS_COLORS[STATUS_ORDER.indexOf(s)] || '#F7C948',
+      color: STATUS_COLORS[s] || '#F7C948',
     }));
 
   if (data.length === 0) return <EmptyChart label="No status data yet" />;
 
   return (
     <div className="flex flex-col items-center gap-4">
-      <ResponsiveContainer width="100%" height={200}>
+      <ResponsiveContainer width="100%" height={220}>
         <PieChart>
           <Pie
             data={data}
             cx="50%"
             cy="50%"
-            innerRadius={55}
-            outerRadius={85}
-            paddingAngle={2}
+            innerRadius={0}
+            outerRadius={95}
+            paddingAngle={1.5}
             dataKey="value"
           >
             {data.map((entry, index) => (
-              <Cell key={`cell-${index}`} fill={entry.color} />
+              <Cell key={`cell-${index}`} fill={entry.color} stroke="rgba(10,10,15,0.6)" strokeWidth={1} />
             ))}
           </Pie>
           <Tooltip contentStyle={TOOLTIP_STYLE} />
@@ -104,7 +105,7 @@ export function IdeasByStatusChart({ ideas }: ChartsProps) {
       <div className="flex flex-wrap gap-x-4 gap-y-1.5 justify-center">
         {data.map((entry) => (
           <div key={entry.name} className="flex items-center gap-1.5">
-            <div className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: entry.color }} />
+            <div className="w-2 h-2 rounded-sm shrink-0" style={{ backgroundColor: entry.color }} />
             <span className="text-[10px] font-mono text-[#5E5E7A] capitalize">{entry.name}</span>
             <span className="text-[10px] font-mono text-[#3A3A55]">{entry.value}</span>
           </div>
@@ -137,8 +138,8 @@ export function GradeDistributionChart({ ideas }: ChartsProps) {
   for (let t = 0; t <= dataMax; t += 4) ticks.push(t);
 
   return (
-    <ResponsiveContainer width="100%" height={200}>
-      <BarChart data={data} margin={{ top: 16, bottom: 4, left: 0, right: 8 }}>
+    <ResponsiveContainer width="100%" height={270}>
+      <BarChart data={data} margin={{ top: 12, bottom: 4, left: 4, right: 12 }}>
         <CartesianGrid strokeDasharray="2 4" stroke="#1A1A28" vertical={false} />
         <XAxis dataKey="range" tick={{ fill: '#3A3A55', fontSize: 10 }} tickLine={false} axisLine={false} />
         <YAxis
@@ -147,6 +148,7 @@ export function GradeDistributionChart({ ideas }: ChartsProps) {
           axisLine={false}
           ticks={ticks}
           domain={[0, dataMax]}
+          interval={0}
         />
         <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(247,201,72,0.04)' }} />
         <Bar dataKey="count" fill="#F7C948" radius={[3, 3, 0, 0]} opacity={0.85} />

@@ -382,9 +382,10 @@ ${idea.ai_suggestions ? `<h2>AI Suggestion</h2><div class="suggestion">${idea.ai
               </div>
             </div>
 
-            {/* Highlights */}
+            {/* Highlights — always show both cards once there's at least one point */}
             {(pros.length > 0 || cons.length > 0) && (
               <div className="grid grid-cols-2 gap-4">
+                {/* Strengths — only show if there are any */}
                 {pros.length > 0 && (
                   <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-5">
                     <p className="text-[10px] font-mono text-[#3AB870]/70 uppercase tracking-widest mb-3">Strengths</p>
@@ -398,9 +399,10 @@ ${idea.ai_suggestions ? `<h2>AI Suggestion</h2><div class="suggestion">${idea.ai
                     </ul>
                   </div>
                 )}
-                {cons.length > 0 && (
-                  <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-5">
-                    <p className="text-[10px] font-mono text-[#C06830]/70 uppercase tracking-widest mb-3">Concerns</p>
+                {/* Concerns — always show */}
+                <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-5">
+                  <p className="text-[10px] font-mono text-[#C06830]/70 uppercase tracking-widest mb-3">Concerns</p>
+                  {cons.length > 0 ? (
                     <ul className="space-y-2">
                       {cons.map((c, i) => (
                         <li key={i} className="flex gap-2 text-[11px] text-[#6A6A80]">
@@ -409,8 +411,10 @@ ${idea.ai_suggestions ? `<h2>AI Suggestion</h2><div class="suggestion">${idea.ai
                         </li>
                       ))}
                     </ul>
-                  </div>
-                )}
+                  ) : (
+                    <p className="text-[11px] text-[#3AB870]/60 font-mono">No concerns for now</p>
+                  )}
+                </div>
               </div>
             )}
 

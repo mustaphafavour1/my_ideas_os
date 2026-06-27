@@ -21,6 +21,7 @@ const NAV_ITEMS = [
   { href: '/suggestions', label: 'Suggestions', Icon: Sparkle },
   { href: '/inbox',       label: 'Inbox',       Icon: Tray },
   { href: '/signals',     label: 'Signals',     Icon: Lightning },
+  { href: '/settings',    label: 'Settings',    Icon: Gear },
 ];
 
 export function Sidebar() {
@@ -30,8 +31,8 @@ export function Sidebar() {
     <>
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex flex-col fixed left-0 top-0 bottom-0 w-[220px] bg-[#0A0A0F] border-r border-[#1E1E2E] z-40">
-        {/* Logo — exactly h-[70px] to match TopBar */}
-        <div className="flex items-center px-5 h-[70px] border-b border-[#1E1E2E] shrink-0">
+        {/* Logo — h-[71px] to match TopBar */}
+        <div className="flex items-center px-5 h-[71px] border-b border-[#1E1E2E] shrink-0">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-lg bg-[#F7C948] flex items-center justify-center shrink-0">
               <span className="text-[#0A0A0F] font-bold text-xs">IO</span>
