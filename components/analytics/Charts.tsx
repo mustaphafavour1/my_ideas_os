@@ -139,8 +139,8 @@ export function GradeDistributionChart({ ideas }: ChartsProps) {
   for (let t = 0; t <= dataMax; t += 2) ticks.push(t);
 
   return (
-    <ResponsiveContainer width="100%" height={380}>
-      <BarChart data={data} margin={{ top: 12, bottom: 4, left: 4, right: 12 }} barCategoryGap="45%">
+    <ResponsiveContainer width="100%" height={260}>
+      <BarChart data={data} margin={{ top: 12, bottom: 4, left: 4, right: 12 }} barCategoryGap="20%">
         <CartesianGrid strokeDasharray="2 4" stroke="#1A1A28" vertical={false} />
         <XAxis dataKey="range" tick={{ fill: '#3A3A55', fontSize: 10 }} tickLine={false} axisLine={false} />
         <YAxis
@@ -153,7 +153,7 @@ export function GradeDistributionChart({ ideas }: ChartsProps) {
           width={20}
         />
         <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ fill: 'rgba(247,201,72,0.04)' }} />
-        <Bar dataKey="count" fill="#F7C948" radius={[3, 3, 0, 0]} opacity={0.85} maxBarSize={28} />
+        <Bar dataKey="count" fill="#F7C948" radius={[3, 3, 0, 0]} opacity={0.85} maxBarSize={56} />
       </BarChart>
     </ResponsiveContainer>
   );

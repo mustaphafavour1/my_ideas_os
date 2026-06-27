@@ -430,7 +430,7 @@ ${idea.ai_suggestions ? `<h2>AI Suggestion</h2><div class="suggestion">${idea.ai
                 <div className="space-y-2.5 mb-4">
                   {(editing ? form.next_steps : idea.next_steps)?.map((step, i) => (
                     <div key={i} className="flex items-start gap-3">
-                      <div className="w-4 h-4 mt-0.5 rounded border border-[#2A2A3A] shrink-0" />
+                      <span className="text-[#5E5E7A] shrink-0 mt-1 leading-none">•</span>
                       <span className="text-[12px] text-[#7A7A90] flex-1 leading-snug">{step}</span>
                       {editing && (
                         <button onClick={() => removeStep(i)} className="text-[#3A3A55] hover:text-[#F87171] text-[10px] shrink-0">✕</button>

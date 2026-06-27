@@ -9,12 +9,15 @@ import { Idea, DashboardStats } from '@/lib/types';
 
 const SETTINGS_KEY = 'ideas-os-settings';
 
+type SectionId = 'stats' | 'recentIdeas' | 'askAI' | 'attention';
+
 interface SectionVisibility {
   showStats: boolean;
   showRecentIdeas: boolean;
   showAskAI: boolean;
   showNeedsAttention: boolean;
   showAISuggestions: boolean;
+  order: SectionId[];
 }
 
 const DEFAULT_VIS: SectionVisibility = {
@@ -23,6 +26,7 @@ const DEFAULT_VIS: SectionVisibility = {
   showAskAI: true,
   showNeedsAttention: true,
   showAISuggestions: true,
+  order: ['stats', 'recentIdeas', 'askAI', 'attention'],
 };
 
 export interface DashboardContentProps {
@@ -71,7 +75,14 @@ export function DashboardContent({
       const raw = localStorage.getItem(SETTINGS_KEY);
       if (raw) {
         const parsed = JSON.parse(raw);
-        if (parsed.dashboard) setVis((v) => ({ ...v, ...parsed.dashboard }));
+        if (parsed.dashboard) {
+          const loadedOrder = parsed.dashboard.order;
+          setVis((v) => ({
+            ...v,
+            ...parsed.dashboard,
+            order: Array.isArray(loadedOrder) && loadedOrder.length > 0 ? loadedOrder : DEFAULT_VIS.order,
+          }));
+        }
       }
     } catch {}
   }, []);
@@ -94,15 +105,14 @@ export function DashboardContent({
     mostBlockersType ? { label: 'Most Blocked',      main: mostBlockersType.replace(/_/g, ' '),  count: mostBlockersCount } : null,
   ].filter(Boolean) as { label: string; main: string; count: number | null }[];
 
-  const showAttentionSection =
-    (vis.showNeedsAttention && needsAttention.length > 0) ||
-    (vis.showAISuggestions && withSuggestions.length > 0);
+  const showNeeds = vis.showNeedsAttention && needsAttention.length > 0;
+  const showSugg = vis.showAISuggestions && withSuggestions.length > 0;
 
-  return (
-    <main className="flex-1 px-4 lg:px-8 pt-14 pb-10 max-w-6xl mx-auto w-full space-y-14">
-      {/* Stats */}
-      {vis.showStats && (
-        <section>
+  const renderSection = (id: SectionId) => {
+    if (id === 'stats') {
+      if (!vis.showStats) return null;
+      return (
+        <section key="stats">
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {primaryMetrics.map(({ label, value, sub, accent, danger }) => (
               <div
@@ -142,27 +152,13 @@ export function DashboardContent({
             </div>
           )}
         </section>
-      )}
+      );
+    }
 
-      {/* Inbox alert */}
-      {unprocessedCount > 0 && (
-        <div className="flex items-center justify-between bg-[#F7C948]/5 border border-[#F7C948]/12 rounded-xl px-6 py-4">
-          <div className="flex items-center gap-3">
-            <div className="w-1.5 h-1.5 rounded-full bg-[#F7C948] shrink-0 animate-pulse" />
-            <p className="text-[12px] text-[#C0C0D0]">
-              <span className="font-semibold text-[#E0E0EA]">{unprocessedCount}</span>{' '}
-              unprocessed idea{unprocessedCount !== 1 ? 's' : ''} in your inbox
-            </p>
-          </div>
-          <Link href="/inbox" className="text-[10px] font-mono text-[#F7C948] hover:text-[#E6B830] transition-colors">
-            Process →
-          </Link>
-        </div>
-      )}
-
-      {/* Recent Ideas */}
-      {vis.showRecentIdeas && (
-        <section>
+    if (id === 'recentIdeas') {
+      if (!vis.showRecentIdeas) return null;
+      return (
+        <section key="recentIdeas">
           <SectionLabel label="Recent Ideas" href="/ideas" linkText="All ideas" />
           {recent.length === 0 ? (
             <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-16 text-center">
@@ -179,23 +175,28 @@ export function DashboardContent({
             </div>
           )}
         </section>
-      )}
+      );
+    }
 
-      {/* Ask AI */}
-      {vis.showAskAI && (
-        <section>
+    if (id === 'askAI') {
+      if (!vis.showAskAI) return null;
+      return (
+        <section key="askAI">
           <SectionLabel label="Ask AI" />
           <div className="max-w-2xl mx-auto">
             <AskBox />
           </div>
         </section>
-      )}
+      );
+    }
 
-      {/* Needs Attention + AI Suggestions */}
-      {showAttentionSection && (
-        <section>
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
-            {vis.showNeedsAttention && needsAttention.length > 0 && (
+    if (id === 'attention') {
+      if (!showNeeds && !showSugg) return null;
+      const showBoth = showNeeds && showSugg;
+      return (
+        <section key="attention">
+          <div className={showBoth ? 'grid grid-cols-1 lg:grid-cols-2 gap-8 items-start' : 'max-w-xl mx-auto'}>
+            {showNeeds && (
               <div>
                 <div className="flex items-center gap-2.5 mb-5">
                   <h2 className="text-[10px] font-mono text-[#4A4A60] uppercase tracking-widest">Needs Attention</h2>
@@ -205,7 +206,7 @@ export function DashboardContent({
                 </div>
                 <div className="space-y-3">
                   {needsAttention.map((idea) => (
-                    <Link key={idea.id} href={`/ideas/${idea.id}`}>
+                    <Link key={idea.id} href={`/ideas/${idea.id}`} className="block">
                       <div className="bg-[#111118] border border-[#1E1E2E] hover:border-[#252535] rounded-xl px-5 py-4 min-h-[96px] flex flex-col justify-center transition-all card-glow">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
@@ -233,7 +234,7 @@ export function DashboardContent({
               </div>
             )}
 
-            {vis.showAISuggestions && withSuggestions.length > 0 && (
+            {showSugg && (
               <div>
                 <div className="flex items-center justify-between mb-5">
                   <h2 className="text-[10px] font-mono text-[#4A4A60] uppercase tracking-widest flex items-center gap-2">
@@ -246,7 +247,7 @@ export function DashboardContent({
                 </div>
                 <div className="space-y-3">
                   {withSuggestions.map((idea) => (
-                    <Link key={idea.id} href={`/ideas/${idea.id}`}>
+                    <Link key={idea.id} href={`/ideas/${idea.id}`} className="block">
                       <div className="bg-[#111118] border border-[#1E1E2E] hover:border-[#252535] rounded-xl px-5 py-4 min-h-[96px] flex flex-col justify-center transition-all card-glow">
                         <p className="text-[12px] font-medium text-[#D0D0DA] mb-1.5 truncate">{idea.title}</p>
                         <p className="text-[11px] text-[#5E5E7A] line-clamp-2 leading-relaxed">{idea.ai_suggestions}</p>
@@ -258,7 +259,31 @@ export function DashboardContent({
             )}
           </div>
         </section>
+      );
+    }
+
+    return null;
+  };
+
+  return (
+    <main className="flex-1 px-4 lg:px-8 pt-14 pb-10 max-w-6xl mx-auto w-full space-y-14">
+      {/* Inbox alert — always shown prominently */}
+      {unprocessedCount > 0 && (
+        <div className="flex items-center justify-between bg-[#F7C948]/5 border border-[#F7C948]/12 rounded-xl px-6 py-4">
+          <div className="flex items-center gap-3">
+            <div className="w-1.5 h-1.5 rounded-full bg-[#F7C948] shrink-0 animate-pulse" />
+            <p className="text-[12px] text-[#C0C0D0]">
+              <span className="font-semibold text-[#E0E0EA]">{unprocessedCount}</span>{' '}
+              unprocessed idea{unprocessedCount !== 1 ? 's' : ''} in your inbox
+            </p>
+          </div>
+          <Link href="/inbox" className="text-[10px] font-mono text-[#F7C948] hover:text-[#E6B830] transition-colors">
+            Process →
+          </Link>
+        </div>
       )}
+
+      {vis.order.map(renderSection)}
     </main>
   );
 }

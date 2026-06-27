@@ -322,7 +322,7 @@ export function IdeaTable({ ideas: initialIdeas }: IdeaTableProps) {
                   style={{ minWidth: '110px' }}
                   onClick={() => toggleSort('updated_at')}
                 >
-                  Last Worked <SortIcon k="updated_at" />
+                  Last Updated <SortIcon k="updated_at" />
                 </th>
               )}
               <th className="text-left px-4 py-3.5 text-[#3A3A55] font-mono text-[10px] uppercase tracking-widest whitespace-nowrap" style={{ minWidth: '60px' }}></th>

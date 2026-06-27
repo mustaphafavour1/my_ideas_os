@@ -78,10 +78,10 @@ export async function POST(req: NextRequest) {
     // Load existing ideas for fuzzy duplicate matching
     const { data: existingIdeas } = await supabase
       .from('ideas')
-      .select('id, title')
+      .select('id, title, updated_at')
       .eq('user_id', 'favour');
 
-    const existing = (existingIdeas || []) as Pick<Idea, 'id' | 'title'>[];
+    const existing = (existingIdeas || []) as Pick<Idea, 'id' | 'title' | 'updated_at'>[];
 
     let added = 0, updated = 0, skipped = 0;
 
@@ -114,14 +114,14 @@ export async function POST(req: NextRequest) {
       };
 
       if (match) {
-        const { error } = await supabase.from('ideas').update(payload).eq('id', match.id);
+        const { error } = await supabase.from('ideas').update({ ...payload, updated_at: match.updated_at }).eq('id', match.id);
         if (!error) updated++;
         else { console.error('Update error:', error); skipped++; }
       } else {
         const { error } = await supabase.from('ideas').insert(payload);
         if (!error) {
           added++;
-          existing.push({ id: 'new', title: idea.title });
+          existing.push({ id: 'new', title: idea.title!, updated_at: new Date().toISOString() });
         } else { console.error('Insert error:', error); skipped++; }
       }
     }
