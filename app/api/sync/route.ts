@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
 import { extractIdeasFromConversations } from '@/lib/claude';
-import { parseConversationExport, batchConversations, fuzzyMatchTitle } from '@/lib/parser';
+import { ParsedConversation, parseConversationExport, batchConversations, fuzzyMatchTitle } from '@/lib/parser';
 import { Idea } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -11,17 +11,24 @@ export async function POST(req: NextRequest) {
   try {
     const supabase = createServiceClient();
     const body = await req.json().catch(() => ({}));
-    const rawJson: string | null = body.conversationJson || null;
 
-    if (!rawJson) {
+    const rawJson: string | null = body.conversationJson || null;
+    const conversationBatch: ParsedConversation[] | null = body.conversationBatch || null;
+
+    if (!rawJson && !conversationBatch) {
       return NextResponse.json(
         { error: 'No conversation data provided. Upload a conversations.json export file.' },
         { status: 400 }
       );
     }
 
-    // Parse conversations from the uploaded file
-    let conversations = parseConversationExport(rawJson);
+    let conversations: ParsedConversation[];
+
+    if (conversationBatch) {
+      conversations = conversationBatch;
+    } else {
+      conversations = parseConversationExport(rawJson!);
+    }
 
     if (conversations.length === 0) {
       return NextResponse.json({
@@ -48,12 +55,16 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({
         added: 0, updated: 0, skipped: 0, total: 0,
         already_synced: alreadySyncedCount,
-        message: `All ${alreadySyncedCount} conversation(s) in this file were already synced previously.`,
+        message: `All ${alreadySyncedCount} conversation(s) in this batch were already synced previously.`,
       });
     }
 
-    // Batch and extract ideas via Claude
-    const batches = batchConversations(newConversations);
+    // When receiving a pre-parsed batch from the client, treat it as one batch.
+    // When receiving raw JSON, use the standard batching logic.
+    const batches = conversationBatch
+      ? [newConversations]
+      : batchConversations(newConversations);
+
     let allExtracted: Partial<Idea>[] = [];
 
     for (const batch of batches) {

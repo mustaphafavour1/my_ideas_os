@@ -18,7 +18,58 @@ interface FileEntry {
   status: FileStatus;
   error?: string;
   subLabel?: string;
+  progress?: number;
+  progressLabel?: string;
 }
+
+interface ClientConversation {
+  uuid: string;
+  name: string;
+  created_at: string;
+  fullText: string;
+}
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function parseConversationsClient(content: string): ClientConversation[] {
+  try {
+    const data = JSON.parse(content);
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let convs: any[] = [];
+
+    if (Array.isArray(data)) {
+      convs = data;
+    } else if (data?.conversations && Array.isArray(data.conversations)) {
+      convs = data.conversations;
+    } else if (data?.uuid && Array.isArray(data?.chat_messages)) {
+      convs = [data];
+    } else if (data?.chat_messages) {
+      convs = [data];
+    }
+
+    return convs
+      .filter((c) => c && Array.isArray(c.chat_messages) && c.chat_messages.length > 0)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      .map((c: any, i: number) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const messages: any[] = c.chat_messages || [];
+        const fullText = messages
+          .filter((m) => m.text?.trim())
+          .map((m) => `[${m.sender}]: ${m.text}`)
+          .join('\n\n');
+        return {
+          uuid: c.uuid || `unknown-${Date.now()}-${i}`,
+          name: c.name || 'Unnamed Conversation',
+          created_at: c.created_at || new Date().toISOString(),
+          fullText,
+        };
+      })
+      .filter((c) => c.fullText.trim().length > 50);
+  } catch {
+    return [];
+  }
+}
+
+const BATCH_SIZE = 8;
 
 export function SyncUploader({ onComplete }: SyncUploaderProps) {
   const [files, setFiles] = useState<FileEntry[]>([]);
@@ -79,41 +130,116 @@ export function SyncUploader({ onComplete }: SyncUploaderProps) {
     let totalAdded = 0, totalUpdated = 0, totalSkipped = 0, totalAlreadySynced = 0;
 
     for (const file of pending) {
+      const conversations = parseConversationsClient(file.content);
+
+      if (conversations.length === 0) {
+        // Valid JSON but no parseable conversations — let server decide
+        setFiles((prev) =>
+          prev.map((f) => f.name === file.name ? { ...f, status: 'processing', progress: 0, progressLabel: 'Validating…' } : f)
+        );
+        try {
+          const res = await fetch('/api/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ conversationJson: file.content }),
+          });
+          const result = await res.json();
+          if (!res.ok) throw new Error(result.error || 'Sync failed');
+
+          totalAdded += result.added ?? 0;
+          totalUpdated += result.updated ?? 0;
+          totalSkipped += result.skipped ?? 0;
+          totalAlreadySynced += result.already_synced ?? 0;
+
+          setFiles((prev) =>
+            prev.map((f) => f.name === file.name ? { ...f, status: 'done', progress: 100, subLabel: result.message || 'No conversations found' } : f)
+          );
+        } catch (err) {
+          setFiles((prev) =>
+            prev.map((f) => f.name === file.name ? { ...f, status: 'error', error: (err as Error).message } : f)
+          );
+        }
+        continue;
+      }
+
+      // Split into batches for progress tracking
+      const batches: ClientConversation[][] = [];
+      for (let i = 0; i < conversations.length; i += BATCH_SIZE) {
+        batches.push(conversations.slice(i, i + BATCH_SIZE));
+      }
+      const totalBatches = batches.length;
+
       setFiles((prev) =>
-        prev.map((f) => (f.name === file.name ? { ...f, status: 'processing' } : f))
+        prev.map((f) =>
+          f.name === file.name
+            ? { ...f, status: 'processing', progress: 0, progressLabel: `Starting — ${conversations.length} conversation${conversations.length !== 1 ? 's' : ''}` }
+            : f
+        )
       );
 
-      try {
-        JSON.parse(file.content); // validate JSON first
+      let fileAdded = 0, fileUpdated = 0, fileSkipped = 0, fileAlreadySynced = 0;
+      let hadError = false;
 
-        const res = await fetch('/api/sync', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ conversationJson: file.content }),
-        });
+      for (let i = 0; i < batches.length; i++) {
+        try {
+          const res = await fetch('/api/sync', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ conversationBatch: batches[i] }),
+          });
 
-        const result = await res.json();
+          const result = await res.json();
+          if (!res.ok) throw new Error(result.error || 'Sync failed');
 
-        if (!res.ok) throw new Error(result.error || 'Sync failed');
+          fileAdded += result.added ?? 0;
+          fileUpdated += result.updated ?? 0;
+          fileSkipped += result.skipped ?? 0;
+          fileAlreadySynced += result.already_synced ?? 0;
 
-        totalAdded += result.added ?? 0;
-        totalUpdated += result.updated ?? 0;
-        totalSkipped += result.skipped ?? 0;
-        totalAlreadySynced += result.already_synced ?? 0;
+          const done = i + 1;
+          const pct = Math.round((done / totalBatches) * 100);
+          setFiles((prev) =>
+            prev.map((f) =>
+              f.name === file.name
+                ? {
+                    ...f,
+                    progress: pct,
+                    progressLabel: done < totalBatches
+                      ? `Batch ${done}/${totalBatches} · ${pct}%`
+                      : `Finalising · ${pct}%`,
+                  }
+                : f
+            )
+          );
+        } catch (err) {
+          hadError = true;
+          setFiles((prev) =>
+            prev.map((f) =>
+              f.name === file.name
+                ? { ...f, status: 'error', error: (err as Error).message }
+                : f
+            )
+          );
+          break;
+        }
+      }
 
-        const subLabel = result.already_synced > 0
-          ? `done — ${result.already_synced} conversation(s) already synced`
-          : 'Synced successfully';
+      if (!hadError) {
+        totalAdded += fileAdded;
+        totalUpdated += fileUpdated;
+        totalSkipped += fileSkipped;
+        totalAlreadySynced += fileAlreadySynced;
 
-        setFiles((prev) =>
-          prev.map((f) => (f.name === file.name ? { ...f, status: 'done', subLabel } : f))
-        );
-      } catch (err) {
+        const subLabel =
+          fileAlreadySynced > 0 && fileAdded === 0 && fileUpdated === 0
+            ? `done — ${fileAlreadySynced} conversation(s) already synced`
+            : fileAdded > 0 || fileUpdated > 0
+            ? `${fileAdded} added${fileUpdated > 0 ? `, ${fileUpdated} updated` : ''}`
+            : 'Synced — no new ideas found';
+
         setFiles((prev) =>
           prev.map((f) =>
-            f.name === file.name
-              ? { ...f, status: 'error', error: (err as Error).message }
-              : f
+            f.name === file.name ? { ...f, status: 'done', subLabel, progress: 100 } : f
           )
         );
       }
@@ -216,55 +342,71 @@ export function SyncUploader({ onComplete }: SyncUploaderProps) {
                 initial={{ opacity: 0, x: -4 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, height: 0 }}
-                className="flex items-center gap-3 bg-[#0A0A0F] border border-[#1E1E2E] rounded-lg px-3 py-2.5"
+                className="relative overflow-hidden bg-[#0A0A0F] border border-[#1E1E2E] rounded-lg px-3 py-2.5"
               >
-                {/* Status icon */}
-                <div className="shrink-0 w-5 h-5 flex items-center justify-center">
+                <div className="flex items-center gap-3">
+                  {/* Status icon */}
+                  <div className="shrink-0 w-5 h-5 flex items-center justify-center">
+                    {file.status === 'pending' && (
+                      <div className="w-2 h-2 rounded-full bg-[#4A4A60]" />
+                    )}
+                    {file.status === 'processing' && (
+                      <svg className="w-4 h-4 animate-spin text-[#F7C948]" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                      </svg>
+                    )}
+                    {file.status === 'done' && (
+                      <svg className="w-4 h-4 text-[#4ADE80]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+                      </svg>
+                    )}
+                    {file.status === 'error' && (
+                      <svg className="w-4 h-4 text-[#F87171]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    )}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <p className="text-xs font-mono text-[#F0F0F5] truncate">{file.name}</p>
+                    {file.error && (
+                      <p className="text-[10px] text-[#F87171] mt-0.5">{file.error}</p>
+                    )}
+                    {file.status === 'processing' && (
+                      <p className="text-[10px] text-[#F7C948] mt-0.5 font-mono">
+                        {file.progressLabel || 'Analysing with Claude…'}
+                      </p>
+                    )}
+                    {file.status === 'done' && (
+                      <p className="text-[10px] text-[#4ADE80] mt-0.5">
+                        {file.subLabel || 'Synced successfully'}
+                      </p>
+                    )}
+                  </div>
+
                   {file.status === 'pending' && (
-                    <div className="w-2 h-2 rounded-full bg-[#4A4A60]" />
-                  )}
-                  {file.status === 'processing' && (
-                    <svg className="w-4 h-4 animate-spin text-[#F7C948]" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
-                    </svg>
-                  )}
-                  {file.status === 'done' && (
-                    <svg className="w-4 h-4 text-[#4ADE80]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
-                    </svg>
-                  )}
-                  {file.status === 'error' && (
-                    <svg className="w-4 h-4 text-[#F87171]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
+                    <button
+                      onClick={(e) => { e.stopPropagation(); removeFile(file.name); }}
+                      className="shrink-0 text-[#4A4A60] hover:text-[#F87171] transition-colors"
+                    >
+                      <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
                   )}
                 </div>
 
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-mono text-[#F0F0F5] truncate">{file.name}</p>
-                  {file.error && (
-                    <p className="text-[10px] text-[#F87171] mt-0.5">{file.error}</p>
-                  )}
-                  {file.status === 'processing' && (
-                    <p className="text-[10px] text-[#F7C948] mt-0.5">Analysing with Claude…</p>
-                  )}
-                  {file.status === 'done' && (
-                    <p className="text-[10px] text-[#4ADE80] mt-0.5">
-                      {file.subLabel || 'Synced successfully'}
-                    </p>
-                  )}
-                </div>
-
-                {file.status === 'pending' && (
-                  <button
-                    onClick={(e) => { e.stopPropagation(); removeFile(file.name); }}
-                    className="shrink-0 text-[#4A4A60] hover:text-[#F87171] transition-colors"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
+                {/* Progress bar */}
+                {file.status === 'processing' && typeof file.progress === 'number' && (
+                  <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-[#1E1E2E]">
+                    <motion.div
+                      className="h-full bg-[#F7C948]"
+                      initial={{ width: '0%' }}
+                      animate={{ width: `${file.progress}%` }}
+                      transition={{ duration: 0.5, ease: 'easeOut' }}
+                    />
+                  </div>
                 )}
               </motion.div>
             ))}

@@ -1,7 +1,9 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { Idea } from './types';
 
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+function getClient() {
+  return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+}
 
 const EXTRACTION_SYSTEM_PROMPT = `You are an idea extraction engine. You will receive raw Claude conversation transcripts. Your job is to identify any distinct ideas, projects, explorations, or concepts the user was working on or thinking through.
 
@@ -22,27 +24,44 @@ For each idea found, return a JSON array. Each item must have:
 - source_ref: string (conversation name or date)
 - chat_date: ISO date string
 
+If no clear ideas are present, return an empty array [].
 Return only valid JSON array, no markdown, no explanation.`;
 
 export async function extractIdeasFromConversations(
   conversationTexts: string[]
 ): Promise<Partial<Idea>[]> {
+  const client = getClient();
   const batched = conversationTexts.join('\n\n---NEXT CONVERSATION---\n\n');
 
   const message = await client.messages.create({
     model: 'claude-sonnet-4-6',
-    max_tokens: 8192,
+    max_tokens: 16000,
     system: EXTRACTION_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: batched }],
   });
 
   const raw = message.content[0].type === 'text' ? message.content[0].text : '[]';
 
+  // Check if output was truncated (stop_reason === 'max_tokens')
+  if (message.stop_reason === 'max_tokens') {
+    console.warn('Claude output hit max_tokens limit — JSON may be truncated');
+  }
+
   try {
-    return JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
   } catch {
+    // Try to salvage a partial array
     const match = raw.match(/\[[\s\S]*\]/);
-    if (match) return JSON.parse(match[0]);
+    if (match) {
+      try { return JSON.parse(match[0]); } catch { /* fall through */ }
+    }
+    // Try to parse as many complete objects as possible
+    const objects = [...raw.matchAll(/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g)];
+    if (objects.length > 0) {
+      try { return JSON.parse(`[${objects.map(m => m[0]).join(',')}]`); } catch { /* fall through */ }
+    }
+    console.error('Failed to parse Claude response as JSON. Raw:', raw.slice(0, 500));
     return [];
   }
 }
@@ -56,6 +75,7 @@ Return only valid JSON array, no markdown.`;
 export async function refreshSuggestions(
   ideas: Pick<Idea, 'id' | 'title' | 'description' | 'status' | 'sector' | 'idea_type' | 'next_steps' | 'blockers'>[]
 ): Promise<{ id: string; suggestion: string }[]> {
+  const client = getClient();
   const prompt = ideas
     .map(
       (i) =>
@@ -71,7 +91,6 @@ export async function refreshSuggestions(
   });
 
   const raw = message.content[0].type === 'text' ? message.content[0].text : '[]';
-
   try {
     return JSON.parse(raw);
   } catch {
@@ -102,6 +121,7 @@ Return a JSON array. Each item must have:
 Return only valid JSON array, no markdown.`;
 
 export async function processInboxItems(items: string[]): Promise<Partial<Idea>[]> {
+  const client = getClient();
   const prompt = items.map((item, i) => `Item ${i + 1}: ${item}`).join('\n\n');
 
   const message = await client.messages.create({
@@ -112,7 +132,6 @@ export async function processInboxItems(items: string[]): Promise<Partial<Idea>[
   });
 
   const raw = message.content[0].type === 'text' ? message.content[0].text : '[]';
-
   try {
     return JSON.parse(raw);
   } catch {

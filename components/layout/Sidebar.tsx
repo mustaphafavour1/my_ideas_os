@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { motion } from 'framer-motion';
+import { DemoButton } from './DemoButton';
 
 const NAV_ITEMS = [
   {
@@ -104,8 +105,10 @@ export function Sidebar() {
           })}
         </nav>
 
-        <div className="px-5 py-4 border-t border-[#1E1E2E]">
-          <p className="text-[#4A4A60] text-[10px] font-mono">v0.1.0 — local</p>
+        <DemoButton />
+
+        <div className="px-5 py-3 border-t border-[#1E1E2E]">
+          <p className="text-[#4A4A60] text-[10px] font-mono">v0.1.0</p>
         </div>
       </aside>
 
