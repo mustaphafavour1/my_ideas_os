@@ -21,6 +21,7 @@ interface ConnectedPair {
   b: Idea;
   score: number;
   reasons: string[];
+  recommendations: string[];
 }
 
 function findConnectedPairs(ideas: Idea[]): ConnectedPair[] {
@@ -31,14 +32,18 @@ function findConnectedPairs(ideas: Idea[]): ConnectedPair[] {
       const b = ideas[j];
       let score = 0;
       const reasons: string[] = [];
+      const recommendations: string[] = [];
 
       if (a.sector && b.sector && a.sector === b.sector) {
         score += 3;
         reasons.push(`${a.sector} sector`);
+        recommendations.push(`Both tackle the ${a.sector} space — parallel development lets you share market positioning and distribution.`);
       }
       if (a.idea_type && b.idea_type && a.idea_type === b.idea_type) {
         score += 2;
-        reasons.push(a.idea_type.replace(/_/g, ' '));
+        const typeLabel = a.idea_type.replace(/_/g, ' ');
+        reasons.push(typeLabel);
+        recommendations.push(`Same format (${typeLabel}) — infrastructure, playbooks, and learnings transfer directly between these.`);
       }
 
       const aWords = new Set(
@@ -54,9 +59,14 @@ function findConnectedPairs(ideas: Idea[]): ConnectedPair[] {
       if (overlap > 0) {
         score += overlap;
         reasons.push(`${overlap} shared word${overlap > 1 ? 's' : ''}`);
+        recommendations.push(`Shared core concept — decide deliberately whether to merge these into one idea or keep them separate with clear differentiation.`);
       }
 
-      if (score >= 3) pairs.push({ a, b, score, reasons });
+      if (score >= 5) {
+        recommendations.push(`Strong synergy (score ${score}) — consider launching as a bundled offer or a single product with two distinct modes.`);
+      }
+
+      if (score >= 3) pairs.push({ a, b, score, reasons, recommendations });
     }
   }
   return pairs.sort((x, y) => y.score - x.score).slice(0, 8);
@@ -73,6 +83,15 @@ export default function InsightsPage() {
   const [page, setPage] = useState(1);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [showConnected, setShowConnected] = useState(true);
+  const [expandedPairs, setExpandedPairs] = useState<Set<number>>(new Set());
+
+  const togglePair = (idx: number) => {
+    setExpandedPairs((prev) => {
+      const next = new Set(prev);
+      if (next.has(idx)) next.delete(idx); else next.add(idx);
+      return next;
+    });
+  };
 
   const fetchIdeas = useCallback(async () => {
     setLoading(true);
@@ -195,35 +214,66 @@ export default function InsightsPage() {
                   className="overflow-hidden"
                 >
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {connectedPairs.map(({ a, b, score, reasons }, idx) => (
-                      <div
-                        key={idx}
-                        className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-4 hover:border-[#252535] transition-colors"
-                      >
-                        <div className="flex items-start gap-3">
-                          <div className="flex-1 min-w-0 space-y-1.5">
-                            <Link href={`/ideas/${a.id}`} className="block text-[12px] text-[#D0D0DA] font-medium hover:text-[#F7C948] transition-colors truncate">
-                              {a.title}
-                            </Link>
-                            <div className="w-4 h-px bg-[#2A2A3A]" />
-                            <Link href={`/ideas/${b.id}`} className="block text-[12px] text-[#D0D0DA] font-medium hover:text-[#F7C948] transition-colors truncate">
-                              {b.title}
-                            </Link>
+                    {connectedPairs.map(({ a, b, score, reasons, recommendations }, idx) => {
+                      const isPairExpanded = expandedPairs.has(idx);
+                      return (
+                        <div
+                          key={idx}
+                          className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-4 hover:border-[#252535] transition-colors"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="flex-1 min-w-0 space-y-1.5">
+                              <Link href={`/ideas/${a.id}`} className="block text-[12px] text-[#D0D0DA] font-medium hover:text-[#F7C948] transition-colors truncate">
+                                {a.title}
+                              </Link>
+                              <div className="w-4 h-px bg-[#2A2A3A]" />
+                              <Link href={`/ideas/${b.id}`} className="block text-[12px] text-[#D0D0DA] font-medium hover:text-[#F7C948] transition-colors truncate">
+                                {b.title}
+                              </Link>
+                            </div>
+                            <div className="shrink-0 text-right">
+                              <p className="text-[13px] font-bold text-[#F7C948]">{score}</p>
+                              <p className="text-[9px] font-mono text-[#3A3A55]">score</p>
+                            </div>
                           </div>
-                          <div className="shrink-0 text-right">
-                            <p className="text-[13px] font-bold text-[#F7C948]">{score}</p>
-                            <p className="text-[9px] font-mono text-[#3A3A55]">score</p>
+                          <div className="flex flex-wrap gap-1.5 mt-3">
+                            {reasons.map((r, i) => (
+                              <span key={i} className="text-[9px] font-mono text-[#4A4A60] bg-[#1A1A28] px-2 py-0.5 rounded">
+                                {r}
+                              </span>
+                            ))}
                           </div>
+
+                          <AnimatePresence>
+                            {isPairExpanded && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                className="overflow-hidden"
+                              >
+                                <div className="mt-3 pt-3 border-t border-[#1A1A28] space-y-2">
+                                  <p className="text-[9px] font-mono text-[#3A3A55] uppercase tracking-widest mb-2">What to do with this connection</p>
+                                  {recommendations.map((rec, i) => (
+                                    <div key={i} className="flex gap-2 items-start">
+                                      <span className="text-[#F7C948]/50 shrink-0 text-[10px] mt-0.5">✦</span>
+                                      <p className="text-[11px] text-[#6A6A80] leading-snug">{rec}</p>
+                                    </div>
+                                  ))}
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+
+                          <button
+                            onClick={() => togglePair(idx)}
+                            className="mt-3 text-[9px] font-mono text-[#3A3A55] hover:text-[#6A6A80] transition-colors"
+                          >
+                            {isPairExpanded ? 'Less ↑' : 'View more ↓'}
+                          </button>
                         </div>
-                        <div className="flex flex-wrap gap-1.5 mt-3">
-                          {reasons.map((r, i) => (
-                            <span key={i} className="text-[9px] font-mono text-[#4A4A60] bg-[#1A1A28] px-2 py-0.5 rounded">
-                              {r}
-                            </span>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </motion.div>
               )}

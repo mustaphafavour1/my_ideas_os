@@ -6,6 +6,7 @@ import { IdeaCard } from '@/components/ideas/IdeaCard';
 import { StatusChip } from '@/components/ui/StatusChip';
 import { AskBox } from '@/components/dashboard/AskBox';
 import { Idea, DashboardStats } from '@/lib/types';
+import { TimeRangeFilter } from '@/components/ui/TimeRangeFilter';
 
 const SETTINGS_KEY = 'ideas-os-settings';
 
@@ -48,6 +49,9 @@ export interface DashboardContentProps {
   mostCompletedCount: number;
   mostBlockersType: string | null;
   mostBlockersCount: number;
+  range?: string;
+  rangeFrom?: string;
+  rangeTo?: string;
 }
 
 function SectionLabel({ label, href, linkText }: { label: string; href?: string; linkText?: string }) {
@@ -67,6 +71,7 @@ export function DashboardContent({
   stats, recent, needsAttention, withSuggestions, unprocessedCount,
   withBlockers, paused, topSector, topSectorCount, topType, topTypeCount, completionPct,
   mostPausedSector, mostPausedCount, mostCompletedType, mostCompletedCount, mostBlockersType, mostBlockersCount,
+  range = 'all', rangeFrom, rangeTo,
 }: DashboardContentProps) {
   const [vis, setVis] = useState<SectionVisibility>(DEFAULT_VIS);
 
@@ -113,6 +118,10 @@ export function DashboardContent({
       if (!vis.showStats) return null;
       return (
         <section key="stats">
+          <div className="flex items-center justify-between mb-4">
+            <h2 className="text-[10px] font-mono text-[#4A4A60] uppercase tracking-widest">Overview</h2>
+            <TimeRangeFilter currentRange={range} currentFrom={rangeFrom} currentTo={rangeTo} />
+          </div>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {primaryMetrics.map(({ label, value, sub, accent, danger }) => (
               <div

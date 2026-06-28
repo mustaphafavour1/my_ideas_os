@@ -22,6 +22,7 @@ export default function SignalsPage() {
   const [signals, setSignals] = useState<Signal[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [typeFilter, setTypeFilter] = useState<SignalType | ''>('');
   const [error, setError] = useState('');
 
@@ -103,14 +104,27 @@ export default function SignalsPage() {
             <div className="relative">
               <input
                 type="text"
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search signals…"
-                className="bg-[#111118] border border-[#1E1E2E] rounded-lg pl-9 pr-3 py-2 text-[12px] text-[#F0F0F5] placeholder-[#3A3A55] focus:outline-none focus:border-[#F7C948]/30 w-48 transition-colors"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter') setSearch(searchInput); }}
+                placeholder="Search… press Enter"
+                className="bg-[#111118] border border-[#1E1E2E] rounded-lg pl-9 pr-9 py-2 text-[12px] text-[#F0F0F5] placeholder-[#3A3A55] focus:outline-none focus:border-[#F7C948]/30 w-48 transition-colors"
               />
               <svg className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#3A3A55]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
+              <button
+                onClick={() => setSearch(searchInput)}
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#3A3A55] hover:text-[#8888A0] transition-colors"
+              >
+                {searchInput ? (
+                  <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 5l7 7m0 0l-7 7m7-7H3" />
+                  </svg>
+                ) : (
+                  <svg className="w-3.5 h-3.5 opacity-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" />
+                )}
+              </button>
             </div>
             <div className="flex gap-1.5 flex-wrap">
               <button

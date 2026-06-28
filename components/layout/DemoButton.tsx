@@ -54,19 +54,23 @@ export function DemoButton({ variant = 'sidebar' }: DemoButtonProps) {
         <div>
           <p className="text-[12px] text-[#D0D0DA] font-medium">Demo Mode</p>
           <p className="text-[11px] text-[#4A4A60] font-mono mt-0.5">
-            {active ? 'Sample ideas are loaded' : 'Load sample ideas to explore the app'}
+            {active ? 'Sample ideas & conversations loaded' : 'Load sample data to explore the app'}
           </p>
         </div>
         <button
           onClick={toggle}
           disabled={loading}
-          className={`text-[11px] font-mono px-3 py-1.5 rounded-lg border transition-all disabled:opacity-40 disabled:cursor-not-allowed ${
-            active
-              ? 'bg-[#F7C948]/10 border-[#F7C948]/30 text-[#F7C948] hover:bg-[#F7C948]/15'
-              : 'bg-transparent border-[#1E1E2E] text-[#6A6A80] hover:text-[#D0D0DA] hover:border-[#2A2A3A]'
+          role="switch"
+          aria-checked={active}
+          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors disabled:opacity-40 disabled:cursor-not-allowed ${
+            active ? 'bg-[#F7C948]' : 'bg-[#1E1E2E]'
           }`}
         >
-          {loading ? '…' : active ? 'Clear demo' : 'Load demo'}
+          <span
+            className={`inline-block h-3.5 w-3.5 rounded-full transition-transform ${loading ? 'animate-pulse' : ''} ${
+              active ? 'translate-x-[18px] bg-[#0A0A0F]' : 'translate-x-[3px] bg-[#4A4A60]'
+            }`}
+          />
         </button>
       </div>
     );

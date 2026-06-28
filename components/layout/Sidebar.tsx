@@ -15,6 +15,8 @@ import {
   Gear,
   List,
   X,
+  Users,
+  User,
 } from '@phosphor-icons/react';
 
 const MAIN_NAV = [
@@ -26,9 +28,10 @@ const MAIN_NAV = [
 ];
 
 const MORE_NAV = [
-  { href: '/inbox',    label: 'Inbox',    Icon: Tray },
-  { href: '/signals',  label: 'Signals',  Icon: Lightning },
-  { href: '/settings', label: 'Settings', Icon: Gear },
+  { href: '/inbox',     label: 'Inbox',     Icon: Tray },
+  { href: '/signals',   label: 'Signals',   Icon: Lightning },
+  { href: '/community', label: 'Community', Icon: Users },
+  { href: '/settings',  label: 'Settings',  Icon: Gear },
 ];
 
 const ALL_NAV = [...MAIN_NAV, ...MORE_NAV];
@@ -55,7 +58,7 @@ export function Sidebar() {
     return () => document.removeEventListener('mousedown', onClickOutside);
   }, [moreOpen]);
 
-  const anyMoreActive = MORE_NAV.some((item) => isActive(item.href, pathname));
+  const anyMoreActive = [...MORE_NAV, { href: '/profile' }].some((item) => isActive(item.href, pathname));
 
   return (
     <>
@@ -101,8 +104,19 @@ export function Sidebar() {
           })}
         </nav>
 
-        <div className="px-5 py-3 border-t border-[#1E1E2E]">
-          <p className="text-[#4A4A60] text-[10px] font-mono">v0.1.0</p>
+        <div className="px-3 pb-3 border-t border-[#1E1E2E] pt-2">
+          <Link
+            href="/profile"
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-150 relative group ${
+              isActive('/profile', pathname)
+                ? 'text-[#F7C948] bg-[#F7C948]/8'
+                : 'text-[#6A6A80] hover:text-[#D0D0DA] hover:bg-[#1E1E2E]/60'
+            }`}
+          >
+            <User size={18} weight={isActive('/profile', pathname) ? 'fill' : 'regular'} />
+            <span className="font-medium">Profile</span>
+          </Link>
+          <p className="text-[#4A4A60] text-[10px] font-mono px-3 pt-1">v0.1.0</p>
         </div>
       </aside>
 
@@ -147,7 +161,7 @@ export function Sidebar() {
                 transition={{ duration: 0.15 }}
                 className="absolute bottom-full right-0 mb-2 mr-2 bg-[#111118] border border-[#1E1E2E] rounded-xl overflow-hidden shadow-xl min-w-[160px]"
               >
-                {MORE_NAV.map(({ href, label, Icon }) => {
+                {[...MORE_NAV, { href: '/profile', label: 'Profile', Icon: User }].map(({ href, label, Icon }) => {
                   const active = isActive(href, pathname);
                   return (
                     <Link
