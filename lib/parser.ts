@@ -211,6 +211,63 @@ export function batchConversations(
   return batches;
 }
 
+export interface ConversationStats {
+  human_messages: number;
+  assistant_messages: number;
+  total_words: number;
+  human_words: number;
+  assistant_words: number;
+  code_blocks: number;
+  code_lines: number;
+}
+
+export function extractConversationStats(fullText: string): ConversationStats {
+  const segments = fullText.split(/\n\n(?=\[)/);
+
+  let human_messages = 0;
+  let assistant_messages = 0;
+  let human_words = 0;
+  let assistant_words = 0;
+  let code_blocks = 0;
+  let code_lines = 0;
+
+  for (const seg of segments) {
+    const roleMatch = seg.match(/^\[([^\]]+)\]:\s*/);
+    if (!roleMatch) continue;
+
+    const role = roleMatch[1].toLowerCase();
+    const text = seg.slice(roleMatch[0].length);
+
+    const codePattern = /```[\s\S]*?```/g;
+    let m: RegExpExecArray | null;
+    while ((m = codePattern.exec(text)) !== null) {
+      code_blocks++;
+      code_lines += Math.max(0, m[0].split('\n').length - 2);
+    }
+
+    const stripped = text.replace(/```[\s\S]*?```/g, ' ');
+    const words = stripped.trim() ? stripped.trim().split(/\s+/).length : 0;
+
+    if (role === 'human' || role === 'user') {
+      human_messages++;
+      human_words += words;
+    } else {
+      assistant_messages++;
+      assistant_words += words;
+    }
+  }
+
+  return {
+    human_messages,
+    assistant_messages,
+    total_words: human_words + assistant_words,
+    human_words,
+    assistant_words,
+    code_blocks,
+    code_lines,
+  };
+}
+
 export function fuzzyMatchTitle(a: string, b: string): boolean {
   const normalize = (s: string) =>
     s.toLowerCase().replace(/[^a-z0-9\s]/g, '').trim();

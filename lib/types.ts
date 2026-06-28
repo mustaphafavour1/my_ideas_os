@@ -90,6 +90,35 @@ export interface DashboardStats {
   avg_grade: number;
 }
 
+export interface ConversationLog {
+  id: string;
+  user_id: string;
+  conversation_uuid: string;
+  title: string | null;
+  created_at: string;
+  processed_at: string;
+  human_messages: number;
+  assistant_messages: number;
+  total_words: number;
+  human_words: number;
+  assistant_words: number;
+  code_blocks: number;
+  code_lines: number;
+}
+
+export interface UserStats {
+  user_id: string;
+  total_conversations: number;
+  total_words: number;
+  total_human_words: number;
+  total_assistant_words: number;
+  total_code_blocks: number;
+  total_code_lines: number;
+  first_conversation_at: string | null;
+  last_conversation_at: string | null;
+  updated_at: string;
+}
+
 export type SignalType = 'strategy' | 'pattern' | 'principle' | 'risk' | 'opportunity' | 'lesson';
 
 export interface Signal {

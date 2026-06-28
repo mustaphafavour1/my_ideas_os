@@ -10,6 +10,7 @@ import {
   AvgGradeRing,
   TopSectorsChart,
 } from '@/components/analytics/Charts';
+import { AnalyticsFilters } from '@/components/analytics/AnalyticsFilters';
 import { createServiceClient } from '@/lib/supabase';
 import { Idea } from '@/lib/types';
 
@@ -20,6 +21,17 @@ async function getData(): Promise<{ ideas: Idea[]; syncCount: number }> {
     supabase.from('sync_log').select('*', { count: 'exact', head: true }).eq('user_id', 'favour'),
   ]);
   return { ideas: (ideas || []) as Idea[], syncCount: syncCount || 0 };
+}
+
+function getRangeCutoff(range: string): Date | null {
+  const now = new Date();
+  switch (range) {
+    case '7d': return new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+    case '30d': return new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    case '90d': return new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+    case '1y': return new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+    default: return null;
+  }
 }
 
 function ChartCard({ title, subtitle, children, tall }: { title: string; subtitle?: string; children: React.ReactNode; tall?: boolean }) {
@@ -39,7 +51,6 @@ function ChartCard({ title, subtitle, children, tall }: { title: string; subtitl
 function buildInsights(ideas: Idea[]): string[] {
   const insights: string[] = [];
 
-  // Group by type + status combos
   const typeCounts: Record<string, { completed: number; inProgress: number; total: number; blocked: number }> = {};
   ideas.forEach((i) => {
     const type = i.idea_type || 'untyped';
@@ -65,7 +76,6 @@ function buildInsights(ideas: Idea[]): string[] {
     }
   });
 
-  // Paused ideas
   const paused = ideas.filter((i) => i.status === 'paused').length;
   if (paused > 0) insights.push(`${paused} idea${paused !== 1 ? 's' : ''} currently paused`);
 
@@ -84,11 +94,21 @@ function avgDaysBetweenChats(ideas: Idea[]): string {
   return avg < 1 ? '<1' : Math.round(avg).toString();
 }
 
-export default async function AnalyticsPage() {
-  const { ideas, syncCount } = await getData();
+export default async function AnalyticsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ range?: string }>;
+}) {
+  const { range = 'all' } = await searchParams;
+  const { ideas: allIdeas, syncCount } = await getData();
 
-  const inProgress = ideas.filter(i => i.status === 'in_progress').length;
-  const completed = ideas.filter(i => i.status === 'completed').length;
+  const cutoff = getRangeCutoff(range);
+  const ideas = cutoff
+    ? allIdeas.filter((i) => new Date(i.created_at) >= cutoff)
+    : allIdeas;
+
+  const inProgress = ideas.filter((i) => i.status === 'in_progress').length;
+  const completed = ideas.filter((i) => i.status === 'completed').length;
   const avgDays = avgDaysBetweenChats(ideas);
   const insights = buildInsights(ideas);
 
@@ -105,13 +125,22 @@ export default async function AnalyticsPage() {
       <TopBar title="Analytics" subtitle={`${ideas.length} ideas · ${inProgress} active · ${completed} shipped`} />
 
       <main className="flex-1 px-4 lg:px-8 pt-12 pb-10 max-w-6xl mx-auto w-full">
+        {/* Time range filter */}
+        <div className="flex items-center justify-between mb-6">
+          <AnalyticsFilters currentRange={range} />
+          {cutoff && (
+            <p className="text-[10px] font-mono text-[#3A3A55]">
+              showing {ideas.length} of {allIdeas.length} ideas
+            </p>
+          )}
+        </div>
+
         {ideas.length === 0 ? (
           <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-16 text-center">
-            <p className="text-[12px] text-[#3A3A55] font-mono">No data yet — sync your ideas to see analytics</p>
+            <p className="text-[12px] text-[#3A3A55] font-mono">No data for this time range</p>
           </div>
         ) : (
           <div className="space-y-5">
-            {/* Metric summary row */}
             <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
               {metricCards.map(({ label, value }) => (
                 <div key={label} className="bg-[#111118] border border-[#1E1E2E] rounded-xl px-4 py-3.5">
@@ -121,7 +150,6 @@ export default async function AnalyticsPage() {
               ))}
             </div>
 
-            {/* Row 1 — completion + avg grade + timeline */}
             <div className="grid grid-cols-1 lg:grid-cols-[200px_200px_1fr] gap-5">
               <ChartCard title="Completion" tall>
                 <CompletionRing ideas={ideas} />
@@ -134,7 +162,6 @@ export default async function AnalyticsPage() {
               </ChartCard>
             </div>
 
-            {/* Row 2 — type + status */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
               <ChartCard title="By Type" subtitle="distribution across categories">
                 <IdeasByTypeChart ideas={ideas} />
@@ -144,7 +171,6 @@ export default async function AnalyticsPage() {
               </ChartCard>
             </div>
 
-            {/* Row 3 — sectors + grade dist */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
               <ChartCard title="Top Sectors" subtitle="where your ideas cluster">
                 <TopSectorsChart ideas={ideas} />
@@ -154,7 +180,6 @@ export default async function AnalyticsPage() {
               </ChartCard>
             </div>
 
-            {/* Combined insights */}
             {insights.length > 0 && (
               <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-6">
                 <h3 className="text-[11px] font-mono text-[#4A4A60] uppercase tracking-widest mb-4">

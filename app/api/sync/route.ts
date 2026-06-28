@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
 import { extractIdeasFromConversations } from '@/lib/claude';
-import { ParsedConversation, parseConversationExport, batchConversations, fuzzyMatchTitle } from '@/lib/parser';
+import { ParsedConversation, parseConversationExport, batchConversations, fuzzyMatchTitle, extractConversationStats } from '@/lib/parser';
 import { Idea } from '@/lib/types';
 
 export const dynamic = 'force-dynamic';
@@ -139,6 +139,71 @@ export async function POST(req: NextRequest) {
       await supabase
         .from('synced_conversations')
         .upsert(upsertRows, { onConflict: 'conversation_uuid,user_id' });
+    }
+
+    // Extract and store conversation stats (best-effort; won't break sync if tables missing)
+    try {
+      const conversationLogRows = newConversations.map((conv) => {
+        const stats = extractConversationStats(conv.fullText);
+        return {
+          conversation_uuid: conv.uuid,
+          user_id: 'favour',
+          title: conv.name,
+          created_at: conv.created_at,
+          human_messages: stats.human_messages,
+          assistant_messages: stats.assistant_messages,
+          total_words: stats.total_words,
+          human_words: stats.human_words,
+          assistant_words: stats.assistant_words,
+          code_blocks: stats.code_blocks,
+          code_lines: stats.code_lines,
+        };
+      });
+
+      await supabase
+        .from('conversations_log')
+        .upsert(conversationLogRows, { onConflict: 'user_id,conversation_uuid' });
+
+      const totalsNew = conversationLogRows.reduce(
+        (acc, r) => ({
+          total_conversations: acc.total_conversations + 1,
+          total_words: acc.total_words + r.total_words,
+          total_human_words: acc.total_human_words + r.human_words,
+          total_assistant_words: acc.total_assistant_words + r.assistant_words,
+          total_code_blocks: acc.total_code_blocks + r.code_blocks,
+          total_code_lines: acc.total_code_lines + r.code_lines,
+        }),
+        { total_conversations: 0, total_words: 0, total_human_words: 0, total_assistant_words: 0, total_code_blocks: 0, total_code_lines: 0 }
+      );
+
+      const { data: existingStats } = await supabase
+        .from('user_stats')
+        .select('*')
+        .eq('user_id', 'favour')
+        .single();
+
+      const sortedDates = newConversations.map((c) => c.created_at).sort();
+      const earliest = sortedDates[0];
+      const latest = sortedDates[sortedDates.length - 1];
+
+      await supabase.from('user_stats').upsert({
+        user_id: 'favour',
+        total_conversations: (existingStats?.total_conversations || 0) + totalsNew.total_conversations,
+        total_words: (existingStats?.total_words || 0) + totalsNew.total_words,
+        total_human_words: (existingStats?.total_human_words || 0) + totalsNew.total_human_words,
+        total_assistant_words: (existingStats?.total_assistant_words || 0) + totalsNew.total_assistant_words,
+        total_code_blocks: (existingStats?.total_code_blocks || 0) + totalsNew.total_code_blocks,
+        total_code_lines: (existingStats?.total_code_lines || 0) + totalsNew.total_code_lines,
+        first_conversation_at: existingStats?.first_conversation_at
+          ? (earliest < existingStats.first_conversation_at ? earliest : existingStats.first_conversation_at)
+          : earliest,
+        last_conversation_at: existingStats?.last_conversation_at
+          ? (latest > existingStats.last_conversation_at ? latest : existingStats.last_conversation_at)
+          : latest,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id' });
+    } catch (statsErr) {
+      console.warn('Conversation stats update failed (non-fatal):', statsErr);
     }
 
     // Record sync log entry
