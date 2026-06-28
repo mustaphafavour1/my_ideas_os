@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
+import { DEMO_CONVERSATIONS_LOG, DEMO_USER_STATS, DEMO_CONV_PREFIX } from '@/lib/demo-data';
 
 export const dynamic = 'force-dynamic';
 
@@ -18,25 +19,6 @@ export async function GET() {
 }
 
 const DEMO_SOURCE_REF = 'demo_mode';
-const DEMO_CONV_PREFIX = 'demo-conv-';
-
-const DEMO_CONVERSATIONS_LOG = [
-  { conversation_uuid: 'demo-conv-001', title: 'Building Lagos Transit Tracker MVP', created_at: '2025-11-03T14:22:00Z', human_messages: 14, assistant_messages: 14, total_words: 4200, human_words: 1300, assistant_words: 2900, code_blocks: 5, code_lines: 142 },
-  { conversation_uuid: 'demo-conv-002', title: 'Danfo Pay NFC Payment Architecture', created_at: '2025-10-17T09:45:00Z', human_messages: 18, assistant_messages: 18, total_words: 5800, human_words: 1700, assistant_words: 4100, code_blocks: 8, code_lines: 267 },
-  { conversation_uuid: 'demo-conv-003', title: 'Idea OS Data Model & Dashboard Design', created_at: '2025-12-01T10:00:00Z', human_messages: 22, assistant_messages: 22, total_words: 7200, human_words: 2100, assistant_words: 5100, code_blocks: 12, code_lines: 385 },
-  { conversation_uuid: 'demo-conv-004', title: 'JAMB Study App Prompt Engineering', created_at: '2025-08-14T11:15:00Z', human_messages: 9, assistant_messages: 9, total_words: 2900, human_words: 920, assistant_words: 1980, code_blocks: 2, code_lines: 48 },
-  { conversation_uuid: 'demo-conv-005', title: 'Freelance Invoice Parser Full Build', created_at: '2025-11-22T08:00:00Z', human_messages: 25, assistant_messages: 25, total_words: 8100, human_words: 2400, assistant_words: 5700, code_blocks: 14, code_lines: 412 },
-  { conversation_uuid: 'demo-conv-006', title: 'WhatsApp Business Automation Flow', created_at: '2025-11-10T16:00:00Z', human_messages: 19, assistant_messages: 19, total_words: 6400, human_words: 1900, assistant_words: 4500, code_blocks: 9, code_lines: 298 },
-  { conversation_uuid: 'demo-conv-007', title: 'African Tech Podcast Format Strategy', created_at: '2025-09-20T16:30:00Z', human_messages: 7, assistant_messages: 7, total_words: 2100, human_words: 680, assistant_words: 1420, code_blocks: 0, code_lines: 0 },
-  { conversation_uuid: 'demo-conv-008', title: 'Afro Design System Component Library', created_at: '2025-10-05T15:45:00Z', human_messages: 16, assistant_messages: 16, total_words: 5200, human_words: 1560, assistant_words: 3640, code_blocks: 10, code_lines: 326 },
-  { conversation_uuid: 'demo-conv-009', title: 'Remote Jobs Board Tech Stack', created_at: '2025-06-25T09:30:00Z', human_messages: 13, assistant_messages: 13, total_words: 4000, human_words: 1200, assistant_words: 2800, code_blocks: 6, code_lines: 178 },
-  { conversation_uuid: 'demo-conv-010', title: 'Ajo Digital Paystack Integration', created_at: '2025-09-01T12:00:00Z', human_messages: 21, assistant_messages: 21, total_words: 6900, human_words: 2050, assistant_words: 4850, code_blocks: 11, code_lines: 357 },
-  { conversation_uuid: 'demo-conv-011', title: 'Mental Health App Market Research', created_at: '2025-05-12T10:00:00Z', human_messages: 8, assistant_messages: 8, total_words: 2600, human_words: 820, assistant_words: 1780, code_blocks: 0, code_lines: 0 },
-  { conversation_uuid: 'demo-conv-012', title: 'Personal Finance Dashboard React Build', created_at: '2025-03-10T09:00:00Z', human_messages: 28, assistant_messages: 28, total_words: 9200, human_words: 2700, assistant_words: 6500, code_blocks: 16, code_lines: 523 },
-  { conversation_uuid: 'demo-conv-013', title: 'Climate Data API & Visualisation', created_at: '2025-09-11T11:30:00Z', human_messages: 11, assistant_messages: 11, total_words: 3500, human_words: 1050, assistant_words: 2450, code_blocks: 4, code_lines: 112 },
-  { conversation_uuid: 'demo-conv-014', title: 'Co-living Platform Business Model', created_at: '2025-07-08T13:00:00Z', human_messages: 6, assistant_messages: 6, total_words: 1900, human_words: 620, assistant_words: 1280, code_blocks: 0, code_lines: 0 },
-  { conversation_uuid: 'demo-conv-015', title: 'Build in Lagos Newsletter SEO Strategy', created_at: '2025-12-01T08:00:00Z', human_messages: 15, assistant_messages: 15, total_words: 4800, human_words: 1450, assistant_words: 3350, code_blocks: 3, code_lines: 67 },
-];
 
 const DEMO_IDEAS = [
   {
@@ -444,40 +426,30 @@ export async function POST() {
       notes: `Demo data seeded — ${rows.length} ideas across multiple sectors.`,
     });
 
-    // Seed conversation stats (best-effort)
+    // Seed conversation stats (best-effort — pages fall back to static data if tables missing)
     try {
-      const convRows = DEMO_CONVERSATIONS_LOG.map((c) => ({ ...c, user_id: 'favour' }));
-      await supabase.from('conversations_log').upsert(convRows, { onConflict: 'user_id,conversation_uuid' });
+      const convRows = DEMO_CONVERSATIONS_LOG.map((c) => ({ ...c }));
+      const { error: convErr } = await supabase.from('conversations_log').upsert(convRows, { onConflict: 'user_id,conversation_uuid' });
+      if (convErr) console.warn('conversations_log upsert skipped:', convErr.message);
 
       const { data: existing } = await supabase.from('user_stats').select('*').eq('user_id', 'favour').single();
-      const demoTotals = DEMO_CONVERSATIONS_LOG.reduce(
-        (acc, c) => ({
-          total_conversations: acc.total_conversations + 1,
-          total_words: acc.total_words + c.total_words,
-          total_human_words: acc.total_human_words + c.human_words,
-          total_assistant_words: acc.total_assistant_words + c.assistant_words,
-          total_code_blocks: acc.total_code_blocks + c.code_blocks,
-          total_code_lines: acc.total_code_lines + c.code_lines,
-        }),
-        { total_conversations: 0, total_words: 0, total_human_words: 0, total_assistant_words: 0, total_code_blocks: 0, total_code_lines: 0 }
-      );
-      const sortedDates = DEMO_CONVERSATIONS_LOG.map((c) => c.created_at).sort();
-      await supabase.from('user_stats').upsert({
+      const { error: statsErr } = await supabase.from('user_stats').upsert({
         user_id: 'favour',
-        total_conversations: (existing?.total_conversations || 0) + demoTotals.total_conversations,
-        total_words: (existing?.total_words || 0) + demoTotals.total_words,
-        total_human_words: (existing?.total_human_words || 0) + demoTotals.total_human_words,
-        total_assistant_words: (existing?.total_assistant_words || 0) + demoTotals.total_assistant_words,
-        total_code_blocks: (existing?.total_code_blocks || 0) + demoTotals.total_code_blocks,
-        total_code_lines: (existing?.total_code_lines || 0) + demoTotals.total_code_lines,
+        total_conversations: (existing?.total_conversations || 0) + DEMO_USER_STATS.total_conversations,
+        total_words: (existing?.total_words || 0) + DEMO_USER_STATS.total_words,
+        total_human_words: (existing?.total_human_words || 0) + DEMO_USER_STATS.total_human_words,
+        total_assistant_words: (existing?.total_assistant_words || 0) + DEMO_USER_STATS.total_assistant_words,
+        total_code_blocks: (existing?.total_code_blocks || 0) + DEMO_USER_STATS.total_code_blocks,
+        total_code_lines: (existing?.total_code_lines || 0) + DEMO_USER_STATS.total_code_lines,
         first_conversation_at: existing?.first_conversation_at
-          ? (sortedDates[0] < existing.first_conversation_at ? sortedDates[0] : existing.first_conversation_at)
-          : sortedDates[0],
-        last_conversation_at: sortedDates[sortedDates.length - 1],
+          ? (DEMO_USER_STATS.first_conversation_at! < existing.first_conversation_at ? DEMO_USER_STATS.first_conversation_at : existing.first_conversation_at)
+          : DEMO_USER_STATS.first_conversation_at,
+        last_conversation_at: DEMO_USER_STATS.last_conversation_at,
         updated_at: new Date().toISOString(),
       }, { onConflict: 'user_id' });
-    } catch (statsErr) {
-      console.warn('Demo conversation stats seeding failed (non-fatal):', statsErr);
+      if (statsErr) console.warn('user_stats upsert skipped:', statsErr.message);
+    } catch (e) {
+      console.warn('Demo conversation stats seeding failed (non-fatal):', e);
     }
 
     return NextResponse.json({ seeded: rows.length });

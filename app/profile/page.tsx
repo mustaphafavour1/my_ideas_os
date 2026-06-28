@@ -3,6 +3,7 @@ export const dynamic = 'force-dynamic';
 import { TopBar } from '@/components/layout/TopBar';
 import { createServiceClient } from '@/lib/supabase';
 import { Idea, UserStats } from '@/lib/types';
+import { DEMO_USER_STATS } from '@/lib/demo-data';
 
 async function getData() {
   const supabase = createServiceClient();
@@ -10,9 +11,12 @@ async function getData() {
     supabase.from('ideas').select('*').eq('user_id', 'favour'),
     supabase.from('user_stats').select('*').eq('user_id', 'favour').single(),
   ]);
+  const allIdeas = (ideas || []) as Idea[];
+  const isDemoActive = allIdeas.some((i) => i.source_ref === 'demo_mode');
+  const effectiveStats = (stats as UserStats | null) ?? (isDemoActive ? DEMO_USER_STATS : null);
   return {
-    ideas: (ideas || []) as Idea[],
-    stats: (stats || null) as UserStats | null,
+    ideas: allIdeas,
+    stats: effectiveStats,
   };
 }
 

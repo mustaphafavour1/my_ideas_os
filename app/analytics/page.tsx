@@ -13,6 +13,7 @@ import {
 import { TimeRangeFilter } from '@/components/ui/TimeRangeFilter';
 import { createServiceClient } from '@/lib/supabase';
 import { Idea, ConversationLog, UserStats } from '@/lib/types';
+import { DEMO_CONVERSATIONS_LOG, DEMO_USER_STATS } from '@/lib/demo-data';
 
 async function getData() {
   const supabase = createServiceClient();
@@ -22,11 +23,17 @@ async function getData() {
     supabase.from('conversations_log').select('*').eq('user_id', 'favour').order('created_at', { ascending: true }),
     supabase.from('user_stats').select('*').eq('user_id', 'favour').single(),
   ]);
+  const allIdeas = (ideas || []) as Idea[];
+  const isDemoActive = allIdeas.some((i) => i.source_ref === 'demo_mode');
+  const effectiveLogs = (logs && logs.length > 0)
+    ? (logs as ConversationLog[])
+    : isDemoActive ? ([...DEMO_CONVERSATIONS_LOG].sort((a, b) => a.created_at.localeCompare(b.created_at)) as unknown as ConversationLog[]) : [];
+  const effectiveStats = (userStats as UserStats | null) ?? (isDemoActive ? DEMO_USER_STATS : null);
   return {
-    ideas: (ideas || []) as Idea[],
+    ideas: allIdeas,
     syncCount: syncCount || 0,
-    logs: (logs || []) as ConversationLog[],
-    userStats: (userStats || null) as UserStats | null,
+    logs: effectiveLogs,
+    userStats: effectiveStats,
   };
 }
 
