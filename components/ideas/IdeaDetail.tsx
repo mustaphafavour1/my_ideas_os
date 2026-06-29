@@ -109,9 +109,18 @@ function computeHighlights(idea: Idea) {
 
 interface IdeaDetailProps {
   initialIdea: Idea;
+  parentIdea?: Pick<Idea, 'id' | 'title'> | null;
+  childIdeas?: Pick<Idea, 'id' | 'title' | 'status'>[];
 }
 
-export function IdeaDetail({ initialIdea }: IdeaDetailProps) {
+// Detect if an idea might already be shipped despite having in_progress status
+function detectShippedSignals(idea: Idea): boolean {
+  if (idea.status !== 'in_progress') return false;
+  const text = [idea.description, idea.ai_suggestions, ...(idea.next_steps || [])].join(' ').toLowerCase();
+  return /\b(shipped|went live|in production|deployed|launched|live now|already built|it's live|its live|we launched)\b/.test(text);
+}
+
+export function IdeaDetail({ initialIdea, parentIdea, childIdeas = [] }: IdeaDetailProps) {
   const router = useRouter();
   const [idea, setIdea] = useState<Idea>(initialIdea);
   const [editing, setEditing] = useState(false);
@@ -124,6 +133,7 @@ export function IdeaDetail({ initialIdea }: IdeaDetailProps) {
   const [askInput, setAskInput] = useState('');
   const [askLoading, setAskLoading] = useState(false);
   const [askResponse, setAskResponse] = useState<string | null>(null);
+  const [dismissedNudge, setDismissedNudge] = useState(false);
 
   const inputClass = 'w-full bg-[#0A0A0F] border border-[#1E1E2E] rounded-lg px-3 py-2 text-[12px] text-[#F0F0F5] placeholder-[#3A3A55] focus:outline-none focus:border-[#F7C948]/30 transition-colors';
 
@@ -238,11 +248,38 @@ ${idea.ai_suggestions ? `<h2>AI Suggestion</h2><div class="suggestion">${idea.ai
       >
         {/* Breadcrumbs — outside grid so sidebar aligns with header card */}
         <div className="px-4 lg:px-8 pt-8 lg:pt-10 pb-0 max-w-6xl mx-auto w-full">
-          <nav className="flex items-center gap-1 text-[10px] font-mono">
+          <nav className="flex items-center gap-1 text-[10px] font-mono flex-wrap">
             <Link href="/ideas" className="text-[#3A3A55] hover:text-[#6A6A80] transition-colors">Ideas</Link>
+            {parentIdea && (
+              <>
+                <span className="text-[#252540] mx-0.5">/</span>
+                <Link href={`/ideas/${parentIdea.id}`} className="text-[#3A3A55] hover:text-[#6A6A80] transition-colors truncate max-w-[160px]">{parentIdea.title}</Link>
+              </>
+            )}
             <span className="text-[#252540] mx-0.5">/</span>
             <span className="text-[#5E5E7A] truncate max-w-[200px]">{idea.title}</span>
           </nav>
+
+          {/* Shipped status nudge */}
+          {!dismissedNudge && detectShippedSignals(idea) && (
+            <div className="mt-3 flex items-center gap-3 bg-[#F7C948]/8 border border-[#F7C948]/20 rounded-xl px-4 py-2.5">
+              <span className="text-[#F7C948] text-sm shrink-0">✦</span>
+              <p className="text-[11px] text-[#C0B060] flex-1">
+                This idea looks like it might already be live — is the status still accurate?
+              </p>
+              <button
+                onClick={() => {
+                  setForm((f) => ({ ...f, status: 'completed' }));
+                  setEditing(true);
+                  setDismissedNudge(true);
+                }}
+                className="text-[10px] font-mono text-[#F7C948] hover:text-[#E6B830] transition-colors whitespace-nowrap"
+              >
+                Mark completed →
+              </button>
+              <button onClick={() => setDismissedNudge(true)} className="text-[#3A3A55] hover:text-[#6A6A80] text-[11px]">✕</button>
+            </div>
+          )}
         </div>
 
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-[1fr_300px] gap-6 px-4 lg:px-8 pt-5 pb-8 lg:pb-10 max-w-6xl mx-auto w-full">
@@ -490,6 +527,60 @@ ${idea.ai_suggestions ? `<h2>AI Suggestion</h2><div class="suggestion">${idea.ai
             {idea.tags && idea.tags.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {idea.tags.map((tag) => <TagBadge key={tag} label={tag} />)}
+              </div>
+            )}
+
+            {/* Related ideas — children */}
+            {childIdeas.length > 0 && (
+              <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-5">
+                <h2 className="text-[10px] font-mono text-[#4A4A60] uppercase tracking-widest mb-3">
+                  Sub-ideas <span className="text-[#2A2A40]">({childIdeas.length})</span>
+                </h2>
+                <div className="space-y-2">
+                  {childIdeas.map((child) => (
+                    <Link key={child.id} href={`/ideas/${child.id}`}
+                      className="flex items-center gap-3 px-3 py-2 rounded-lg hover:bg-[#1A1A28] transition-colors group">
+                      <span className="text-[#2A2A40] text-[10px] shrink-0">↳</span>
+                      <span className="text-[12px] text-[#D0D0DA] flex-1 truncate group-hover:text-[#E8E8F0] transition-colors">{child.title}</span>
+                      <StatusChip status={child.status} size="sm" />
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Your complaints — from conversation extraction */}
+            {((idea.user_complaints?.length > 0) || (idea.rephrasing_suggestions?.length > 0)) && (
+              <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-5">
+                <h2 className="text-[10px] font-mono text-[#4A4A60] uppercase tracking-widest mb-4">Your Complaints</h2>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {idea.user_complaints?.length > 0 && (
+                    <div>
+                      <p className="text-[9px] font-mono text-[#C06830]/70 uppercase tracking-widest mb-2">Frustrations logged</p>
+                      <ul className="space-y-1.5">
+                        {idea.user_complaints.map((c, i) => (
+                          <li key={i} className="flex gap-2 text-[11px] text-[#7A7A90]">
+                            <span className="text-[#C06830] shrink-0">!</span>
+                            {c}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                  {idea.rephrasing_suggestions?.length > 0 && (
+                    <div>
+                      <p className="text-[9px] font-mono text-[#7A7AF0]/70 uppercase tracking-widest mb-2">Rephrasing moments</p>
+                      <ul className="space-y-1.5">
+                        {idea.rephrasing_suggestions.map((r, i) => (
+                          <li key={i} className="flex gap-2 text-[11px] text-[#7A7A90]">
+                            <span className="text-[#7A7AF0] shrink-0">↺</span>
+                            {r}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
           </div>

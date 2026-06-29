@@ -13,6 +13,7 @@ For each idea found, return a JSON array. Each item must have:
 - sector: string (fintech, health-tech, design, community, personal, education, etc.)
 - idea_type: one of [product, side_quest, portfolio, content, strategy, research, personal_development, automation, community, framework, experiment, partnership]
 - status: one of [captured, lightly_researched, prototyping, validated, in_progress, paused, completed, archived]
+  IMPORTANT for status: if the conversation mentions the idea is "shipped", "live", "deployed", "launched", "in production", "already built", "went live", or "done and working", set status to "completed". If it mentions actively building/coding right now, use "in_progress".
 - grade_novelty: 1-5
 - grade_feasibility: 1-5
 - grade_personal_fit: 1-5
@@ -23,6 +24,9 @@ For each idea found, return a JSON array. Each item must have:
 - ai_suggestions: string (one concrete recommendation for this idea)
 - source_ref: string (conversation name or date)
 - chat_date: ISO date string
+- related_to: string | null (if this idea is a sub-feature, variant, or closely related to another idea extracted from the SAME batch, put the EXACT title of that parent/related idea here; otherwise null)
+- user_complaints: string[] (max 3 — frustrations or complaints the user expressed about AI responses in this conversation, e.g. "Claude kept ignoring the constraint about X"; empty array if none)
+- rephrasing_suggestions: string[] (max 3 — cases where the user had to rephrase or retry a prompt; empty array if none)
 
 If no clear ideas are present, return an empty array [].
 Return only valid JSON array, no markdown, no explanation.`;

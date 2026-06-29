@@ -126,7 +126,13 @@ function buildInsights(ideas: Idea[]): string[] {
   });
   const paused = ideas.filter((i) => i.status === 'paused').length;
   if (paused > 0) insights.push(`${paused} idea${paused !== 1 ? 's' : ''} currently paused`);
-  return insights.slice(0, 6);
+
+  // Idea group insights
+  const parentIds = new Set(ideas.filter((i) => i.parent_idea_id).map((i) => i.parent_idea_id));
+  const groupCount = ideas.filter((i) => parentIds.has(i.id)).length;
+  if (groupCount > 0) insights.push(`${groupCount} idea${groupCount !== 1 ? 's' : ''} have related sub-ideas`);
+
+  return insights.slice(0, 8);
 }
 
 function avgDaysBetweenChats(ideas: Idea[]): string {

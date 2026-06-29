@@ -95,6 +95,8 @@ export async function POST(req: NextRequest) {
     const existing = (existingIdeas || []) as Pick<Idea, 'id' | 'title' | 'updated_at'>[];
 
     let added = 0, updated = 0, skipped = 0;
+    // Track inserted idea titles -> DB ids for parent resolution
+    const insertedTitleToId = new Map<string, string>();
 
     for (const idea of allExtracted) {
       if (!idea.title?.trim()) { skipped++; continue; }
@@ -122,18 +124,36 @@ export async function POST(req: NextRequest) {
         raw_source: null,
         tags: [],
         chat_date: idea.chat_date || null,
+        user_complaints: (idea as unknown as { user_complaints?: string[] }).user_complaints || [],
+        rephrasing_suggestions: (idea as unknown as { rephrasing_suggestions?: string[] }).rephrasing_suggestions || [],
       };
 
       if (match) {
         const { error } = await supabase.from('ideas').update({ ...payload, updated_at: match.updated_at }).eq('id', match.id);
-        if (!error) updated++;
-        else { console.error('Update error:', error); skipped++; }
-      } else {
-        const { error } = await supabase.from('ideas').insert(payload);
         if (!error) {
+          updated++;
+          insertedTitleToId.set(idea.title!.trim().toLowerCase(), match.id);
+        } else { console.error('Update error:', error); skipped++; }
+      } else {
+        const { data: inserted, error } = await supabase.from('ideas').insert(payload).select('id').single();
+        if (!error && inserted) {
           added++;
-          existing.push({ id: 'new', title: idea.title!, updated_at: new Date().toISOString() });
+          insertedTitleToId.set(idea.title!.trim().toLowerCase(), inserted.id);
+          existing.push({ id: inserted.id, title: idea.title!, updated_at: new Date().toISOString() });
         } else { console.error('Insert error:', error); skipped++; }
+      }
+    }
+
+    // Second pass: resolve parent_idea_id from related_to field
+    for (const idea of allExtracted) {
+      const relatedTo = (idea as unknown as { related_to?: string | null }).related_to;
+      if (!relatedTo || !idea.title?.trim()) continue;
+      const childId = insertedTitleToId.get(idea.title.trim().toLowerCase());
+      if (!childId) continue;
+      // Find the parent by fuzzy title match across all known ideas
+      const parentEntry = existing.find((e) => fuzzyMatchTitle(e.title, relatedTo));
+      if (parentEntry && parentEntry.id !== 'new' && parentEntry.id !== childId) {
+        await supabase.from('ideas').update({ parent_idea_id: parentEntry.id }).eq('id', childId);
       }
     }
 

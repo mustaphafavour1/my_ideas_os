@@ -54,6 +54,9 @@ export interface Idea {
   chat_date: string | null;
   created_at: string;
   updated_at: string;
+  parent_idea_id: string | null;
+  user_complaints: string[];
+  rephrasing_suggestions: string[];
 }
 
 export interface SyncLog {

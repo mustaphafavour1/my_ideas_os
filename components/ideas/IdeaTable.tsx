@@ -362,9 +362,14 @@ export function IdeaTable({ ideas: initialIdeas }: IdeaTableProps) {
                 >
                   <td className="px-5 py-4 text-[10px] font-mono text-[#3A3A55] tabular-nums">{(page - 1) * perPage + idx + 1}</td>
                   <td className="px-5 py-4">
-                    <span className="text-[12px] text-[#E0E0EA] font-medium whitespace-nowrap overflow-hidden text-ellipsis block max-w-[240px]">{idea.title}</span>
+                    <div className="flex items-center gap-1.5">
+                      {idea.parent_idea_id && (
+                        <span className="text-[#3A3A55] text-[10px] shrink-0" title="Sub-idea">↳</span>
+                      )}
+                      <span className="text-[12px] text-[#E0E0EA] font-medium whitespace-nowrap overflow-hidden text-ellipsis block max-w-[230px]">{idea.title}</span>
+                    </div>
                     {idea.description && (
-                      <span className="text-[10px] text-[#3A3A55] font-mono whitespace-nowrap overflow-hidden text-ellipsis block max-w-[240px]">
+                      <span className="text-[10px] text-[#3A3A55] font-mono whitespace-nowrap overflow-hidden text-ellipsis block max-w-[240px] ml-4">
                         {idea.description}
                       </span>
                     )}
