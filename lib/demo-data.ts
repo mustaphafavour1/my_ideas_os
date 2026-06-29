@@ -1,4 +1,4 @@
-import { ConversationLog, UserStats } from './types';
+import { ConversationLog, UserStats, Signal, SignalType } from './types';
 
 export const DEMO_CONV_PREFIX = 'demo-conv-';
 
@@ -18,6 +18,73 @@ export const DEMO_CONVERSATIONS_LOG: Omit<ConversationLog, 'id' | 'processed_at'
   { user_id: 'favour', conversation_uuid: 'demo-conv-013', title: 'Climate Data API & Visualisation',           created_at: '2025-09-11T11:30:00Z', human_messages: 11, assistant_messages: 11, total_words: 3500,  human_words: 1050, assistant_words: 2450, code_blocks: 4,  code_lines: 112 },
   { user_id: 'favour', conversation_uuid: 'demo-conv-014', title: 'Co-living Platform Business Model',          created_at: '2025-07-08T13:00:00Z', human_messages: 6,  assistant_messages: 6,  total_words: 1900,  human_words: 620,  assistant_words: 1280, code_blocks: 0,  code_lines: 0   },
   { user_id: 'favour', conversation_uuid: 'demo-conv-015', title: 'Build in Lagos Newsletter SEO Strategy',     created_at: '2025-12-01T08:00:00Z', human_messages: 15, assistant_messages: 15, total_words: 4800,  human_words: 1450, assistant_words: 3350, code_blocks: 3,  code_lines: 67  },
+];
+
+export const DEMO_SIGNALS: Omit<Signal, 'idea_id' | 'idea_title'>[] = [
+  {
+    id: 'demo-sig-001',
+    user_id: 'favour',
+    title: 'Ship to a narrow geography first, expand later',
+    content: 'Every Lagos-specific product I\'ve ideated has more traction potential than global plays because the problem is acute and underserved. Starting narrow lets you find true product-market fit before scaling the complexity.',
+    signal_type: 'strategy' as SignalType,
+    created_at: '2025-11-15T10:00:00Z',
+  },
+  {
+    id: 'demo-sig-002',
+    user_id: 'favour',
+    title: 'Payments are the unlock for African B2C',
+    content: 'Across transit, savings, and freelance tools, the moment I add a Paystack or Flutterwave integration the idea becomes 10× more concrete. Payment infrastructure is the moat — don\'t build around it, build on top of it.',
+    signal_type: 'pattern' as SignalType,
+    created_at: '2025-10-22T09:30:00Z',
+  },
+  {
+    id: 'demo-sig-003',
+    user_id: 'favour',
+    title: 'AI is a force multiplier, not a replacement',
+    content: 'Every time I\'ve used Claude to draft architecture or suggest code patterns, the final output still needed my domain knowledge. The leverage is in the iteration speed, not in removing my thinking.',
+    signal_type: 'principle' as SignalType,
+    created_at: '2025-09-18T14:00:00Z',
+  },
+  {
+    id: 'demo-sig-004',
+    user_id: 'favour',
+    title: 'WhatsApp-first beats app-first in Nigeria',
+    content: 'Ideas that route through WhatsApp (automation, alerts, onboarding) consistently rank higher in viability scores. App install friction is real. If your MVP can live in a chat, start there.',
+    signal_type: 'opportunity' as SignalType,
+    created_at: '2025-11-05T11:00:00Z',
+  },
+  {
+    id: 'demo-sig-005',
+    user_id: 'favour',
+    title: 'Trust deficit in digital services slows growth',
+    content: 'Three separate ideas — co-living platform, digital Ajo, and mental health app — all face the same risk: users don\'t trust a new platform with their money or data. Credibility and social proof must be built in from day one.',
+    signal_type: 'risk' as SignalType,
+    created_at: '2025-10-03T16:30:00Z',
+  },
+  {
+    id: 'demo-sig-006',
+    user_id: 'favour',
+    title: 'Beautiful defaults outperform configurable complexity',
+    content: 'The design system I built with Claude was better when I asked for opinionated defaults and then trimmed, rather than building everything configurable from scratch. Constraint creates quality.',
+    signal_type: 'lesson' as SignalType,
+    created_at: '2025-08-29T08:00:00Z',
+  },
+  {
+    id: 'demo-sig-007',
+    user_id: 'favour',
+    title: 'JAMB + education = perpetual demand',
+    content: 'Every year brings a new cohort of students with high urgency and clear willingness to pay. Education-adjacent products in Nigeria have structural demand that doesn\'t need to be created — it needs to be intercepted.',
+    signal_type: 'opportunity' as SignalType,
+    created_at: '2025-07-20T13:00:00Z',
+  },
+  {
+    id: 'demo-sig-008',
+    user_id: 'favour',
+    title: 'Prompt iteration is the new debugging',
+    content: 'The fastest path to a better output isn\'t rewriting code — it\'s reframing the prompt. Treating prompts like code (version them, test edge cases, document what works) has become its own skill set.',
+    signal_type: 'principle' as SignalType,
+    created_at: '2025-12-01T07:30:00Z',
+  },
 ];
 
 export const DEMO_USER_STATS: UserStats = {

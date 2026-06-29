@@ -56,6 +56,34 @@ export interface DashboardContentProps {
   rangeTo?: string;
 }
 
+function MiniRing({ value, max, displayLabel, sublabel, color = '#F7C948' }: {
+  value: number; max: number; displayLabel: string; sublabel: string; color?: string;
+}) {
+  const r = 27;
+  const c = 2 * Math.PI * r;
+  const dash = (Math.min(Math.max(value, 0), max) / max) * c;
+  return (
+    <div className="flex flex-col items-center gap-1.5">
+      <div className="relative" style={{ width: 68, height: 68 }}>
+        <svg width={68} height={68} style={{ transform: 'rotate(-90deg)' }}>
+          <circle cx={34} cy={34} r={r} fill="none" stroke="#1A1A28" strokeWidth={5} />
+          <circle
+            cx={34} cy={34} r={r} fill="none"
+            stroke={color}
+            strokeWidth={5}
+            strokeDasharray={`${dash} ${c}`}
+            strokeLinecap="round"
+          />
+        </svg>
+        <div className="absolute inset-0 flex items-center justify-center">
+          <span className="text-[13px] font-bold leading-none" style={{ color }}>{displayLabel}</span>
+        </div>
+      </div>
+      <p className="text-[9px] font-mono text-white/40 text-center leading-snug max-w-[72px]">{sublabel}</p>
+    </div>
+  );
+}
+
 function SectionLabel({ label, href, linkText }: { label: string; href?: string; linkText?: string }) {
   return (
     <div className="flex items-center justify-between mb-5">
@@ -165,30 +193,26 @@ export function DashboardContent({
           )}
 
           {productivityScore !== undefined && (
-            <div className="mt-3 bg-[#111118] border border-[#1E1E2E] rounded-xl px-5 py-4 flex items-center justify-between gap-4 relative overflow-hidden">
+            <div className="mt-3 bg-[#111118] border border-[#1E1E2E] rounded-xl px-5 py-4 flex items-center gap-6 relative overflow-hidden">
               <div className="absolute inset-x-0 top-0 h-px"
-                style={{ background: `linear-gradient(90deg, transparent, ${productivityScore >= 100 ? 'rgba(76,175,130,0.3)' : productivityScore >= 65 ? 'rgba(247,201,72,0.3)' : 'rgba(122,122,240,0.2)'}, transparent)` }} />
-              <div>
-                <p className="text-[9px] font-mono text-[#3A3A55] uppercase tracking-widest mb-1">AI Productivity Score</p>
-                <div className="flex items-baseline gap-2">
-                  <p className="text-[28px] font-bold leading-none"
-                    style={{ color: productivityScore >= 100 ? '#4CAF82' : productivityScore >= 65 ? '#F7C948' : productivityScore >= 30 ? '#7A7AF0' : '#E07B54' }}>
-                    {productivityScore}%
-                  </p>
-                  <span className="text-[11px] font-mono text-[#4A4A60]">{productivityLabel}</span>
-                </div>
-              </div>
-              <div className="flex items-center gap-2 shrink-0">
-                <div className="h-1.5 w-32 bg-[#1A1A28] rounded-full overflow-hidden">
-                  <div className="h-full rounded-full transition-all"
-                    style={{
-                      width: `${Math.min(100, productivityScore)}%`,
-                      background: productivityScore >= 100
-                        ? 'linear-gradient(90deg, #4CAF82, rgba(76,175,130,0.4))'
-                        : 'linear-gradient(90deg, #F7C948, rgba(247,201,72,0.4))',
-                    }} />
-                </div>
-                <Link href="/profile" className="text-[10px] font-mono text-[#3A3A55] hover:text-[#F7C948] transition-colors whitespace-nowrap">
+                style={{ background: 'linear-gradient(90deg, transparent, rgba(247,201,72,0.2), transparent)' }} />
+              <MiniRing
+                value={productivityScore} max={99}
+                displayLabel={`${productivityScore}%`}
+                sublabel="AI Productivity"
+              />
+              <MiniRing
+                value={stats.avg_grade} max={5}
+                displayLabel={stats.avg_grade > 0 ? stats.avg_grade.toFixed(1) : '—'}
+                sublabel="Avg Idea Grade"
+              />
+              <MiniRing
+                value={completionPct} max={100}
+                displayLabel={`${completionPct}%`}
+                sublabel="Completion Rate"
+              />
+              <div className="ml-auto shrink-0">
+                <Link href="/profile" className="text-[10px] font-mono text-white/30 hover:text-[#F7C948] transition-colors whitespace-nowrap">
                   Full breakdown →
                 </Link>
               </div>

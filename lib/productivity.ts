@@ -1,29 +1,42 @@
 import { Idea, UserStats } from './types';
 
 export function computeProductivityScore(ideas: Idea[], stats: UserStats | null): number {
-  const convos = stats?.total_conversations || 0;
-  const codeLines = stats?.total_code_lines || 0;
+  const convos    = stats?.total_conversations || 0;
+  const codeLines = stats?.total_code_lines    || 0;
   const completed = ideas.filter((i) => i.status === 'completed').length;
   const completionRate = ideas.length > 0 ? completed / ideas.length : 0;
 
-  const volumeScore = (convos / 30) * 100;
-  const outputScore = (codeLines / 2000) * 100;
-  const ideasScore = (ideas.length / 15) * 100;
-  const executionScore = completionRate * 100;
+  // Depth: quality of captured ideas (description + grade + next steps)
+  const withDesc      = ideas.filter((i) => i.description && i.description.trim().length > 10).length;
+  const withGrade     = ideas.filter((i) => i.grade_overall !== null).length;
+  const withNextSteps = ideas.filter((i) => i.next_steps && i.next_steps.length > 0).length;
+  const depthRate     = ideas.length > 0
+    ? (withDesc + withGrade + withNextSteps) / (ideas.length * 3)
+    : 0;
 
-  return Math.round(
-    volumeScore * 0.35 +
-    outputScore * 0.30 +
-    ideasScore * 0.20 +
-    executionScore * 0.15
+  // High thresholds — AI's ceiling is far above what most builders currently reach
+  const volumeScore    = (convos       / 150)   * 100;  // 150 conversations = 100%
+  const outputScore    = (codeLines    / 50000) * 100;  // 50 000 code lines  = 100%
+  const ideasScore     = (ideas.length / 250)   * 100;  // 250 ideas          = 100%
+  const executionScore = completionRate          * 100;
+  const depthScore     = depthRate               * 100;
+
+  const raw = Math.round(
+    volumeScore    * 0.30 +
+    outputScore    * 0.30 +
+    ideasScore     * 0.20 +
+    executionScore * 0.10 +
+    depthScore     * 0.10,
   );
+
+  return Math.min(99, raw); // 99% ceiling — AI can always do more
 }
 
 export function scoreLabel(score: number): string {
-  if (score >= 150) return 'AI Native';
-  if (score >= 100) return 'Elite Builder';
-  if (score >= 65) return 'Power Builder';
-  if (score >= 30) return 'Active Builder';
+  if (score >= 80) return 'AI Native';
+  if (score >= 60) return 'Elite Builder';
+  if (score >= 40) return 'Power Builder';
+  if (score >= 20) return 'Active Builder';
   return 'Getting Started';
 }
 

@@ -1,7 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
+import { DEMO_SIGNALS } from '@/lib/demo-data';
 
 export const dynamic = 'force-dynamic';
+
+async function isDemoActive(supabase: ReturnType<typeof createServiceClient>): Promise<boolean> {
+  const { count } = await supabase
+    .from('ideas')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', 'favour')
+    .eq('source_ref', 'demo_mode');
+  return (count ?? 0) > 0;
+}
 
 export async function GET() {
   const supabase = createServiceClient();
@@ -11,7 +21,14 @@ export async function GET() {
     .eq('user_id', 'favour')
     .order('created_at', { ascending: false });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+  if (error) {
+    if (await isDemoActive(supabase)) return NextResponse.json(DEMO_SIGNALS);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  if (!data || data.length === 0) {
+    if (await isDemoActive(supabase)) return NextResponse.json(DEMO_SIGNALS);
+  }
 
   const signals = (data || []).map((s: Record<string, unknown> & { ideas?: { title: string } | null }) => ({
     ...s,

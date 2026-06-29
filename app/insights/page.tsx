@@ -257,9 +257,15 @@ export default function InsightsPage() {
                           animate={{ opacity: 1, scale: 1, y: 0 }}
                           exit={{ opacity: 0, scale: 0.96, y: 8 }}
                           transition={{ duration: 0.18 }}
-                          className="bg-[#111118] border border-[#252535] rounded-2xl p-7 max-w-lg w-full shadow-2xl"
+                          className="bg-[#111118] border border-[#252535] rounded-2xl p-7 max-w-lg w-full shadow-2xl relative"
                           onClick={(e) => e.stopPropagation()}
                         >
+                          <button
+                            onClick={() => setSelectedPair(null)}
+                            className="absolute top-4 right-4 w-7 h-7 flex items-center justify-center rounded-lg text-[#4A4A60] hover:text-white/60 hover:bg-white/5 transition-colors text-[14px]"
+                          >
+                            ✕
+                          </button>
                           {/* Header */}
                           <div className="flex items-start justify-between gap-4 mb-6">
                             <div>
@@ -287,8 +293,11 @@ export default function InsightsPage() {
                               </div>
                             </div>
                             <div className="shrink-0 text-right">
-                              <p className="text-[24px] font-bold text-[#F7C948] leading-none">{selectedPair.score}</p>
-                              <p className="text-[9px] font-mono text-[#3A3A55]">connection score</p>
+                              <p className="text-[24px] font-bold text-[#F7C948] leading-none">
+                                {selectedPair.score}
+                                <span className="text-[13px] font-normal text-white/30">/10</span>
+                              </p>
+                              <p className="text-[9px] font-mono text-white/30">connection score</p>
                             </div>
                           </div>
 

@@ -151,17 +151,6 @@ export default function SettingsPage() {
     setDragOverIdx(null);
   };
 
-  if (!loaded) {
-    return (
-      <div className="flex flex-col flex-1">
-        <TopBar title="Settings" subtitle="Customise your workspace" />
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-[11px] text-[#3A3A55] font-mono">Loading…</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="flex flex-col flex-1">
       <TopBar title="Settings" subtitle="Customise your workspace" />

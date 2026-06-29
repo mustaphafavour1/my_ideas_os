@@ -225,10 +225,10 @@ export default async function AnalyticsPage({
             {/* Completion + AvgGrade + Ideas over time */}
             {ideas.length > 0 && (
               <div className="grid grid-cols-1 lg:grid-cols-[200px_200px_1fr] gap-5">
-                <ChartCard title="Completion" tall>
+                <ChartCard title="Completion Rate" tall>
                   <CompletionRing ideas={ideas} />
                 </ChartCard>
-                <ChartCard title="Avg Grade" tall>
+                <ChartCard title="Avg Idea Grade" tall>
                   <AvgGradeRing ideas={ideas} />
                 </ChartCard>
                 <ChartCard title="Ideas Over Time" subtitle="captured per month">
@@ -258,10 +258,10 @@ export default async function AnalyticsPage({
             {/* By Type + By Status */}
             {ideas.length > 0 && (
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                <ChartCard title="By Type" subtitle="distribution across categories">
+                <ChartCard title="Ideas By Type" subtitle="distribution across categories">
                   <IdeasByTypeChart ideas={ideas} />
                 </ChartCard>
-                <ChartCard title="By Status" subtitle="pipeline stage breakdown">
+                <ChartCard title="Ideas By Status" subtitle="pipeline stage breakdown">
                   <IdeasByStatusChart ideas={ideas} />
                 </ChartCard>
               </div>
