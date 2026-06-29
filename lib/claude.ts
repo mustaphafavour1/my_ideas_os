@@ -41,8 +41,8 @@ export async function extractIdeasFromConversations(
   const batched = truncated.join('\n\n---NEXT CONVERSATION---\n\n');
 
   const message = await client.messages.create({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 4096,
+    model: 'claude-sonnet-4-6',
+    max_tokens: 8192,
     system: EXTRACTION_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: batched }],
   });

@@ -190,7 +190,7 @@ export function parseConversationExport(raw: string): ParsedConversation[] {
 
 export function batchConversations(
   conversations: ParsedConversation[],
-  maxTokensPerBatch = 80000
+  maxTokensPerBatch = 12500
 ): ParsedConversation[][] {
   const batches: ParsedConversation[][] = [];
   let current: ParsedConversation[] = [];
