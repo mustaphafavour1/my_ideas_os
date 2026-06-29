@@ -5,7 +5,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell,
 } from 'recharts';
-import { Idea } from '@/lib/types';
+import { Idea, ConversationLog } from '@/lib/types';
 
 const TOOLTIP_STYLE = {
   backgroundColor: '#0D0D18',
@@ -313,6 +313,51 @@ export function TopSectorsChart({ ideas }: ChartsProps) {
         </div>
       ))}
     </div>
+  );
+}
+
+export function ConversationsTimelineChart({ logs }: { logs: ConversationLog[] }) {
+  const byMonth: Record<string, number> = {};
+  logs.forEach((l) => {
+    const d = new Date(l.created_at);
+    if (isNaN(d.getTime())) return;
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    byMonth[key] = (byMonth[key] || 0) + 1;
+  });
+  const data = Object.entries(byMonth)
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .slice(-12)
+    .map(([month, count]) => ({
+      month: new Date(month + '-01').toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }),
+      count,
+    }));
+
+  if (data.length < 2) return <EmptyChart label="Not enough conversation data" />;
+
+  return (
+    <ResponsiveContainer width="100%" height={180}>
+      <AreaChart data={data} margin={{ top: 8, right: 8 }}>
+        <defs>
+          <linearGradient id="convGradient" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#F7C948" stopOpacity={0.18} />
+            <stop offset="100%" stopColor="#F7C948" stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <CartesianGrid strokeDasharray="2 4" stroke="#1A1A28" vertical={false} />
+        <XAxis dataKey="month" tick={{ fill: '#3A3A55', fontSize: 10 }} tickLine={false} axisLine={false} />
+        <YAxis tick={{ fill: '#3A3A55', fontSize: 10 }} tickLine={false} axisLine={false} />
+        <Tooltip contentStyle={TOOLTIP_STYLE} cursor={{ stroke: '#2A2A3A', strokeWidth: 1 }} />
+        <Area
+          type="monotone"
+          dataKey="count"
+          stroke="#F7C948"
+          strokeWidth={1.5}
+          fill="url(#convGradient)"
+          dot={false}
+          activeDot={{ r: 4, fill: '#F7C948', strokeWidth: 0 }}
+        />
+      </AreaChart>
+    </ResponsiveContainer>
   );
 }
 

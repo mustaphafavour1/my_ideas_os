@@ -3,7 +3,9 @@ export const dynamic = 'force-dynamic';
 import { TopBar } from '@/components/layout/TopBar';
 import { DashboardContent } from '@/components/dashboard/DashboardContent';
 import { createServiceClient } from '@/lib/supabase';
-import { Idea, DashboardStats } from '@/lib/types';
+import { Idea, DashboardStats, UserStats } from '@/lib/types';
+import { DEMO_USER_STATS } from '@/lib/demo-data';
+import { computeProductivityScore, scoreLabel } from '@/lib/productivity';
 
 function getRangeCutoff(range: string, from?: string, to?: string): { from: Date | null; to: Date | null } {
   const now = new Date();
@@ -21,13 +23,18 @@ function getRangeCutoff(range: string, from?: string, to?: string): { from: Date
 async function getDashboardData(range: string, rangeFrom?: string, rangeTo?: string) {
   const supabase = createServiceClient();
 
-  const [{ data: ideas }, { data: syncLog }, { data: inboxItems }] = await Promise.all([
+  const [{ data: ideas }, { data: syncLog }, { data: inboxItems }, { data: userStats }] = await Promise.all([
     supabase.from('ideas').select('*').eq('user_id', 'favour').order('created_at', { ascending: false }),
     supabase.from('sync_log').select('synced_at').eq('user_id', 'favour').order('synced_at', { ascending: false }).limit(1),
     supabase.from('inbox').select('id').eq('user_id', 'favour').eq('processed', false),
+    supabase.from('user_stats').select('*').eq('user_id', 'favour').single(),
   ]);
 
   const allIdeas = (ideas || []) as Idea[];
+  const isDemoActive = allIdeas.some((i) => i.source_ref === 'demo_mode');
+  const effectiveStats = (userStats as UserStats | null) ?? (isDemoActive ? DEMO_USER_STATS : null);
+  const productivityScore = computeProductivityScore(allIdeas, effectiveStats);
+  const productivityLabel = scoreLabel(productivityScore);
   const cutoff = getRangeCutoff(range, rangeFrom, rangeTo);
   const filteredIdeas = cutoff.from || cutoff.to
     ? allIdeas.filter((i) => {
@@ -110,6 +117,8 @@ async function getDashboardData(range: string, rangeFrom?: string, rangeTo?: str
     mostCompletedCount: mostCompletedEntry?.[1] || 0,
     mostBlockersType: mostBlockersEntry?.[0] || null,
     mostBlockersCount: mostBlockersEntry?.[1] || 0,
+    productivityScore,
+    productivityLabel,
     range,
     rangeFrom,
     rangeTo,

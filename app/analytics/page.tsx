@@ -9,6 +9,7 @@ import {
   CompletionRing,
   AvgGradeRing,
   TopSectorsChart,
+  ConversationsTimelineChart,
 } from '@/components/analytics/Charts';
 import { TimeRangeFilter } from '@/components/ui/TimeRangeFilter';
 import { createServiceClient } from '@/lib/supabase';
@@ -97,19 +98,6 @@ function computeStreaks(logs: ConversationLog[]): { current: number; longest: nu
   return { current, longest };
 }
 
-function buildConvTimeline(logs: ConversationLog[]): { month: string; convs: number; words: number }[] {
-  const map: Record<string, { convs: number; words: number }> = {};
-  logs.forEach((l) => {
-    const key = l.created_at.slice(0, 7);
-    if (!map[key]) map[key] = { convs: 0, words: 0 };
-    map[key].convs++;
-    map[key].words += l.total_words;
-  });
-  return Object.entries(map)
-    .sort(([a], [b]) => a.localeCompare(b))
-    .map(([month, v]) => ({ month: month.slice(5) + '/' + month.slice(2, 4), ...v }));
-}
-
 function ChartCard({ title, subtitle, children, tall }: { title: string; subtitle?: string; children: React.ReactNode; tall?: boolean }) {
   return (
     <div className={`bg-[#111118] border border-[#1E1E2E] rounded-xl flex flex-col ${tall ? 'h-full' : ''}`}>
@@ -177,7 +165,6 @@ export default async function AnalyticsPage({
   const insights = buildInsights(ideas);
 
   const streaks = computeStreaks(allLogs);
-  const convTimeline = buildConvTimeline(logs);
 
   const avgPromptWords = logs.length > 0
     ? Math.round(logs.reduce((s, l) => s + (l.human_messages > 0 ? l.human_words / l.human_messages : 0), 0) / logs.length)
@@ -193,12 +180,12 @@ export default async function AnalyticsPage({
 
   const convMetricCards = userStats
     ? [
-        { label: 'Conversations', value: fmt(logs.length > 0 ? logs.length : userStats.total_conversations) },
-        { label: 'Total Words', value: fmt(logs.length > 0 ? logs.reduce((s, l) => s + l.total_words, 0) : userStats.total_words) },
-        { label: 'Code Lines by AI', value: fmt(logs.length > 0 ? logs.reduce((s, l) => s + l.code_lines, 0) : userStats.total_code_lines) },
+        { label: 'Conversations',   value: fmt(logs.length > 0 ? logs.length : userStats.total_conversations) },
+        { label: 'Total Words',      value: fmt(logs.length > 0 ? logs.reduce((s, l) => s + l.total_words, 0) : userStats.total_words) },
+        { label: 'Code Lines',       value: fmt(logs.length > 0 ? logs.reduce((s, l) => s + l.code_lines, 0) : userStats.total_code_lines) },
         { label: 'Avg Prompt Words', value: avgPromptWords || '—' },
-        { label: 'Current Streak', value: `${streaks.current}d` },
-        { label: 'Longest Streak', value: `${streaks.longest}d` },
+        { label: 'Current Streak',   value: `${streaks.current}d` },
+        { label: 'Longest Streak',   value: `${streaks.longest}d` },
       ]
     : null;
 
@@ -225,74 +212,34 @@ export default async function AnalyticsPage({
           <div className="space-y-5">
             {/* Idea metrics */}
             {ideas.length > 0 && (
-              <>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
-                  {metricCards.map(({ label, value }) => (
-                    <div key={label} className="bg-[#111118] border border-[#1E1E2E] rounded-xl px-4 py-3.5">
-                      <p className="text-[9px] font-mono text-[#3A3A55] uppercase tracking-widest mb-1.5">{label}</p>
-                      <p className="text-[22px] font-bold text-[#D0D0DA] leading-none">{value}</p>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-[200px_200px_1fr] gap-5">
-                  <ChartCard title="Completion" tall>
-                    <CompletionRing ideas={ideas} />
-                  </ChartCard>
-                  <ChartCard title="Avg Grade" tall>
-                    <AvgGradeRing ideas={ideas} />
-                  </ChartCard>
-                  <ChartCard title="Ideas Over Time" subtitle="captured per month">
-                    <IdeasTimelineChart ideas={ideas} />
-                  </ChartCard>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                  <ChartCard title="By Type" subtitle="distribution across categories">
-                    <IdeasByTypeChart ideas={ideas} />
-                  </ChartCard>
-                  <ChartCard title="By Status" subtitle="pipeline stage breakdown">
-                    <IdeasByStatusChart ideas={ideas} />
-                  </ChartCard>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-                  <ChartCard title="Top Sectors" subtitle="where your ideas cluster">
-                    <TopSectorsChart ideas={ideas} />
-                  </ChartCard>
-                  <ChartCard title="Grade Distribution" subtitle="quality spread">
-                    <GradeDistributionChart ideas={ideas} />
-                  </ChartCard>
-                </div>
-
-                {insights.length > 0 && (
-                  <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-6">
-                    <h3 className="text-[11px] font-mono text-[#4A4A60] uppercase tracking-widest mb-4">
-                      <span className="text-[#F7C948] mr-2">✦</span>
-                      Insights
-                    </h3>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {insights.map((insight, i) => (
-                        <div key={i} className="flex items-start gap-2.5 bg-[#0D0D18] rounded-xl px-4 py-3">
-                          <span className="w-1 h-1 rounded-full bg-[#F7C948]/60 shrink-0 mt-1.5" />
-                          <p className="text-[11px] text-[#6A6A80] leading-snug capitalize">{insight}</p>
-                        </div>
-                      ))}
-                    </div>
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+                {metricCards.map(({ label, value }) => (
+                  <div key={label} className="bg-[#111118] border border-[#1E1E2E] rounded-xl px-4 py-3.5">
+                    <p className="text-[9px] font-mono text-[#3A3A55] uppercase tracking-widest mb-1.5">{label}</p>
+                    <p className="text-[22px] font-bold text-[#D0D0DA] leading-none">{value}</p>
                   </div>
-                )}
-              </>
+                ))}
+              </div>
             )}
 
-            {/* Conversation metrics */}
-            {convMetricCards && (
-              <div className="space-y-5">
-                <div className="flex items-center gap-2 pt-2">
-                  <div className="flex-1 h-px bg-[#1A1A28]" />
-                  <span className="text-[10px] font-mono text-[#3A3A55] uppercase tracking-widest px-3">Conversation Stats</span>
-                  <div className="flex-1 h-px bg-[#1A1A28]" />
-                </div>
+            {/* Completion + AvgGrade + Ideas over time */}
+            {ideas.length > 0 && (
+              <div className="grid grid-cols-1 lg:grid-cols-[200px_200px_1fr] gap-5">
+                <ChartCard title="Completion" tall>
+                  <CompletionRing ideas={ideas} />
+                </ChartCard>
+                <ChartCard title="Avg Grade" tall>
+                  <AvgGradeRing ideas={ideas} />
+                </ChartCard>
+                <ChartCard title="Ideas Over Time" subtitle="captured per month">
+                  <IdeasTimelineChart ideas={ideas} />
+                </ChartCard>
+              </div>
+            )}
 
+            {/* Conversation stats — placed right after ideas-over-time */}
+            {convMetricCards && (
+              <>
                 <div className="grid grid-cols-2 sm:grid-cols-6 gap-3">
                   {convMetricCards.map(({ label, value }) => (
                     <div key={label} className="bg-[#111118] border border-[#1E1E2E] rounded-xl px-4 py-3.5">
@@ -302,25 +249,51 @@ export default async function AnalyticsPage({
                   ))}
                 </div>
 
-                {convTimeline.length > 1 && (
-                  <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-6">
-                    <p className="text-[11px] font-mono text-[#4A4A60] uppercase tracking-widest mb-5">Conversations Over Time</p>
-                    <div className="flex items-end gap-2 h-[120px]">
-                      {(() => {
-                        const maxConvs = Math.max(...convTimeline.map((d) => d.convs));
-                        return convTimeline.map((d) => (
-                          <div key={d.month} className="flex-1 flex flex-col items-center gap-1.5 min-w-0">
-                            <div
-                              className="w-full bg-[#7A7AF0]/70 rounded-t"
-                              style={{ height: `${Math.max(4, (d.convs / maxConvs) * 96)}px` }}
-                            />
-                            <p className="text-[8px] font-mono text-[#3A3A55] truncate w-full text-center">{d.month}</p>
-                          </div>
-                        ));
-                      })()}
+                <ChartCard title="Conversations Over Time" subtitle="messages per month">
+                  <ConversationsTimelineChart logs={logs.length > 0 ? logs : allLogs} />
+                </ChartCard>
+              </>
+            )}
+
+            {/* By Type + By Status */}
+            {ideas.length > 0 && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <ChartCard title="By Type" subtitle="distribution across categories">
+                  <IdeasByTypeChart ideas={ideas} />
+                </ChartCard>
+                <ChartCard title="By Status" subtitle="pipeline stage breakdown">
+                  <IdeasByStatusChart ideas={ideas} />
+                </ChartCard>
+              </div>
+            )}
+
+            {/* Top Sectors + Grade Distribution */}
+            {ideas.length > 0 && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+                <ChartCard title="Top Sectors" subtitle="where your ideas cluster">
+                  <TopSectorsChart ideas={ideas} />
+                </ChartCard>
+                <ChartCard title="Grade Distribution" subtitle="quality spread">
+                  <GradeDistributionChart ideas={ideas} />
+                </ChartCard>
+              </div>
+            )}
+
+            {/* Insights */}
+            {ideas.length > 0 && insights.length > 0 && (
+              <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-6">
+                <h3 className="text-[11px] font-mono text-[#4A4A60] uppercase tracking-widest mb-4">
+                  <span className="text-[#F7C948] mr-2">✦</span>
+                  Insights
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {insights.map((insight, i) => (
+                    <div key={i} className="flex items-start gap-2.5 bg-[#0D0D18] rounded-xl px-4 py-3">
+                      <span className="w-1 h-1 rounded-full bg-[#F7C948]/60 shrink-0 mt-1.5" />
+                      <p className="text-[11px] text-[#6A6A80] leading-snug capitalize">{insight}</p>
                     </div>
-                  </div>
-                )}
+                  ))}
+                </div>
               </div>
             )}
           </div>

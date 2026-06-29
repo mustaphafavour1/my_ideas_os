@@ -49,6 +49,8 @@ export interface DashboardContentProps {
   mostCompletedCount: number;
   mostBlockersType: string | null;
   mostBlockersCount: number;
+  productivityScore?: number;
+  productivityLabel?: string;
   range?: string;
   rangeFrom?: string;
   rangeTo?: string;
@@ -71,6 +73,7 @@ export function DashboardContent({
   stats, recent, needsAttention, withSuggestions, unprocessedCount,
   withBlockers, paused, topSector, topSectorCount, topType, topTypeCount, completionPct,
   mostPausedSector, mostPausedCount, mostCompletedType, mostCompletedCount, mostBlockersType, mostBlockersCount,
+  productivityScore, productivityLabel,
   range = 'all', rangeFrom, rangeTo,
 }: DashboardContentProps) {
   const [vis, setVis] = useState<SectionVisibility>(DEFAULT_VIS);
@@ -158,6 +161,37 @@ export function DashboardContent({
                   </div>
                 </div>
               ))}
+            </div>
+          )}
+
+          {productivityScore !== undefined && (
+            <div className="mt-3 bg-[#111118] border border-[#1E1E2E] rounded-xl px-5 py-4 flex items-center justify-between gap-4 relative overflow-hidden">
+              <div className="absolute inset-x-0 top-0 h-px"
+                style={{ background: `linear-gradient(90deg, transparent, ${productivityScore >= 100 ? 'rgba(76,175,130,0.3)' : productivityScore >= 65 ? 'rgba(247,201,72,0.3)' : 'rgba(122,122,240,0.2)'}, transparent)` }} />
+              <div>
+                <p className="text-[9px] font-mono text-[#3A3A55] uppercase tracking-widest mb-1">AI Productivity Score</p>
+                <div className="flex items-baseline gap-2">
+                  <p className="text-[28px] font-bold leading-none"
+                    style={{ color: productivityScore >= 100 ? '#4CAF82' : productivityScore >= 65 ? '#F7C948' : productivityScore >= 30 ? '#7A7AF0' : '#E07B54' }}>
+                    {productivityScore}%
+                  </p>
+                  <span className="text-[11px] font-mono text-[#4A4A60]">{productivityLabel}</span>
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <div className="h-1.5 w-32 bg-[#1A1A28] rounded-full overflow-hidden">
+                  <div className="h-full rounded-full transition-all"
+                    style={{
+                      width: `${Math.min(100, productivityScore)}%`,
+                      background: productivityScore >= 100
+                        ? 'linear-gradient(90deg, #4CAF82, rgba(76,175,130,0.4))'
+                        : 'linear-gradient(90deg, #F7C948, rgba(247,201,72,0.4))',
+                    }} />
+                </div>
+                <Link href="/profile" className="text-[10px] font-mono text-[#3A3A55] hover:text-[#F7C948] transition-colors whitespace-nowrap">
+                  Full breakdown →
+                </Link>
+              </div>
             </div>
           )}
         </section>

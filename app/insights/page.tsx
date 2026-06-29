@@ -83,15 +83,7 @@ export default function InsightsPage() {
   const [page, setPage] = useState(1);
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
   const [showConnected, setShowConnected] = useState(true);
-  const [expandedPairs, setExpandedPairs] = useState<Set<number>>(new Set());
-
-  const togglePair = (idx: number) => {
-    setExpandedPairs((prev) => {
-      const next = new Set(prev);
-      if (next.has(idx)) next.delete(idx); else next.add(idx);
-      return next;
-    });
-  };
+  const [selectedPair, setSelectedPair] = useState<ConnectedPair | null>(null);
 
   const fetchIdeas = useCallback(async () => {
     setLoading(true);
@@ -214,67 +206,127 @@ export default function InsightsPage() {
                   className="overflow-hidden"
                 >
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    {connectedPairs.map(({ a, b, score, reasons, recommendations }, idx) => {
-                      const isPairExpanded = expandedPairs.has(idx);
-                      return (
-                        <div
-                          key={idx}
-                          className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-4 hover:border-[#252535] transition-colors"
+                    {connectedPairs.map((pair, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => setSelectedPair(pair)}
+                        className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-4 hover:border-[#252535] hover:bg-[#13131F] transition-colors text-left w-full"
+                      >
+                        <div className="flex items-start gap-3">
+                          <div className="flex-1 min-w-0 space-y-1.5">
+                            <p className="text-[12px] text-[#D0D0DA] font-medium hover:text-[#F7C948] transition-colors truncate">
+                              {pair.a.title}
+                            </p>
+                            <div className="w-4 h-px bg-[#2A2A3A]" />
+                            <p className="text-[12px] text-[#D0D0DA] font-medium hover:text-[#F7C948] transition-colors truncate">
+                              {pair.b.title}
+                            </p>
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <p className="text-[13px] font-bold text-[#F7C948]">{pair.score}</p>
+                            <p className="text-[9px] font-mono text-[#3A3A55]">score</p>
+                          </div>
+                        </div>
+                        <div className="flex flex-wrap gap-1.5 mt-3">
+                          {pair.reasons.map((r, i) => (
+                            <span key={i} className="text-[9px] font-mono text-[#4A4A60] bg-[#1A1A28] px-2 py-0.5 rounded">
+                              {r}
+                            </span>
+                          ))}
+                        </div>
+                        <p className="mt-3 text-[9px] font-mono text-[#3A3A55] hover:text-[#6A6A80] transition-colors">
+                          Click to view details →
+                        </p>
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Connected pair modal */}
+                  <AnimatePresence>
+                    {selectedPair && (
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4"
+                        style={{ background: 'rgba(0,0,0,0.7)' }}
+                        onClick={() => setSelectedPair(null)}
+                      >
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.96, y: 8 }}
+                          animate={{ opacity: 1, scale: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.96, y: 8 }}
+                          transition={{ duration: 0.18 }}
+                          className="bg-[#111118] border border-[#252535] rounded-2xl p-7 max-w-lg w-full shadow-2xl"
+                          onClick={(e) => e.stopPropagation()}
                         >
-                          <div className="flex items-start gap-3">
-                            <div className="flex-1 min-w-0 space-y-1.5">
-                              <Link href={`/ideas/${a.id}`} className="block text-[12px] text-[#D0D0DA] font-medium hover:text-[#F7C948] transition-colors truncate">
-                                {a.title}
-                              </Link>
-                              <div className="w-4 h-px bg-[#2A2A3A]" />
-                              <Link href={`/ideas/${b.id}`} className="block text-[12px] text-[#D0D0DA] font-medium hover:text-[#F7C948] transition-colors truncate">
-                                {b.title}
-                              </Link>
+                          {/* Header */}
+                          <div className="flex items-start justify-between gap-4 mb-6">
+                            <div>
+                              <p className="text-[10px] font-mono text-[#4A4A60] uppercase tracking-widest mb-2">Connected Ideas</p>
+                              <div className="space-y-2">
+                                <Link
+                                  href={`/ideas/${selectedPair.a.id}`}
+                                  className="block text-[14px] text-[#D0D0DA] font-semibold hover:text-[#F7C948] transition-colors leading-snug"
+                                  onClick={() => setSelectedPair(null)}
+                                >
+                                  {selectedPair.a.title}
+                                </Link>
+                                <div className="flex items-center gap-2">
+                                  <div className="flex-1 h-px bg-[#2A2A3A]" />
+                                  <span className="text-[9px] font-mono text-[#3A3A55]">connected</span>
+                                  <div className="flex-1 h-px bg-[#2A2A3A]" />
+                                </div>
+                                <Link
+                                  href={`/ideas/${selectedPair.b.id}`}
+                                  className="block text-[14px] text-[#D0D0DA] font-semibold hover:text-[#F7C948] transition-colors leading-snug"
+                                  onClick={() => setSelectedPair(null)}
+                                >
+                                  {selectedPair.b.title}
+                                </Link>
+                              </div>
                             </div>
                             <div className="shrink-0 text-right">
-                              <p className="text-[13px] font-bold text-[#F7C948]">{score}</p>
-                              <p className="text-[9px] font-mono text-[#3A3A55]">score</p>
+                              <p className="text-[24px] font-bold text-[#F7C948] leading-none">{selectedPair.score}</p>
+                              <p className="text-[9px] font-mono text-[#3A3A55]">connection score</p>
                             </div>
                           </div>
-                          <div className="flex flex-wrap gap-1.5 mt-3">
-                            {reasons.map((r, i) => (
-                              <span key={i} className="text-[9px] font-mono text-[#4A4A60] bg-[#1A1A28] px-2 py-0.5 rounded">
-                                {r}
-                              </span>
-                            ))}
+
+                          {/* Why connected */}
+                          <div className="mb-5">
+                            <p className="text-[9px] font-mono text-[#3A3A55] uppercase tracking-widest mb-2">Why connected</p>
+                            <div className="flex flex-wrap gap-1.5">
+                              {selectedPair.reasons.map((r, i) => (
+                                <span key={i} className="text-[10px] font-mono text-[#5E5E7A] bg-[#1A1A28] px-2.5 py-1 rounded-lg">
+                                  {r}
+                                </span>
+                              ))}
+                            </div>
                           </div>
 
-                          <AnimatePresence>
-                            {isPairExpanded && (
-                              <motion.div
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                exit={{ opacity: 0, height: 0 }}
-                                className="overflow-hidden"
-                              >
-                                <div className="mt-3 pt-3 border-t border-[#1A1A28] space-y-2">
-                                  <p className="text-[9px] font-mono text-[#3A3A55] uppercase tracking-widest mb-2">What to do with this connection</p>
-                                  {recommendations.map((rec, i) => (
-                                    <div key={i} className="flex gap-2 items-start">
-                                      <span className="text-[#F7C948]/50 shrink-0 text-[10px] mt-0.5">✦</span>
-                                      <p className="text-[11px] text-[#6A6A80] leading-snug">{rec}</p>
-                                    </div>
-                                  ))}
+                          {/* Recommendations */}
+                          <div className="mb-6">
+                            <p className="text-[9px] font-mono text-[#3A3A55] uppercase tracking-widest mb-3">What to do with this connection</p>
+                            <div className="space-y-3">
+                              {selectedPair.recommendations.map((rec, i) => (
+                                <div key={i} className="flex gap-2.5 items-start bg-[#0D0D18] rounded-xl px-4 py-3">
+                                  <span className="text-[#F7C948]/60 shrink-0 text-[11px] mt-0.5">✦</span>
+                                  <p className="text-[12px] text-[#7A7A90] leading-relaxed">{rec}</p>
                                 </div>
-                              </motion.div>
-                            )}
-                          </AnimatePresence>
+                              ))}
+                            </div>
+                          </div>
 
                           <button
-                            onClick={() => togglePair(idx)}
-                            className="mt-3 text-[9px] font-mono text-[#3A3A55] hover:text-[#6A6A80] transition-colors"
+                            onClick={() => setSelectedPair(null)}
+                            className="w-full py-2.5 rounded-xl border border-[#1E1E2E] text-[11px] font-mono text-[#4A4A60] hover:border-[#2A2A3A] hover:text-[#6A6A80] transition-colors"
                           >
-                            {isPairExpanded ? 'Less ↑' : 'View more ↓'}
+                            Close
                           </button>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        </motion.div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </motion.div>
               )}
             </AnimatePresence>
