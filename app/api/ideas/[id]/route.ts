@@ -40,10 +40,12 @@ export async function PATCH(
 
   try {
     const body = await req.json();
+    // Strip fields that cannot be updated (PK, owner, managed timestamps)
+    const { id: _id, user_id: _uid, created_at: _ca, updated_at: _ua, ...updateData } = body;
 
     const { data, error } = await supabase
       .from('ideas')
-      .update(body)
+      .update(updateData)
       .eq('id', id)
       .eq('user_id', user.id)
       .select()

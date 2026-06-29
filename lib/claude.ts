@@ -31,9 +31,14 @@ Return only valid JSON array, no markdown, no explanation.`;
 // Idea-relevant content is almost always in the first few exchanges.
 const MAX_CONV_CHARS = 5000;
 
+export interface ExtractionResult {
+  ideas: Partial<Idea>[];
+  usage: { input_tokens: number; output_tokens: number };
+}
+
 export async function extractIdeasFromConversations(
   conversationTexts: string[]
-): Promise<Partial<Idea>[]> {
+): Promise<ExtractionResult> {
   const client = getClient();
   const truncated = conversationTexts.map((t) =>
     t.length > MAX_CONV_CHARS ? t.slice(0, MAX_CONV_CHARS) + '\n[…truncated]' : t
@@ -48,29 +53,29 @@ export async function extractIdeasFromConversations(
   });
 
   const raw = message.content[0].type === 'text' ? message.content[0].text : '[]';
+  const usage = { input_tokens: message.usage.input_tokens, output_tokens: message.usage.output_tokens };
 
-  // Check if output was truncated (stop_reason === 'max_tokens')
   if (message.stop_reason === 'max_tokens') {
     console.warn('Claude output hit max_tokens limit — JSON may be truncated');
   }
 
+  let ideas: Partial<Idea>[];
   try {
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    ideas = Array.isArray(parsed) ? parsed : [];
   } catch {
-    // Try to salvage a partial array
     const match = raw.match(/\[[\s\S]*\]/);
     if (match) {
-      try { return JSON.parse(match[0]); } catch { /* fall through */ }
+      try { ideas = JSON.parse(match[0]); return { ideas, usage }; } catch { /* fall through */ }
     }
-    // Try to parse as many complete objects as possible
     const objects = [...raw.matchAll(/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g)];
     if (objects.length > 0) {
-      try { return JSON.parse(`[${objects.map(m => m[0]).join(',')}]`); } catch { /* fall through */ }
+      try { ideas = JSON.parse(`[${objects.map(m => m[0]).join(',')}]`); return { ideas, usage }; } catch { /* fall through */ }
     }
     console.error('Failed to parse Claude response as JSON. Raw:', raw.slice(0, 500));
-    return [];
+    ideas = [];
   }
+  return { ideas, usage };
 }
 
 const SUGGESTIONS_SYSTEM_PROMPT = `You are an idea coach for a product builder and creative thinker.

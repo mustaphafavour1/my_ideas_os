@@ -220,7 +220,7 @@ export function SyncUploader({ onComplete }: SyncUploaderProps) {
         setFiles((prev) =>
           prev.map((f) =>
             f.name === file.name
-              ? { ...f, progress: prePct, progressLabel: `Batch ${i + 1}/${totalBatches} · asking Claude…` }
+              ? { ...f, progress: prePct, progressLabel: `Batch ${i + 1}/${totalBatches} · Analysing conversations…` }
               : f
           )
         );

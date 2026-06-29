@@ -70,14 +70,21 @@ export async function POST(req: NextRequest) {
       : batchConversations(newConversations);
 
     let allExtracted: Partial<Idea>[] = [];
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
 
     for (const batch of batches) {
       const texts = batch.map(
         (c) => `=== Conversation: ${c.name} (${c.created_at}) ===\n${c.fullText}`
       );
-      const extracted = await extractIdeasFromConversations(texts);
+      const { ideas: extracted, usage } = await extractIdeasFromConversations(texts);
       allExtracted = allExtracted.concat(extracted);
+      totalInputTokens += usage.input_tokens;
+      totalOutputTokens += usage.output_tokens;
     }
+
+    // Sonnet 4.6 pricing: $3/M input, $15/M output
+    const estimatedCostUsd = (totalInputTokens * 3 + totalOutputTokens * 15) / 1_000_000;
 
     // Load existing ideas for fuzzy duplicate matching
     const { data: existingIdeas } = await supabase
@@ -217,7 +224,7 @@ export async function POST(req: NextRequest) {
       ideas_found: allExtracted.length,
       ideas_added: added,
       ideas_updated: updated,
-      notes: `${newConversations.length} new conversation(s), ${alreadySyncedCount} skipped (already synced). ${batches.length} batch(es) sent to Claude.`,
+      notes: `${newConversations.length} new conversation(s), ${alreadySyncedCount} skipped (already synced). ${batches.length} batch(es) sent to Claude. Tokens: ${totalInputTokens} in / ${totalOutputTokens} out. Est. cost: $${estimatedCostUsd.toFixed(4)}.`,
     });
 
     return NextResponse.json({
