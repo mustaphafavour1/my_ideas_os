@@ -77,11 +77,17 @@ const SECTION_META: Record<SectionId, SectionMeta> = {
   },
 };
 
+function hexToRgb(hex: string): string {
+  const h = hex.replace('#', '');
+  return `${parseInt(h.slice(0,2),16)},${parseInt(h.slice(2,4),16)},${parseInt(h.slice(4,6),16)}`;
+}
+
 function applyAppearance(theme: ThemeMode, accentColor: string, font: FontOption) {
   const h = document.documentElement;
   if (theme === 'light') h.setAttribute('data-theme', 'light');
   else h.removeAttribute('data-theme');
   h.style.setProperty('--accent', accentColor);
+  h.style.setProperty('--accent-rgb', hexToRgb(accentColor));
   h.classList.remove('font-rancho', 'font-jetbrains');
   if (font === 'rancho') h.classList.add('font-rancho');
   else if (font === 'jetbrains') h.classList.add('font-jetbrains');
