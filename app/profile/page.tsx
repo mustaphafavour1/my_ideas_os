@@ -35,10 +35,12 @@ export default async function ProfilePage() {
   const topSectors = topEntries(ideas.map((i) => i.sector));
   const completionPct = ideas.length > 0 ? Math.round((completed / ideas.length) * 100) : 0;
 
-  const firstIdeaDate = ideas.length > 0
-    ? new Date(ideas.reduce((min, i) => i.created_at < min ? i.created_at : min, ideas[0].created_at))
+  const firstConvDate = effectiveStats?.first_conversation_at
+    ? new Date(effectiveStats.first_conversation_at)
     : null;
-  const sinceYear = firstIdeaDate ? firstIdeaDate.getFullYear() : null;
+  const monthsExp = firstConvDate
+    ? Math.max(1, Math.round((Date.now() - firstConvDate.getTime()) / (1000 * 60 * 60 * 24 * 30.44)))
+    : null;
 
   return (
     <div className="flex flex-col flex-1">
@@ -49,7 +51,7 @@ export default async function ProfilePage() {
         completed={completed}
         inProgress={inProgress}
         completionPct={completionPct}
-        sinceYear={sinceYear}
+        monthsExp={monthsExp}
         topSectors={topSectors}
       />
     </div>

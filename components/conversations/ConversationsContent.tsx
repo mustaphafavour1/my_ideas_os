@@ -11,6 +11,11 @@ function fmt(n: number): string {
   return n.toString();
 }
 
+function fmtLines(n: number): string {
+  if (n < 100) return '<100';
+  return fmt(n);
+}
+
 function pct(part: number, total: number) {
   return total === 0 ? 0 : Math.round((part / total) * 100);
 }
@@ -170,7 +175,7 @@ export function ConversationsContent({ logs, stats, productivityScore, productiv
                     </div>
                     {log.code_lines > 0 && (
                       <div className="text-right">
-                        <p className="text-[12px] font-mono text-[#F7C948]">{log.code_lines}</p>
+                        <p className="text-[12px] font-mono text-[#F7C948]">{fmtLines(log.code_lines)}</p>
                         <p className="text-[9px] font-mono text-white/30">code lines</p>
                       </div>
                     )}

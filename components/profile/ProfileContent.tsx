@@ -55,11 +55,11 @@ interface Props {
   completed: number;
   inProgress: number;
   completionPct: number;
-  sinceYear: number | null;
+  monthsExp: number | null;
   topSectors: { label: string; count: number }[];
 }
 
-export function ProfileContent({ ideas, stats, completed, inProgress, completionPct, sinceYear, topSectors }: Props) {
+export function ProfileContent({ ideas, stats, completed, inProgress, completionPct, monthsExp, topSectors }: Props) {
   const [avatar, setAvatar] = useState<string | null>(null);
   const [username, setUsername] = useState('favour');
   const [editingName, setEditingName] = useState(false);
@@ -224,8 +224,8 @@ export function ProfileContent({ ideas, stats, completed, inProgress, completion
                       </>
                     )}
                   </div>
-                  <p className="text-[11px] font-mono text-[#4A4A60] mt-0.5">
-                    {sinceYear ? `Building since ${sinceYear}` : 'AI Builder'}
+                  <p className="text-[11px] font-mono text-white/40 mt-0.5">
+                    {monthsExp ? `${monthsExp} Months exp.` : 'AI Builder'}
                   </p>
                 </div>
               </div>
@@ -234,31 +234,31 @@ export function ProfileContent({ ideas, stats, completed, inProgress, completion
               <ScoreRing score={score} />
             </div>
 
-            {/* Personality + Temperament */}
-            <div className="mb-6 space-y-2">
-              <div className="flex items-center gap-2">
-                <span className="text-[8px] font-mono text-white/30 uppercase tracking-widest w-[88px] shrink-0">AI Personality</span>
+            {/* Personality + Temperament + AI Usage — 3 columns on desktop */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+              <div className="flex flex-col gap-1.5">
+                <p className="text-[8px] font-mono text-white/30 uppercase tracking-widest">AI Personality</p>
                 <span
-                  className="text-[10px] font-mono px-2.5 py-1 rounded-lg tracking-wide"
+                  className="text-[10px] font-mono px-2.5 py-1 rounded-lg tracking-wide self-start"
                   style={{ background: 'rgba(247,201,72,0.1)', color: '#F7C948', border: '1px solid rgba(247,201,72,0.2)' }}
                 >
                   {personality.type}
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <span className="text-[8px] font-mono text-white/30 uppercase tracking-widest w-[88px] shrink-0">AI Temperament</span>
+              <div className="flex flex-col gap-1.5">
+                <p className="text-[8px] font-mono text-white/30 uppercase tracking-widest">AI Temperament</p>
                 <span
-                  className="text-[10px] font-mono px-2.5 py-1 rounded-lg tracking-wide"
+                  className="text-[10px] font-mono px-2.5 py-1 rounded-lg tracking-wide self-start"
                   style={{ background: `${temperament.color}14`, color: temperament.color, border: `1px solid ${temperament.color}30` }}
                 >
                   {temperament.name} · {temperament.subtitle}
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-[88px] shrink-0" />
+              <div className="flex flex-col gap-1.5">
+                <p className="text-[8px] font-mono text-white/30 uppercase tracking-widest">AI Usage</p>
                 <span
-                  className="text-[10px] font-mono px-2.5 py-1 rounded-lg tracking-wide"
-                  style={{ background: 'rgba(255,255,255,0.04)', color: '#5E5E7A', border: '1px solid rgba(255,255,255,0.06)' }}
+                  className="text-[10px] font-mono px-2.5 py-1 rounded-lg tracking-wide self-start"
+                  style={{ background: 'rgba(255,255,255,0.04)', color: '#8888A0', border: '1px solid rgba(255,255,255,0.06)' }}
                 >
                   {label}
                 </span>
@@ -283,7 +283,7 @@ export function ProfileContent({ ideas, stats, completed, inProgress, completion
             {stats && (
               <div className="grid grid-cols-3 gap-3 mb-6">
                 {[
-                  { label: 'Convos',  value: fmt(stats.total_conversations), accent: '#7A7AF0' },
+                  { label: 'Conversations', value: fmt(stats.total_conversations), accent: '#7A7AF0' },
                   { label: 'Words',   value: fmt(stats.total_words),         accent: '#A0A0C0' },
                   { label: 'AI-code Lines', value: fmt(stats.total_code_lines), accent: '#A0A0C0' },
                 ].map(({ label, value, accent }) => (
@@ -331,31 +331,28 @@ export function ProfileContent({ ideas, stats, completed, inProgress, completion
         </div>
         <div className="px-6 py-5 space-y-4">
           {[
-            { label: 'AI Conversations',    tip: '150 sessions = 100%', val: stats?.total_conversations || 0, baseline: 150,   weight: '30%' },
-            { label: 'Code Lines Generated', tip: '50k lines = 100%',   val: stats?.total_code_lines || 0,  baseline: 50000, weight: '30%' },
-            { label: 'Ideas Captured',       tip: '250 ideas = 100%',   val: ideas.length,                  baseline: 250,   weight: '20%' },
-            { label: 'Execution Rate',       tip: 'completion rate',    val: completed, baseline: ideas.length || 1, weight: '10%', isRate: true },
-            { label: 'Depth of Ideas',       tip: 'completeness score', val: ideas.filter((i) => i.description).length, baseline: ideas.length || 1, weight: '10%', isRate: true },
-          ].map(({ label, tip, val, baseline, weight, isRate }) => {
-            const pct = isRate ? (val / baseline) * 100 : (val / baseline) * 100;
-            const display = isRate ? `${Math.round(pct)}%` : fmt(val);
+            { label: 'AI Conversations',     val: stats?.total_conversations || 0, baseline: 150,   weight: 30 },
+            { label: 'Code Lines Generated', val: stats?.total_code_lines    || 0, baseline: 50000, weight: 30 },
+            { label: 'Ideas Captured',       val: ideas.length,                   baseline: 250,   weight: 20 },
+            { label: 'Execution Rate',       val: completed, baseline: ideas.length || 1, weight: 10, isRate: true },
+            { label: 'Depth of Ideas',       val: ideas.filter((i) => i.description).length, baseline: ideas.length || 1, weight: 10, isRate: true },
+          ].map(({ label, val, baseline, weight }) => {
+            const componentPct = Math.min(100, (val / baseline) * 100);
+            const earned = Math.round(componentPct * weight) / 100;
             return (
               <div key={label}>
                 <div className="flex items-center justify-between mb-1.5">
-                  <div>
-                    <span className="text-[12px] text-[#C0C0D0]">{label}</span>
-                    <span className="text-[10px] font-mono text-white/40 ml-2">{tip}</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[13px] font-semibold text-[#D0D0DA]">{display}</span>
-                    <span className="text-[9px] font-mono text-white/40">×{weight}</span>
+                  <span className="text-[12px] text-[#C0C0D0]">{label}</span>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-[13px] font-semibold text-[#F7C948]">{earned.toFixed(1)}%</span>
+                    <span className="text-[11px] font-mono text-white/30">/ {weight}%</span>
                   </div>
                 </div>
                 <div className="h-1.5 bg-[#1A1A28] rounded-full overflow-hidden">
                   <div
                     className="h-full rounded-full transition-all"
                     style={{
-                      width: `${Math.min(100, pct)}%`,
+                      width: `${componentPct}%`,
                       background: 'linear-gradient(90deg, #F7C948, rgba(247,201,72,0.4))',
                     }}
                   />
@@ -363,7 +360,6 @@ export function ProfileContent({ ideas, stats, completed, inProgress, completion
               </div>
             );
           })}
-          <p className="text-[10px] font-mono text-white/20 pt-1">Score is capped at 99% — the baselines are set for elite AI-native builders.</p>
         </div>
       </section>
 

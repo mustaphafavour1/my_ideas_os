@@ -56,30 +56,27 @@ export interface DashboardContentProps {
   rangeTo?: string;
 }
 
-function MiniRing({ value, max, displayLabel, sublabel, color = '#F7C948' }: {
-  value: number; max: number; displayLabel: string; sublabel: string; color?: string;
+function MiniRing({ value, max, displayLabel, color = '#F7C948' }: {
+  value: number; max: number; displayLabel: string; color?: string;
 }) {
-  const r = 27;
+  const r = 24;
   const c = 2 * Math.PI * r;
   const dash = (Math.min(Math.max(value, 0), max) / max) * c;
   return (
-    <div className="flex flex-col items-center gap-1.5">
-      <div className="relative" style={{ width: 68, height: 68 }}>
-        <svg width={68} height={68} style={{ transform: 'rotate(-90deg)' }}>
-          <circle cx={34} cy={34} r={r} fill="none" stroke="#1A1A28" strokeWidth={5} />
-          <circle
-            cx={34} cy={34} r={r} fill="none"
-            stroke={color}
-            strokeWidth={5}
-            strokeDasharray={`${dash} ${c}`}
-            strokeLinecap="round"
-          />
-        </svg>
-        <div className="absolute inset-0 flex items-center justify-center">
-          <span className="text-[13px] font-bold leading-none" style={{ color }}>{displayLabel}</span>
-        </div>
+    <div className="relative shrink-0" style={{ width: 58, height: 58 }}>
+      <svg width={58} height={58} style={{ transform: 'rotate(-90deg)' }}>
+        <circle cx={29} cy={29} r={r} fill="none" stroke="#1A1A28" strokeWidth={4} />
+        <circle
+          cx={29} cy={29} r={r} fill="none"
+          stroke={color}
+          strokeWidth={4}
+          strokeDasharray={`${dash} ${c}`}
+          strokeLinecap="round"
+        />
+      </svg>
+      <div className="absolute inset-0 flex items-center justify-center">
+        <span className="text-[11px] font-bold leading-none" style={{ color }}>{displayLabel}</span>
       </div>
-      <p className="text-[9px] font-mono text-white/40 text-center leading-snug max-w-[72px]">{sublabel}</p>
     </div>
   );
 }
@@ -193,29 +190,43 @@ export function DashboardContent({
           )}
 
           {productivityScore !== undefined && (
-            <div className="mt-3 bg-[#111118] border border-[#1E1E2E] rounded-xl px-5 py-4 flex items-center gap-6 relative overflow-hidden">
-              <div className="absolute inset-x-0 top-0 h-px"
-                style={{ background: 'linear-gradient(90deg, transparent, rgba(247,201,72,0.2), transparent)' }} />
-              <MiniRing
-                value={productivityScore} max={99}
-                displayLabel={`${productivityScore}%`}
-                sublabel="AI Productivity"
-              />
-              <MiniRing
-                value={stats.avg_grade} max={5}
-                displayLabel={stats.avg_grade > 0 ? stats.avg_grade.toFixed(1) : '—'}
-                sublabel="Avg Idea Grade"
-              />
-              <MiniRing
-                value={completionPct} max={100}
-                displayLabel={`${completionPct}%`}
-                sublabel="Completion Rate"
-              />
-              <div className="ml-auto shrink-0">
-                <Link href="/profile" className="text-[10px] font-mono text-white/30 hover:text-[#F7C948] transition-colors whitespace-nowrap">
-                  Full breakdown →
-                </Link>
-              </div>
+            <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {[
+                {
+                  value: productivityScore, max: 99,
+                  ringLabel: `${productivityScore}%`,
+                  title: 'AI Productivity',
+                  sub: productivityLabel || 'Score',
+                  href: '/profile',
+                },
+                {
+                  value: stats.avg_grade * 20, max: 100,
+                  ringLabel: stats.avg_grade > 0 ? stats.avg_grade.toFixed(1) : '—',
+                  title: 'Avg Idea Grade',
+                  sub: 'out of 5.0',
+                },
+                {
+                  value: completionPct, max: 100,
+                  ringLabel: `${completionPct}%`,
+                  title: 'Completion Rate',
+                  sub: `${stats.completed} of ${stats.total} shipped`,
+                },
+              ].map(({ value, max, ringLabel, title, sub, href }) => {
+                const card = (
+                  <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl px-4 py-3 flex items-center gap-3 relative overflow-hidden card-glow hover:border-[#252535] transition-colors cursor-pointer">
+                    <div className="absolute inset-x-0 top-0 h-px"
+                      style={{ background: 'linear-gradient(90deg, transparent, rgba(247,201,72,0.15), transparent)' }} />
+                    <MiniRing value={value} max={max} displayLabel={ringLabel} />
+                    <div className="min-w-0">
+                      <p className="text-[13px] font-semibold text-[#D0D0DA] leading-tight">{title}</p>
+                      <p className="text-[10px] font-mono text-white/40 mt-0.5 truncate">{sub}</p>
+                    </div>
+                  </div>
+                );
+                return href
+                  ? <Link key={title} href={href}>{card}</Link>
+                  : <div key={title}>{card}</div>;
+              })}
             </div>
           )}
         </section>

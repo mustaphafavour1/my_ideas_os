@@ -58,6 +58,32 @@ export async function POST(req: NextRequest) {
   }
 }
 
+export async function PATCH(req: NextRequest) {
+  try {
+    const { id, title, content, signal_type } = await req.json();
+    if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
+
+    const updates: Record<string, string> = {};
+    if (title !== undefined) updates.title = title;
+    if (content !== undefined) updates.content = content;
+    if (signal_type !== undefined) updates.signal_type = signal_type;
+
+    const supabase = createServiceClient();
+    const { data, error } = await supabase
+      .from('signals')
+      .update(updates)
+      .eq('id', id)
+      .eq('user_id', 'favour')
+      .select()
+      .single();
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json(data);
+  } catch (err) {
+    return NextResponse.json({ error: (err as Error).message }, { status: 500 });
+  }
+}
+
 export async function DELETE(req: NextRequest) {
   const { id } = await req.json();
   const supabase = createServiceClient();

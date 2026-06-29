@@ -1,11 +1,13 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono } from 'next/font/google';
+import { Geist, Geist_Mono, Rancho, JetBrains_Mono } from 'next/font/google';
 import './globals.css';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Toaster } from 'sonner';
 
 const geistSans = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 const geistMono = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
+const rancho = Rancho({ weight: '400', variable: '--font-rancho', subsets: ['latin'] });
+const jetbrainsMono = JetBrains_Mono({ variable: '--font-jetbrains-mono', subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'Idea OS',
@@ -14,7 +16,20 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} h-full`}>
+    <html lang="en" className={`${geistSans.variable} ${geistMono.variable} ${rancho.variable} ${jetbrainsMono.variable} h-full`}>
+      <head>
+        {/* Apply theme/color/font before first paint to avoid flash */}
+        <script dangerouslySetInnerHTML={{ __html: `
+          try {
+            var s = JSON.parse(localStorage.getItem('ideas-os-settings') || '{}');
+            var h = document.documentElement;
+            if (s.theme === 'light') h.setAttribute('data-theme', 'light');
+            if (s.accentColor && s.accentColor !== '#F7C948') h.style.setProperty('--accent', s.accentColor);
+            if (s.font === 'rancho') h.classList.add('font-rancho');
+            else if (s.font === 'jetbrains') h.classList.add('font-jetbrains');
+          } catch(e) {}
+        ` }} />
+      </head>
       <body className="h-full bg-[#0A0A0F] text-[#F0F0F5] antialiased">
         {/* Premium ambient glow — bottom-right corner */}
         <div

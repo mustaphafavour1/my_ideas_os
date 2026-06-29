@@ -14,11 +14,39 @@
   --error: #F87171;
 }
 
+/* ── Light theme ──────────────────────────────────── */
+[data-theme="light"] {
+  --bg: #F2F2EE;
+  --surface: #FFFFFF;
+  --border: #E0E0DA;
+  --text-primary: #1A1A2E;
+  --text-secondary: #5A5A70;
+  --text-muted: #9A9AB0;
+}
+
+[data-theme="light"] body {
+  background: var(--bg);
+  color: var(--text-primary);
+}
+
 @theme inline {
   --color-background: var(--bg);
   --color-foreground: var(--text-primary);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+}
+
+/* ── Display fonts (applied via html class) ──────── */
+.font-rancho h1, .font-rancho h2, .font-rancho h3,
+.font-rancho [class*="text-[2"],
+.font-rancho [class*="text-[3"] {
+  font-family: var(--font-rancho), 'Rancho', cursive;
+}
+
+.font-jetbrains h1, .font-jetbrains h2, .font-jetbrains h3,
+.font-jetbrains [class*="text-[2"],
+.font-jetbrains [class*="text-[3"] {
+  font-family: var(--font-jetbrains-mono), 'JetBrains Mono', monospace;
 }
 
 *, *::before, *::after {

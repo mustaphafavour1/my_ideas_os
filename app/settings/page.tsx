@@ -9,6 +9,8 @@ const SETTINGS_KEY = 'ideas-os-settings';
 
 type SectionId = 'stats' | 'recentIdeas' | 'askAI' | 'attention';
 type DashboardKey = 'showStats' | 'showRecentIdeas' | 'showAskAI' | 'showNeedsAttention' | 'showAISuggestions';
+type ThemeMode = 'dark' | 'light';
+type FontOption = 'default' | 'rancho' | 'jetbrains';
 
 interface Settings {
   dashboard: {
@@ -19,6 +21,9 @@ interface Settings {
     showAISuggestions: boolean;
     order: SectionId[];
   };
+  theme: ThemeMode;
+  accentColor: string;
+  font: FontOption;
 }
 
 const DEFAULT_SETTINGS: Settings = {
@@ -30,7 +35,26 @@ const DEFAULT_SETTINGS: Settings = {
     showAISuggestions: true,
     order: ['stats', 'recentIdeas', 'askAI', 'attention'],
   },
+  theme: 'dark',
+  accentColor: '#F7C948',
+  font: 'default',
 };
+
+const ACCENT_COLORS = [
+  { name: 'Gold',   hex: '#F7C948' },
+  { name: 'Blue',   hex: '#3B82F6' },
+  { name: 'Green',  hex: '#4CAF82' },
+  { name: 'Purple', hex: '#7A7AF0' },
+  { name: 'Rose',   hex: '#F43F5E' },
+  { name: 'Orange', hex: '#F97316' },
+  { name: 'Cyan',   hex: '#06B6D4' },
+];
+
+const FONT_OPTIONS: { key: FontOption; label: string; desc: string; sample: string }[] = [
+  { key: 'default',   label: 'Geist',         desc: 'Clean system-optimised',        sample: '123 Ideas' },
+  { key: 'rancho',    label: 'Rancho',         desc: 'Expressive display',            sample: '123 Ideas' },
+  { key: 'jetbrains', label: 'JetBrains Mono', desc: 'Crisp monospace for metrics',   sample: '123 Ideas' },
+];
 
 interface SectionMeta {
   label: string;
@@ -52,6 +76,16 @@ const SECTION_META: Record<SectionId, SectionMeta> = {
     ],
   },
 };
+
+function applyAppearance(theme: ThemeMode, accentColor: string, font: FontOption) {
+  const h = document.documentElement;
+  if (theme === 'light') h.setAttribute('data-theme', 'light');
+  else h.removeAttribute('data-theme');
+  h.style.setProperty('--accent', accentColor);
+  h.classList.remove('font-rancho', 'font-jetbrains');
+  if (font === 'rancho') h.classList.add('font-rancho');
+  else if (font === 'jetbrains') h.classList.add('font-jetbrains');
+}
 
 function Toggle({ on, onChange }: { on: boolean; onChange: (v: boolean) => void }) {
   return (
@@ -80,7 +114,6 @@ function GripIcon() {
 
 export default function SettingsPage() {
   const [settings, setSettings] = useState<Settings>(DEFAULT_SETTINGS);
-  const [loaded, setLoaded] = useState(false);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
   const [dragOverIdx, setDragOverIdx] = useState<number | null>(null);
 
@@ -91,6 +124,8 @@ export default function SettingsPage() {
         const parsed = JSON.parse(raw);
         const loadedOrder = parsed.dashboard?.order;
         setSettings((s) => ({
+          ...s,
+          ...parsed,
           dashboard: {
             ...s.dashboard,
             ...parsed.dashboard,
@@ -99,13 +134,13 @@ export default function SettingsPage() {
         }));
       }
     } catch {}
-    setLoaded(true);
   }, []);
 
   const save = (next: Settings) => {
     setSettings(next);
     try {
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(next));
+      applyAppearance(next.theme, next.accentColor, next.font);
       toast.success('Settings saved');
     } catch {
       toast.error('Could not save settings');
@@ -113,12 +148,10 @@ export default function SettingsPage() {
   };
 
   const setDash = (key: DashboardKey, val: boolean) => {
-    save({ dashboard: { ...settings.dashboard, [key]: val } });
+    save({ ...settings, dashboard: { ...settings.dashboard, [key]: val } });
   };
 
-  const reset = () => {
-    save(DEFAULT_SETTINGS);
-  };
+  const reset = () => save(DEFAULT_SETTINGS);
 
   const handleDragStart = (e: React.DragEvent, idx: number) => {
     e.dataTransfer.effectAllowed = 'move';
@@ -133,23 +166,16 @@ export default function SettingsPage() {
 
   const handleDrop = (e: React.DragEvent, idx: number) => {
     e.preventDefault();
-    if (dragIdx === null || dragIdx === idx) {
-      setDragIdx(null);
-      setDragOverIdx(null);
-      return;
-    }
+    if (dragIdx === null || dragIdx === idx) { setDragIdx(null); setDragOverIdx(null); return; }
     const newOrder = [...settings.dashboard.order];
     const [moved] = newOrder.splice(dragIdx, 1);
     newOrder.splice(idx, 0, moved);
     setDragIdx(null);
     setDragOverIdx(null);
-    save({ dashboard: { ...settings.dashboard, order: newOrder } });
+    save({ ...settings, dashboard: { ...settings.dashboard, order: newOrder } });
   };
 
-  const handleDragEnd = () => {
-    setDragIdx(null);
-    setDragOverIdx(null);
-  };
+  const handleDragEnd = () => { setDragIdx(null); setDragOverIdx(null); };
 
   return (
     <div className="flex flex-col flex-1">
@@ -167,10 +193,106 @@ export default function SettingsPage() {
           </div>
         </section>
 
+        {/* Appearance */}
+        <section>
+          <div className="mb-5">
+            <h2 className="text-[10px] font-mono text-[#4A4A60] uppercase tracking-widest mb-1">Appearance</h2>
+            <p className="text-[11px] text-white/30 font-mono">Theme, accent colour, and font style.</p>
+          </div>
+
+          {/* Theme toggle */}
+          <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl overflow-hidden mb-3">
+            <div className="flex items-center justify-between px-5 py-3.5">
+              <div>
+                <p className="text-[12px] text-[#D0D0DA] font-medium">Colour Theme</p>
+                <p className="text-[11px] text-white/40 font-mono mt-0.5">Background and surface colours</p>
+              </div>
+              <div className="flex gap-2">
+                {(['dark', 'light'] as ThemeMode[]).map((t) => (
+                  <button
+                    key={t}
+                    onClick={() => save({ ...settings, theme: t })}
+                    className={`px-3 py-1.5 rounded-lg text-[11px] font-mono border transition-colors capitalize ${
+                      settings.theme === t
+                        ? 'border-[#F7C948]/30 text-[#F7C948] bg-[#F7C948]/8'
+                        : 'border-[#1E1E2E] text-white/40 hover:border-[#2A2A3A]'
+                    }`}
+                  >
+                    {t}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Accent colors */}
+          <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl overflow-hidden mb-3">
+            <div className="flex items-center justify-between px-5 py-3.5">
+              <div>
+                <p className="text-[12px] text-[#D0D0DA] font-medium">Accent Colour</p>
+                <p className="text-[11px] text-white/40 font-mono mt-0.5">Primary highlight throughout the app</p>
+              </div>
+              <div className="flex gap-2 flex-wrap justify-end">
+                {ACCENT_COLORS.map(({ name, hex }) => (
+                  <button
+                    key={hex}
+                    title={name}
+                    onClick={() => save({ ...settings, accentColor: hex })}
+                    className={`w-6 h-6 rounded-full transition-all ${
+                      settings.accentColor === hex
+                        ? 'ring-2 ring-offset-2 ring-offset-[#111118] ring-white/40 scale-110'
+                        : 'opacity-70 hover:opacity-100 hover:scale-110'
+                    }`}
+                    style={{ backgroundColor: hex }}
+                  />
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Font */}
+          <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl overflow-hidden">
+            <div className="px-5 py-3.5 border-b border-[#1A1A28]">
+              <p className="text-[12px] text-[#D0D0DA] font-medium">Display Font</p>
+              <p className="text-[11px] text-white/40 font-mono mt-0.5">Applied to headings and large metrics</p>
+            </div>
+            {FONT_OPTIONS.map(({ key, label, desc, sample }) => (
+              <button
+                key={key}
+                onClick={() => save({ ...settings, font: key })}
+                className={`w-full flex items-center justify-between px-5 py-3.5 border-b border-[#1A1A28] last:border-0 transition-colors text-left ${
+                  settings.font === key ? 'bg-[#161620]' : 'hover:bg-[#111118]'
+                }`}
+              >
+                <div>
+                  <p className="text-[12px] text-[#D0D0DA] font-medium">{label}</p>
+                  <p className="text-[11px] text-white/40 font-mono mt-0.5">{desc}</p>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span
+                    className="text-[15px] text-[#6A6A80]"
+                    style={{
+                      fontFamily: key === 'rancho' ? 'var(--font-rancho), Rancho, cursive' :
+                                  key === 'jetbrains' ? 'var(--font-jetbrains-mono), monospace' :
+                                  'var(--font-geist-sans)',
+                    }}
+                  >
+                    {sample}
+                  </span>
+                  {settings.font === key && (
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#F7C948]" />
+                  )}
+                </div>
+              </button>
+            ))}
+          </div>
+        </section>
+
+        {/* Dashboard section order */}
         <section>
           <div className="mb-5">
             <h2 className="text-[10px] font-mono text-[#4A4A60] uppercase tracking-widest mb-1">Dashboard</h2>
-            <p className="text-[11px] text-[#3A3A55] font-mono">Drag to reorder sections. Toggle to show or hide.</p>
+            <p className="text-[11px] text-white/30 font-mono">Drag to reorder sections. Toggle to show or hide.</p>
           </div>
 
           <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl overflow-hidden">
@@ -189,12 +311,11 @@ export default function SettingsPage() {
                   onDragEnd={handleDragEnd}
                   className={`border-b border-[#1A1A28] last:border-0 select-none transition-opacity ${isDragging ? 'opacity-30' : 'opacity-100'} ${isDragOver ? 'bg-[#161620]' : ''}`}
                 >
-                  {/* Row header */}
                   <div className="flex items-center gap-3 px-5 py-3.5">
                     <GripIcon />
                     <div className="flex-1 min-w-0">
                       <p className="text-[12px] text-[#D0D0DA] font-medium">{meta.label}</p>
-                      {meta.desc && <p className="text-[11px] text-[#4A4A60] font-mono mt-0.5">{meta.desc}</p>}
+                      {meta.desc && <p className="text-[11px] text-white/40 font-mono mt-0.5">{meta.desc}</p>}
                     </div>
                     {meta.toggle && (
                       <Toggle
@@ -204,14 +325,13 @@ export default function SettingsPage() {
                     )}
                   </div>
 
-                  {/* Sub-toggles for the attention section */}
                   {meta.subToggles && (
                     <div className="px-5 pb-3 space-y-2.5 ml-8">
                       {meta.subToggles.map((st) => (
                         <div key={st.key} className="flex items-center justify-between pl-3 border-l border-[#1A1A28]">
                           <div>
                             <p className="text-[11px] text-[#8888A0]">{st.label}</p>
-                            <p className="text-[10px] text-[#3A3A55] font-mono mt-0.5">{st.desc}</p>
+                            <p className="text-[10px] text-white/30 font-mono mt-0.5">{st.desc}</p>
                           </div>
                           <Toggle on={settings.dashboard[st.key]} onChange={(v) => setDash(st.key, v)} />
                         </div>
@@ -227,7 +347,7 @@ export default function SettingsPage() {
         <div className="flex justify-end">
           <button
             onClick={reset}
-            className="text-[11px] font-mono text-[#3A3A55] hover:text-[#C06830] transition-colors"
+            className="text-[11px] font-mono text-white/30 hover:text-[#C06830] transition-colors"
           >
             Reset all to defaults
           </button>

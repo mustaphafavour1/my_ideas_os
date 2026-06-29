@@ -257,19 +257,22 @@ export default function InsightsPage() {
                           animate={{ opacity: 1, scale: 1, y: 0 }}
                           exit={{ opacity: 0, scale: 0.96, y: 8 }}
                           transition={{ duration: 0.18 }}
-                          className="bg-[#111118] border border-[#252535] rounded-2xl p-7 max-w-lg w-full shadow-2xl relative"
+                          className="bg-[#111118] border border-[#252535] rounded-2xl p-7 max-w-lg w-full shadow-2xl"
                           onClick={(e) => e.stopPropagation()}
                         >
-                          <button
-                            onClick={() => setSelectedPair(null)}
-                            className="absolute top-4 right-4 w-7 h-7 flex items-center justify-center rounded-lg text-[#4A4A60] hover:text-white/60 hover:bg-white/5 transition-colors text-[14px]"
-                          >
-                            ✕
-                          </button>
-                          {/* Header */}
+                          {/* Top row */}
+                          <div className="flex items-center justify-between mb-5">
+                            <p className="text-[10px] font-mono text-[#4A4A60] uppercase tracking-widest">Connected Ideas</p>
+                            <button
+                              onClick={() => setSelectedPair(null)}
+                              className="w-7 h-7 flex items-center justify-center rounded-lg text-white/30 hover:text-white/60 hover:bg-white/5 transition-colors text-[14px]"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                          {/* Ideas + score */}
                           <div className="flex items-start justify-between gap-4 mb-6">
                             <div>
-                              <p className="text-[10px] font-mono text-[#4A4A60] uppercase tracking-widest mb-2">Connected Ideas</p>
                               <div className="space-y-2">
                                 <Link
                                   href={`/ideas/${selectedPair.a.id}`}
