@@ -64,7 +64,7 @@ function Nav({ scrollToForm }: { scrollToForm: () => void }) {
       <div className="max-w-6xl mx-auto px-6 h-[62px] flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-lg bg-[#F7C948] flex items-center justify-center shrink-0">
-            <span className="text-[#0A0A0F] font-bold text-[13px]">I</span>
+            <span className="text-[#0A0A0F] font-bold text-[10px]">IO</span>
           </div>
           <span className="text-white font-semibold text-[15px] tracking-tight">Idea OS</span>
         </div>
@@ -254,7 +254,18 @@ function Hero({ formRef }: { formRef: React.RefObject<HTMLDivElement | null> }) 
           <motion.div variants={fadeUp} custom={3} ref={formRef} className="flex justify-center mb-4">
             <WaitlistForm size="lg" />
           </motion.div>
-          <motion.p variants={fadeUp} custom={4} className="text-white/20 text-[11px] font-mono">
+          <motion.div variants={fadeUp} custom={4} className="flex justify-center mb-5">
+            <a
+              href="/api/demo"
+              className="inline-flex items-center gap-2 text-[13px] text-white/35 hover:text-white/70 transition-colors font-mono group"
+            >
+              <span className="w-4 h-4 rounded-full border border-white/20 group-hover:border-white/50 flex items-center justify-center transition-colors">
+                <span className="text-[8px]">▶</span>
+              </span>
+              Try the demo first — no sign-up needed
+            </a>
+          </motion.div>
+          <motion.p variants={fadeUp} custom={5} className="text-white/20 text-[11px] font-mono">
             Free to try · No credit card · Works with Claude, ChatGPT, Gemini &amp; more
           </motion.p>
         </motion.div>
@@ -844,8 +855,8 @@ function FinalCTA() {
     <section className="px-6 py-24 bg-[#0D0D14]">
       <div className="max-w-3xl mx-auto text-center">
         <InView>
-          <div className="inline-flex w-16 h-16 rounded-2xl bg-[#F7C948] items-center justify-center text-[#0A0A0F] font-bold text-[28px] mb-8">
-            I
+          <div className="inline-flex w-16 h-16 rounded-2xl bg-[#F7C948] items-center justify-center text-[#0A0A0F] font-bold text-[18px] mb-8">
+            IO
           </div>
           <h2 className="text-[38px] sm:text-[52px] font-bold text-white mb-5 leading-tight">
             Ready to see your<br />AI journey?
@@ -869,7 +880,7 @@ function Footer() {
       <div className="max-w-5xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
         <div className="flex items-center gap-2.5">
           <div className="w-6 h-6 rounded-lg bg-[#F7C948] flex items-center justify-center">
-            <span className="text-[#0A0A0F] font-bold text-[11px]">I</span>
+            <span className="text-[#0A0A0F] font-bold text-[8px]">IO</span>
           </div>
           <span className="text-white/60 text-[13px]">Idea OS</span>
         </div>
@@ -893,7 +904,15 @@ export function WaitlistPage() {
   }, []);
 
   return (
-    <div className="bg-[#0A0A0F] min-h-screen text-white">
+    <div
+      data-landing=""
+      className="bg-[#0A0A0F] min-h-screen text-white"
+      style={{
+        '--accent': '#F7C948',
+        '--accent-rgb': '247, 201, 72',
+        fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
+      } as React.CSSProperties}
+    >
       <Nav scrollToForm={scrollToForm} />
       <Hero formRef={formRef} />
       <WhatItIs />

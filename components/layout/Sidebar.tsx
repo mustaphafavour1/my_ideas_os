@@ -20,7 +20,7 @@ import {
 } from '@phosphor-icons/react';
 
 const MAIN_NAV = [
-  { href: '/',              label: 'Dashboard',      Icon: House },
+  { href: '/app',           label: 'Dashboard',      Icon: House },
   { href: '/ideas',         label: 'Ideas',           Icon: Lightbulb },
   { href: '/analytics',     label: 'Analytics',       Icon: ChartBar },
   { href: '/conversations', label: 'Conversations',   Icon: Chats },
@@ -37,7 +37,7 @@ const MORE_NAV = [
 const ALL_NAV = [...MAIN_NAV, ...MORE_NAV];
 
 function isActive(href: string, pathname: string) {
-  return href === '/' ? pathname === '/' : pathname.startsWith(href);
+  return href === '/app' ? pathname === '/app' : pathname.startsWith(href);
 }
 
 export function Sidebar() {
