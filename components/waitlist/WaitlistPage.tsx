@@ -6,8 +6,7 @@ import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion'
 /* ─── Contact config (replace with real values) ─────────────────────────── */
 const CONTACT_LINKEDIN = 'https://linkedin.com/in/YOUR_HANDLE';
 const CONTACT_X        = 'https://x.com/YOUR_HANDLE';
-const CONTACT_EMAIL    = 'hello@ideaos.co';
-const CONTACT_FORM_URL = 'https://forms.gle/YOUR_GOOGLE_FORM_ID';
+const CONTACT_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSctPvWvt8XcO0UYIyw57ik240a9fsBEZKnMpC35O3vBrUEKtA/viewform?usp=pp_url&entry.181480148=fave&entry.463801258=fave&entry.1926220507=Question&entry.1619198101=favvv&entry.19317049=well';
 
 /* ─── Animation helpers ─────────────────────────────────────────────────── */
 const ease = [0.22, 1, 0.36, 1] as const;
@@ -1039,13 +1038,6 @@ function ContactCTA() {
                   <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.734-8.836L1.524 2.25H8.08l4.253 5.622 5.911-5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
                 </svg>
                 X (Twitter)
-              </a>
-              <a href={`mailto:${CONTACT_EMAIL}`}
-                className="flex items-center gap-2 text-[13px] text-white/40 hover:text-white/70 transition-colors">
-                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
-                </svg>
-                {CONTACT_EMAIL}
               </a>
               <a href={CONTACT_FORM_URL} target="_blank" rel="noopener noreferrer"
                 className="flex items-center gap-2 text-[13px] text-white/40 hover:text-white/70 transition-colors">
