@@ -3,28 +3,26 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 
-/* ─── Google Form config ────────────────────────────────────────────────────
-   Replace these after creating your form in Gemini/Google Forms.
-   FORM_ID: the long ID from the form URL.
-   EMAIL_ENTRY: the entry.XXXXXXXXX field ID for the email question.
-   ─────────────────────────────────────────────────────────────────────────── */
-const FORM_ID = 'YOUR_FORM_ID';
-const EMAIL_ENTRY = 'entry.YOUR_EMAIL_ENTRY_ID';
+/* ─── Contact config (replace with real values) ─────────────────────────── */
+const CONTACT_LINKEDIN = 'https://linkedin.com/in/YOUR_HANDLE';
+const CONTACT_X        = 'https://x.com/YOUR_HANDLE';
+const CONTACT_EMAIL    = 'hello@ideaos.co';
+const CONTACT_FORM_URL = 'https://forms.gle/YOUR_GOOGLE_FORM_ID';
 
 /* ─── Animation helpers ─────────────────────────────────────────────────── */
-const easeOut = [0.22, 1, 0.36, 1] as const;
+const ease = [0.22, 1, 0.36, 1] as const;
 
 const fadeUp = {
-  hidden: { opacity: 0, y: 28 },
+  hidden: { opacity: 0, y: 24 },
   visible: (i = 0) => ({
     opacity: 1, y: 0,
-    transition: { duration: 0.65, delay: i * 0.08, ease: easeOut },
+    transition: { duration: 0.6, delay: i * 0.07, ease },
   }),
 };
 
 const stagger = {
   hidden: {},
-  visible: { transition: { staggerChildren: 0.09, delayChildren: 0.1 } },
+  visible: { transition: { staggerChildren: 0.08, delayChildren: 0.05 } },
 };
 
 function InView({ children, className = '', delay = 0 }: {
@@ -32,10 +30,10 @@ function InView({ children, className = '', delay = 0 }: {
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 28 }}
+      initial={{ opacity: 0, y: 24 }}
       whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: '-60px' }}
-      transition={{ duration: 0.65, delay, ease: easeOut }}
+      viewport={{ once: true, margin: '-50px' }}
+      transition={{ duration: 0.6, delay, ease }}
       className={className}
     >
       {children}
@@ -44,7 +42,7 @@ function InView({ children, className = '', delay = 0 }: {
 }
 
 /* ─── Nav ──────────────────────────────────────────────────────────────── */
-function Nav({ scrollToForm }: { scrollToForm: () => void }) {
+function Nav() {
   const [scrolled, setScrolled] = useState(false);
   useEffect(() => {
     const fn = () => setScrolled(window.scrollY > 30);
@@ -69,165 +67,140 @@ function Nav({ scrollToForm }: { scrollToForm: () => void }) {
           <span className="text-white font-semibold text-[15px] tracking-tight">Idea OS</span>
         </div>
         <div className="hidden md:flex items-center gap-8">
-          {[['features', 'Features'], ['how-it-works', 'How it works'], ['pricing', 'Pricing'], ['export-guide', 'Export guide']].map(([id, label]) => (
+          {[['how-it-works', 'How it works'], ['features', 'Features'], ['pricing', 'Pricing'], ['export-guide', 'Export guide']].map(([id, label]) => (
             <a key={id} href={`#${id}`}
                className="text-[13px] text-white/40 hover:text-white/80 transition-colors">
               {label}
             </a>
           ))}
         </div>
-        <button
-          onClick={scrollToForm}
-          className="h-9 px-5 rounded-full bg-[#F7C948] text-[#0A0A0F] text-[13px] font-semibold hover:bg-[#E6B830] transition-colors"
-        >
-          Join waitlist
-        </button>
+        <div className="flex items-center gap-2">
+          <a
+            href="/demo"
+            className="h-9 px-4 rounded-full border border-[#1E1E2E] text-white/60 text-[13px] font-medium hover:border-[#2A2A3A] hover:text-white/80 transition-colors hidden sm:flex items-center"
+          >
+            Visit demo
+          </a>
+          <a
+            href="/login"
+            className="h-9 px-5 rounded-full bg-[#F7C948] text-[#0A0A0F] text-[13px] font-semibold hover:bg-[#E6B830] transition-colors flex items-center"
+          >
+            Get started
+          </a>
+        </div>
       </div>
     </motion.nav>
   );
 }
 
-/* ─── Waitlist form (shared between Hero & bottom CTA) ─────────────────── */
-function WaitlistForm({ size = 'lg' }: { size?: 'lg' | 'sm' }) {
-  const [email, setEmail] = useState('');
-  const [done, setDone] = useState(false);
-  const [loading, setLoading] = useState(false);
+/* ─── Cycling animated word ──────────────────────────────────────────────── */
+const CYCLING_WORDS = ['Visualized', 'Analysed', 'Optimized', 'Decoded', 'Understood'];
 
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!email) return;
-    setLoading(true);
-    try {
-      await fetch(`https://docs.google.com/forms/d/e/${FORM_ID}/formResponse`, {
-        method: 'POST', mode: 'no-cors',
-        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-        body: new URLSearchParams({ [EMAIL_ENTRY]: email, submit: 'Submit' }),
-      });
-    } catch {}
-    setDone(true);
-    setLoading(false);
-  };
-
-  if (done) {
-    return (
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="inline-flex items-center gap-3 px-6 py-3.5 rounded-xl bg-[#F7C948]/10 border border-[#F7C948]/25"
-      >
-        <div className="w-8 h-8 rounded-full bg-[#F7C948]/20 flex items-center justify-center">
-          <span className="text-[#F7C948]">✓</span>
-        </div>
-        <div>
-          <p className="text-white font-semibold text-[14px]">You&apos;re on the list!</p>
-          <p className="text-white/40 text-[12px] font-mono">We&apos;ll email you when your spot is ready.</p>
-        </div>
-      </motion.div>
-    );
-  }
-
+function CyclingWord() {
+  const [idx, setIdx] = useState(0);
+  useEffect(() => {
+    const t = setInterval(() => setIdx((i) => (i + 1) % CYCLING_WORDS.length), 2200);
+    return () => clearInterval(t);
+  }, []);
   return (
-    <form onSubmit={submit} className={`flex ${size === 'lg' ? 'flex-col sm:flex-row' : 'flex-row'} gap-2.5 w-full max-w-md`}>
-      <input
-        type="email" required value={email} onChange={(e) => setEmail(e.target.value)}
-        placeholder="your@email.com"
-        className={`flex-1 ${size === 'lg' ? 'h-12' : 'h-10'} px-4 rounded-xl bg-[#111118] border border-[#1E1E2E] text-white placeholder:text-white/20 text-[14px] focus:outline-none focus:border-[#F7C948]/40 transition-colors`}
-      />
-      <button type="submit" disabled={loading}
-        className={`${size === 'lg' ? 'h-12 px-8' : 'h-10 px-6'} rounded-xl bg-[#F7C948] text-[#0A0A0F] text-[13px] font-semibold hover:bg-[#E6B830] transition-colors disabled:opacity-60 whitespace-nowrap`}
-      >
-        {loading ? 'Joining…' : 'Get early access'}
-      </button>
-    </form>
+    <span className="inline-block overflow-hidden relative" style={{ minWidth: '8ch' }}>
+      <AnimatePresence mode="wait">
+        <motion.span
+          key={idx}
+          initial={{ y: 48, opacity: 0 }}
+          animate={{ y: 0, opacity: 1 }}
+          exit={{ y: -48, opacity: 0 }}
+          transition={{ duration: 0.38, ease }}
+          className="text-[#F7C948] inline-block"
+        >
+          {CYCLING_WORDS[idx]}.
+        </motion.span>
+      </AnimatePresence>
+    </span>
   );
 }
 
-/* ─── App mockup (pure JSX, shown in hero) ──────────────────────────────── */
-function AppMockup() {
-  const navItems = ['Dashboard', 'Ideas', 'Analytics', 'Conversations', 'Profile'];
+/* ─── Animated line graph with floating insight chips ────────────────────── */
+function AnimatedGraph() {
+  const points = [12, 28, 18, 42, 35, 55, 48, 68, 62, 78, 72, 88];
+  const w = 500, h = 180;
+  const xs = points.map((_, i) => (i / (points.length - 1)) * w);
+  const ys = points.map((v) => h - (v / 100) * h);
+  const path = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x},${ys[i]}`).join(' ');
+
+  const chips = [
+    { label: '↑ Productivity score', x: '62%', y: '12%', delay: 0.5 },
+    { label: '47 ideas captured', x: '20%', y: '52%', delay: 0.8 },
+    { label: '🔁 Recurring pattern', x: '72%', y: '60%', delay: 1.1 },
+  ];
+
   return (
-    <div className="rounded-2xl border border-[#1E1E2E] overflow-hidden"
-         style={{ boxShadow: '0 40px 100px rgba(0,0,0,0.7), 0 0 120px rgba(247,201,72,0.07)' }}>
-      {/* Browser chrome */}
-      <div className="h-9 bg-[#0D0D14] border-b border-[#1E1E2E] flex items-center px-4 gap-2">
-        <div className="flex gap-1.5">
-          <div className="w-2.5 h-2.5 rounded-full bg-[#FF5F57]" />
-          <div className="w-2.5 h-2.5 rounded-full bg-[#FFBD2E]" />
-          <div className="w-2.5 h-2.5 rounded-full bg-[#28CA41]" />
-        </div>
-        <div className="flex-1 mx-3 h-5 bg-[#1A1A28] rounded flex items-center justify-center">
-          <span className="text-[9px] text-white/20 font-mono">app.ideaos.co/dashboard</span>
-        </div>
-      </div>
-      {/* Layout */}
-      <div className="flex bg-[#0A0A0F]" style={{ height: 360 }}>
-        {/* Sidebar */}
-        <div className="w-[52px] sm:w-[160px] bg-[#0A0A0F] border-r border-[#1E1E2E] p-3 flex flex-col gap-1 shrink-0">
-          <div className="hidden sm:flex items-center gap-2 mb-3 px-1">
-            <div className="w-5 h-5 rounded-md bg-[#F7C948] shrink-0" />
-            <span className="text-[11px] font-semibold text-white">Idea OS</span>
-          </div>
-          {navItems.map((item, i) => (
-            <div key={item} className={`flex items-center gap-2 px-2 py-1.5 rounded-lg ${i === 0 ? 'bg-[#F7C948]/10' : ''}`}>
-              <div className={`w-2.5 h-2.5 rounded-sm shrink-0 ${i === 0 ? 'bg-[#F7C948]' : 'bg-[#2A2A3A]'}`} />
-              <span className={`hidden sm:block text-[10px] ${i === 0 ? 'text-[#F7C948]' : 'text-[#3A3A55]'}`}>{item}</span>
-            </div>
-          ))}
-        </div>
-        {/* Main */}
-        <div className="flex-1 p-4 overflow-hidden">
-          {/* Stat cards */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-3">
-            {[['47', 'Ideas'], ['91%', 'AI Score'], ['4.1', 'Avg Grade'], ['18k', 'AI Words']].map(([v, l]) => (
-              <div key={l} className="bg-[#111118] rounded-xl p-3 border border-[#1E1E2E]">
-                <p className="text-[9px] text-[#3A3A55] mb-1">{l}</p>
-                <p className="text-[16px] font-bold text-[#D0D0DA]">{v}</p>
-              </div>
-            ))}
-          </div>
-          {/* Ring cards row */}
-          <div className="grid grid-cols-3 gap-2 mb-3">
-            {[['AI Productivity', '91%', '#F7C948'], ['Avg Grade', '4.1/5', '#7A7AF0'], ['Completion', '68%', '#4ADE80']].map(([t, v, c]) => (
-              <div key={t} className="bg-[#111118] rounded-xl p-3 border border-[#1E1E2E] flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full border-2 flex items-center justify-center shrink-0"
-                     style={{ borderColor: c }}>
-                  <span className="text-[8px] font-bold" style={{ color: c }}>{v}</span>
-                </div>
-                <span className="text-[9px] text-[#6A6A80] hidden sm:block">{t}</span>
-              </div>
-            ))}
-          </div>
-          {/* Ideas list */}
-          <div className="bg-[#111118] rounded-xl border border-[#1E1E2E] overflow-hidden">
-            {[
-              ['AI Study Planner', 'product', 'in_progress'],
-              ['Async voice notes', 'side_quest', 'captured'],
-              ['Builder community', 'community', 'validated'],
-            ].map(([title, type, status]) => (
-              <div key={title} className="flex items-center gap-3 px-3 py-2.5 border-b border-[#1A1A28] last:border-0">
-                <div className="w-1.5 h-1.5 rounded-full bg-[#F7C948] shrink-0" />
-                <span className="text-[10px] text-[#D0D0DA] flex-1 truncate">{title}</span>
-                <span className="hidden sm:block text-[8px] px-1.5 py-0.5 rounded bg-[#1A1A28] text-[#6A6A80]">{type}</span>
-                <span className="text-[8px] text-[#3A3A55]">{status.replace('_', ' ')}</span>
-              </div>
-            ))}
-          </div>
-        </div>
-      </div>
+    <div className="relative w-full max-w-2xl mx-auto h-[200px]">
+      <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-full" preserveAspectRatio="none">
+        <defs>
+          <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
+            <stop offset="0%" stopColor="#F7C948" stopOpacity="0.2" />
+            <stop offset="100%" stopColor="#F7C948" stopOpacity="1" />
+          </linearGradient>
+          <linearGradient id="fillGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#F7C948" stopOpacity="0.12" />
+            <stop offset="100%" stopColor="#F7C948" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <motion.path
+          d={`${path} L${w},${h} L0,${h} Z`}
+          fill="url(#fillGrad)"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: 1.2, delay: 0.3 }}
+        />
+        <motion.path
+          d={path}
+          fill="none"
+          stroke="url(#lineGrad)"
+          strokeWidth="2.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+          initial={{ pathLength: 0 }}
+          animate={{ pathLength: 1 }}
+          transition={{ duration: 1.6, ease: 'easeInOut', delay: 0.2 }}
+        />
+        {points.map((_, i) => (
+          <motion.circle
+            key={i}
+            cx={xs[i]} cy={ys[i]} r={3}
+            fill="#F7C948"
+            initial={{ scale: 0, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.2 + (i / points.length) * 1.2, duration: 0.3 }}
+          />
+        ))}
+      </svg>
+      {chips.map((chip) => (
+        <motion.div
+          key={chip.label}
+          className="absolute px-3 py-1.5 rounded-full bg-[#111118] border border-[#F7C948]/25 text-[10px] font-mono text-[#F7C948]/80 whitespace-nowrap pointer-events-none"
+          style={{ left: chip.x, top: chip.y }}
+          initial={{ opacity: 0, scale: 0.85 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: chip.delay, duration: 0.4, ease }}
+        >
+          {chip.label}
+        </motion.div>
+      ))}
     </div>
   );
 }
 
 /* ─── Hero ───────────────────────────────────────────────────────────────── */
-function Hero({ formRef }: { formRef: React.RefObject<HTMLDivElement | null> }) {
+function Hero() {
   const { scrollYProgress } = useScroll();
-  const y = useTransform(scrollYProgress, [0, 0.4], [0, -60]);
+  const y = useTransform(scrollYProgress, [0, 0.35], [0, -50]);
 
   return (
     <section className="relative min-h-screen flex flex-col items-center justify-center px-6 pt-28 pb-20 overflow-hidden">
-      {/* Ambient glow */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[20%] left-1/2 -translate-x-1/2 w-[900px] h-[600px] opacity-[0.07]"
+        <div className="absolute top-[18%] left-1/2 -translate-x-1/2 w-[800px] h-[500px] opacity-[0.065]"
              style={{ background: 'radial-gradient(ellipse, #F7C948, transparent 70%)' }} />
       </div>
 
@@ -236,45 +209,44 @@ function Hero({ formRef }: { formRef: React.RefObject<HTMLDivElement | null> }) 
           <motion.div variants={fadeUp} custom={0}
             className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#F7C948]/20 bg-[#F7C948]/5 mb-8">
             <span className="w-1.5 h-1.5 rounded-full bg-[#F7C948] animate-pulse" />
-            <span className="text-[#F7C948] text-[10px] font-mono uppercase tracking-widest">Early Access — Limited Spots</span>
+            <span className="text-[#F7C948] text-[10px] font-mono uppercase tracking-widest">Now open · Start free</span>
           </motion.div>
 
           <motion.h1 variants={fadeUp} custom={1}
-            className="text-[52px] sm:text-[72px] lg:text-[90px] font-bold text-white leading-[0.92] tracking-tight mb-7">
+            className="text-[48px] sm:text-[68px] lg:text-[84px] font-bold text-white leading-[0.93] tracking-tight mb-5">
             Your AI journey,<br />
-            <span className="text-[#F7C948]">visualized.</span>
+            <CyclingWord />
           </motion.h1>
 
           <motion.p variants={fadeUp} custom={2}
-            className="text-[17px] sm:text-[19px] text-white/45 max-w-xl mx-auto mb-10 leading-relaxed">
-            Idea OS turns your Claude conversations into a personal intelligence dashboard.
-            Discover your builder DNA, track every idea, and understand how you actually use AI.
+            className="text-[15px] sm:text-[17px] text-white/45 max-w-md mx-auto mb-10 leading-relaxed">
+            Turn your Claude conversations into a personal intelligence dashboard — ideas, patterns, and insights, all in one place.
           </motion.p>
 
-          <motion.div variants={fadeUp} custom={3} ref={formRef} className="flex justify-center mb-4">
-            <WaitlistForm size="lg" />
-          </motion.div>
-          <motion.div variants={fadeUp} custom={4} className="flex justify-center mb-5">
+          <motion.div variants={fadeUp} custom={3} className="flex items-center justify-center gap-3 flex-wrap mb-6">
             <a
-              href="/api/demo"
-              className="inline-flex items-center gap-2 text-[13px] text-white/35 hover:text-white/70 transition-colors font-mono group"
+              href="/demo"
+              className="h-12 px-7 rounded-xl border border-[#1E1E2E] text-white/70 text-[14px] font-medium hover:border-[#2A2A3A] hover:text-white transition-colors"
             >
-              <span className="w-4 h-4 rounded-full border border-white/20 group-hover:border-white/50 flex items-center justify-center transition-colors">
-                <span className="text-[8px]">▶</span>
-              </span>
-              Try the demo first — no sign-up needed
+              Visit demo
+            </a>
+            <a
+              href="/login"
+              className="h-12 px-8 rounded-xl bg-[#F7C948] text-[#0A0A0F] text-[14px] font-semibold hover:bg-[#E6B830] transition-colors"
+            >
+              Get started →
             </a>
           </motion.div>
-          <motion.p variants={fadeUp} custom={5} className="text-white/20 text-[11px] font-mono">
+
+          <motion.p variants={fadeUp} custom={4} className="text-white/20 text-[11px] font-mono">
             Free to try · No credit card · Works with Claude, ChatGPT, Gemini &amp; more
           </motion.p>
         </motion.div>
       </motion.div>
 
-      {/* Mockup */}
-      <InView className="relative z-10 w-full max-w-5xl mx-auto mt-16 px-2">
-        <AppMockup />
-        <div className="absolute -bottom-px inset-x-0 h-32 pointer-events-none"
+      <InView className="relative z-10 w-full max-w-3xl mx-auto mt-20 px-2">
+        <AnimatedGraph />
+        <div className="absolute -bottom-px inset-x-0 h-24 pointer-events-none"
              style={{ background: 'linear-gradient(to bottom, transparent, #0A0A0F)' }} />
       </InView>
     </section>
@@ -282,107 +254,177 @@ function Hero({ formRef }: { formRef: React.RefObject<HTMLDivElement | null> }) 
 }
 
 /* ─── What it is / What it's not ─────────────────────────────────────────── */
+const IS_CARDS = [
+  { emoji: '◎', text: 'An intelligent dashboard that analyses & optimises your AI journey' },
+  { emoji: '⚡', text: 'A personal productivity and usage insights tool for AI builders' },
+  { emoji: '◆', text: 'An idea tracker and knowledge vault for AI-assisted work' },
+  { emoji: '↗', text: 'A pattern detector — see how your prompting style evolves over time' },
+  { emoji: '⊕', text: 'A builder profile that shows how you use AI, in data' },
+];
+const ISNT_CARDS = [
+  { emoji: '✕', text: 'Another AI agent or chatbot — we don\'t generate content for you' },
+  { emoji: '✕', text: 'A replacement for Claude, ChatGPT, or any AI tool' },
+  { emoji: '✕', text: 'A data collector — your conversation text stays on your device' },
+  { emoji: '✕', text: 'A social platform — your data is private and yours alone' },
+];
+
+function IsCard({ item, isNot }: { item: { emoji: string; text: string }; isNot: boolean }) {
+  return (
+    <motion.div
+      variants={fadeUp}
+      className={`rounded-2xl p-6 border ${isNot ? 'border-[#1E1E2E] bg-[#0D0D14]' : 'border-[#F7C948]/15 bg-[#F7C948]/3'}`}
+    >
+      <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[14px] mb-4 ${isNot ? 'bg-white/5 text-white/30' : 'bg-[#F7C948]/10 text-[#F7C948]'}`}>
+        {item.emoji}
+      </div>
+      <p className="text-[13px] text-white/60 leading-relaxed">{item.text}</p>
+    </motion.div>
+  );
+}
+
 function WhatItIs() {
   return (
     <section className="px-6 py-24 max-w-5xl mx-auto">
+      <div className="w-full h-px bg-gradient-to-r from-transparent via-[#1E1E2E] to-transparent mb-20" />
+
       <InView className="text-center mb-14">
         <p className="text-[10px] font-mono text-[#F7C948] uppercase tracking-widest mb-3">Clarity first</p>
-        <h2 className="text-[38px] sm:text-[48px] font-bold text-white">What Idea OS is — and isn&apos;t</h2>
+        <h2 className="text-[34px] sm:text-[44px] font-bold text-white">What Idea OS is — and isn&apos;t</h2>
       </InView>
 
-      <div className="grid sm:grid-cols-2 gap-6">
-        {/* IS */}
-        <InView delay={0.1} className="rounded-2xl border border-[#1E1E2E] bg-[#111118] p-8">
-          <div className="w-10 h-10 rounded-xl bg-[#F7C948]/10 flex items-center justify-center mb-5">
-            <span className="text-[20px]">✓</span>
-          </div>
-          <h3 className="text-[18px] font-semibold text-white mb-4">It IS</h3>
-          <ul className="space-y-3">
-            {[
-              'A read-only dashboard that analyses your past conversations',
-              'A personal productivity and usage insights tool',
-              'An idea tracker and knowledge vault for AI-assisted work',
-              'A builder profile that shows how you use AI over time',
-              'A pattern detector — see how your prompting style evolves',
-            ].map((t) => (
-              <li key={t} className="flex gap-3 text-[14px] text-white/60">
-                <span className="text-[#F7C948] mt-0.5 shrink-0">→</span>
-                <span>{t}</span>
-              </li>
+      <div className="grid sm:grid-cols-2 gap-12">
+        <div>
+          <p className="text-[10px] font-mono text-[#F7C948]/60 uppercase tracking-widest mb-5">It IS</p>
+          <motion.div
+            className="grid grid-cols-2 gap-3"
+            initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-50px' }}
+            variants={stagger}
+          >
+            {IS_CARDS.map((item, i) => (
+              <div key={i} className={i === IS_CARDS.length - 1 && IS_CARDS.length % 2 !== 0 ? 'col-span-2 max-w-[calc(50%-6px)] mx-auto w-full' : ''}>
+                <IsCard item={item} isNot={false} />
+              </div>
             ))}
-          </ul>
-        </InView>
-
-        {/* IS NOT */}
-        <InView delay={0.2} className="rounded-2xl border border-[#1E1E2E] bg-[#111118] p-8">
-          <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center mb-5">
-            <span className="text-[20px]">✕</span>
-          </div>
-          <h3 className="text-[18px] font-semibold text-white mb-4">It&apos;s NOT</h3>
-          <ul className="space-y-3">
-            {[
-              'Another AI agent or chatbot — we don\'t generate content for you',
-              'A replacement for Claude, ChatGPT, or any AI tool',
-              'A data collector — we never read or store your conversation text',
-              'A productivity coach or task manager',
-              'A social platform — your data is private and yours alone',
-            ].map((t) => (
-              <li key={t} className="flex gap-3 text-[14px] text-white/60">
-                <span className="text-white/20 mt-0.5 shrink-0">✕</span>
-                <span>{t}</span>
-              </li>
+          </motion.div>
+        </div>
+        <div>
+          <p className="text-[10px] font-mono text-white/20 uppercase tracking-widest mb-5">It&apos;s NOT</p>
+          <motion.div
+            className="grid grid-cols-2 gap-3"
+            initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-50px' }}
+            variants={stagger}
+          >
+            {ISNT_CARDS.map((item, i) => (
+              <div key={i} className={i === ISNT_CARDS.length - 1 && ISNT_CARDS.length % 2 !== 0 ? 'col-span-2 max-w-[calc(50%-6px)] mx-auto w-full' : ''}>
+                <IsCard item={item} isNot />
+              </div>
             ))}
-          </ul>
-        </InView>
+          </motion.div>
+        </div>
       </div>
     </section>
   );
 }
 
 /* ─── How it works ──────────────────────────────────────────────────────── */
-function HowItWorks() {
-  const steps = [
-    {
-      n: '01', title: 'Export your conversations',
-      body: 'Download your conversation history from Claude, ChatGPT, Gemini, or any AI tool you use. It takes about 30 seconds.',
-      icon: '↓',
-    },
-    {
-      n: '02', title: 'Upload once, analyse forever',
-      body: 'Drop your export file into Idea OS. We process everything locally — your conversation text never leaves your device or touches our servers.',
-      icon: '⚡',
-    },
-    {
-      n: '03', title: 'Unlock your AI builder profile',
-      body: 'See your productivity score, idea evolution, usage patterns, signals, and a personalised analysis of how you actually build with AI.',
-      icon: '◎',
-    },
-  ];
+const HOW_STEPS = [
+  { n: '01', title: 'Export your conversations', body: 'Download your history from Claude, ChatGPT, Gemini — any AI tool. Takes about 30 seconds.' },
+  { n: '02', title: 'Drop the file', body: 'Upload your export JSON. We batch-analyse everything and extract every idea, pattern, and insight in minutes.' },
+  { n: '03', title: 'See your builder profile', body: 'Your productivity score, idea evolution, conversation stats, signals — a complete mirror of how you actually build.' },
+  { n: '04', title: 'Keep it current', body: 'Re-sync anytime to add new conversations. We skip what\'s already been processed so it stays fast.' },
+];
 
+function HowItWorks() {
   return (
     <section id="how-it-works" className="px-6 py-24 bg-[#0D0D14]">
       <div className="max-w-5xl mx-auto">
         <InView className="text-center mb-16">
           <p className="text-[10px] font-mono text-[#F7C948] uppercase tracking-widest mb-3">Simple by design</p>
-          <h2 className="text-[38px] sm:text-[48px] font-bold text-white">How it works</h2>
+          <h2 className="text-[34px] sm:text-[44px] font-bold text-white">How it works</h2>
         </InView>
 
-        <div className="grid sm:grid-cols-3 gap-6">
-          {steps.map((s, i) => (
-            <InView key={s.n} delay={i * 0.12} className="relative">
-              <div className="rounded-2xl border border-[#1E1E2E] bg-[#111118] p-8 h-full">
-                <div className="flex items-center gap-3 mb-5">
-                  <span className="text-[11px] font-mono text-[#F7C948]/40">{s.n}</span>
-                  <div className="w-9 h-9 rounded-xl border border-[#F7C948]/20 bg-[#F7C948]/5 flex items-center justify-center text-[#F7C948] text-[16px]">
-                    {s.icon}
+        <div className="relative grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          {/* Loopy connector line behind cards */}
+          <div className="hidden lg:block absolute top-1/2 left-0 right-0 pointer-events-none -translate-y-1/2 px-16" style={{ zIndex: 0 }}>
+            <svg viewBox="0 0 800 60" className="w-full" style={{ height: 60 }}>
+              <path
+                d="M0,30 C80,10 120,50 200,30 C280,10 320,50 400,30 C480,10 520,50 600,30 C680,10 720,50 800,30"
+                fill="none" stroke="#1E1E2E" strokeWidth="1.5" strokeDasharray="6 4"
+              />
+            </svg>
+          </div>
+
+          {HOW_STEPS.map((s, i) => (
+            <motion.div
+              key={s.n}
+              initial={{ opacity: 0, y: 24 }}
+              whileInView={{ opacity: 1, y: i % 2 === 0 ? 0 : 24 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.55, delay: i * 0.12, ease }}
+              className="relative z-10"
+              style={{ marginTop: i % 2 !== 0 ? 32 : 0 }}
+            >
+              <div className="rounded-2xl bg-[#111118] border border-[#1E1E2E] p-6 font-mono relative overflow-hidden">
+                <div className="absolute inset-x-0 top-0 h-px"
+                  style={{ background: 'linear-gradient(90deg, transparent, rgba(247,201,72,0.2), transparent)' }} />
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-[10px] text-[#F7C948]/40">{s.n}</span>
+                  <div className="w-px h-3 bg-[#1E1E2E]" />
+                  <div className="flex gap-1">
+                    <div className="w-2 h-2 rounded-sm bg-[#F7C948]/30" />
+                    <div className="w-2 h-2 rounded-sm bg-[#1E1E2E]" />
+                    <div className="w-2 h-2 rounded-sm bg-[#1E1E2E]" />
                   </div>
                 </div>
-                <h3 className="text-[17px] font-semibold text-white mb-3">{s.title}</h3>
-                <p className="text-[14px] text-white/45 leading-relaxed">{s.body}</p>
+                <h3 className="text-[14px] font-semibold text-white mb-2 font-sans">{s.title}</h3>
+                <p className="text-[12px] text-white/40 leading-relaxed font-sans">{s.body}</p>
               </div>
-              {i < 2 && (
-                <div className="hidden sm:block absolute top-1/2 -right-3 z-10 text-[#2A2A3A] text-xl">→</div>
-              )}
+            </motion.div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─── Origin story ───────────────────────────────────────────────────────── */
+function TheJourney() {
+  return (
+    <section className="px-6 py-28 relative overflow-hidden">
+      {/* Graph paper background */}
+      <div className="absolute inset-0 pointer-events-none opacity-[0.025]"
+        style={{
+          backgroundImage:
+            'linear-gradient(#F7C948 1px, transparent 1px), linear-gradient(90deg, #F7C948 1px, transparent 1px)',
+          backgroundSize: '40px 40px',
+        }}
+      />
+
+      <div className="max-w-2xl mx-auto relative z-10">
+        <InView className="text-center mb-12">
+          <p className="text-[10px] font-mono text-[#F7C948] uppercase tracking-widest mb-3">The origin story</p>
+          <h2 className="text-[34px] sm:text-[44px] font-bold text-white leading-tight"
+            style={{ transform: 'rotate(-0.5deg)' }}>
+            It started as a<br />personal obsession
+          </h2>
+        </InView>
+
+        <div className="space-y-6 text-[15px] sm:text-[16px] text-white/50 leading-relaxed relative">
+          {/* Loopy connector between paragraphs */}
+          <div className="absolute -left-8 top-0 bottom-0 pointer-events-none hidden sm:block" style={{ width: 24 }}>
+            <svg viewBox="0 0 24 600" className="w-full h-full" preserveAspectRatio="none">
+              <path d="M12,0 C4,80 20,120 12,200 C4,280 20,320 12,400 C4,480 20,520 12,600"
+                fill="none" stroke="#1E1E2E" strokeWidth="1" strokeDasharray="4 4" />
+            </svg>
+          </div>
+
+          {[
+            'I\'d been building with Claude every single day. Ideas in the morning, code reviews at night. But I had no idea how I was actually using it — what patterns I was falling into, which sessions were most productive, or where my ideas were coming from.',
+            'One day I exported my conversations just to see what was in there. Thousands of messages. Hundreds of code blocks. Ideas scattered across dozens of chats that I\'d completely forgotten about.',
+            'I wanted a mirror — something that could show me my own AI usage like a Spotify Wrapped for how I build. The peaks, the patterns, the productivity score. So I built it. For me first. Then people started asking to use it. This is Idea OS.',
+          ].map((text, i) => (
+            <InView key={i} delay={i * 0.1}>
+              <p>{text}</p>
             </InView>
           ))}
         </div>
@@ -391,71 +433,61 @@ function HowItWorks() {
   );
 }
 
-/* ─── The Journey ───────────────────────────────────────────────────────── */
-function TheJourney() {
-  return (
-    <section className="px-6 py-28 max-w-4xl mx-auto">
-      <InView className="text-center mb-3">
-        <p className="text-[10px] font-mono text-[#F7C948] uppercase tracking-widest">The origin story</p>
-      </InView>
-
-      <InView delay={0.1}>
-        <h2 className="text-[36px] sm:text-[48px] font-bold text-white text-center mb-14 leading-tight">
-          It started as a personal<br />obsession
-        </h2>
-      </InView>
-
-      <div className="space-y-6 text-[16px] sm:text-[17px] text-white/50 leading-relaxed max-w-2xl mx-auto">
-        {[
-          { text: 'I\'d been building with Claude every single day. Ideas in the morning, code reviews at night. But I had no idea how I was actually using it — what patterns I was falling into, which sessions were most productive, or where my ideas were coming from.', delay: 0.1 },
-          { text: 'One day I exported my conversations just to see what was in there. Thousands of messages. Hundreds of code blocks. Ideas scattered across dozens of chats that I\'d completely forgotten about.', delay: 0.2 },
-          { text: 'I wanted a mirror. Something that could show me my own AI usage like a Spotify Wrapped for how I build — the peaks, the patterns, the productivity score that tells me if I\'m actually getting better.', delay: 0.25 },
-          { text: 'So I built it. For me first. Then people started asking to use it. This is Idea OS.', delay: 0.3 },
-        ].map(({ text, delay }) => (
-          <InView key={delay} delay={delay}>
-            <p>{text}</p>
-          </InView>
-        ))}
-      </div>
-    </section>
-  );
-}
-
 /* ─── Features ──────────────────────────────────────────────────────────── */
-function Features() {
-  const features = [
-    { icon: '◎', title: 'AI Builder Profile', body: 'Your productivity score, AI personality type, temperament, usage patterns — a complete picture of how you build with AI.' },
-    { icon: '⚡', title: 'Idea Intelligence', body: 'Capture, grade, and track every idea from your AI conversations. See which sectors you focus on and which ideas keep getting revisited.' },
-    { icon: '↗', title: 'Productivity Analytics', body: 'Code lines written, conversation volume, word breakdowns, time trends — understand your real output across weeks and months.' },
-    { icon: '◆', title: 'Signals Engine', body: 'Surface recurring patterns, strategic principles, and insights from across your work. Build a personal knowledge layer that grows with you.' },
-    { icon: '⊕', title: 'Insights Connector', body: 'See which ideas are semantically connected. Spot the threads across conversations you might have missed.' },
-    { icon: '↻', title: 'Multi-tool Support', body: 'Export from Claude, ChatGPT, Gemini, and more. Idea OS merges all your AI work into one unified dashboard.' },
-  ];
+const FEATURE_ITEMS = [
+  { icon: '◎', title: 'AI Builder Profile', body: 'Your productivity score, AI personality type, temperament, usage patterns — a complete picture of how you build with AI.' },
+  { icon: '⚡', title: 'Idea Intelligence', body: 'Capture, grade, and track every idea from your AI conversations. See which sectors you focus on and which ideas keep coming back.' },
+  { icon: '↗', title: 'Productivity Analytics', body: 'Code lines written, conversation volume, word breakdowns, time trends — understand your real output across weeks and months.' },
+  { icon: '◆', title: 'Signals Engine', body: 'Surface recurring patterns, strategic principles, and insights from across your work. Build a personal knowledge layer that grows with you.' },
+  { icon: '⊕', title: 'Insights Connector', body: 'See which ideas are related. Spot the threads across conversations you might have missed. Group sub-ideas under parent projects.' },
+];
 
+function Features() {
   return (
     <section id="features" className="px-6 py-24 bg-[#0D0D14]">
       <div className="max-w-5xl mx-auto">
         <InView className="text-center mb-16">
           <p className="text-[10px] font-mono text-[#F7C948] uppercase tracking-widest mb-3">What you get</p>
-          <h2 className="text-[38px] sm:text-[48px] font-bold text-white">The cool features</h2>
+          <h2 className="text-[34px] sm:text-[44px] font-bold text-white">The features</h2>
         </InView>
 
-        <motion.div
-          initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-60px' }}
-          variants={stagger}
-          className="grid sm:grid-cols-2 lg:grid-cols-3 gap-5"
-        >
-          {features.map((f, i) => (
-            <motion.div key={f.title} variants={fadeUp} custom={i}
-              className="rounded-2xl border border-[#1E1E2E] bg-[#111118] p-7 hover:border-[#F7C948]/20 transition-colors group">
-              <div className="w-10 h-10 rounded-xl bg-[#F7C948]/8 border border-[#F7C948]/15 flex items-center justify-center text-[#F7C948] text-[18px] mb-5 group-hover:bg-[#F7C948]/12 transition-colors">
-                {f.icon}
-              </div>
-              <h3 className="text-[16px] font-semibold text-white mb-2">{f.title}</h3>
-              <p className="text-[13px] text-white/40 leading-relaxed">{f.body}</p>
+        {/* Title card centred at top + 5 feature cards */}
+        <div className="relative">
+          {/* Top title card */}
+          <div className="flex justify-center mb-4">
+            <motion.div
+              initial={{ opacity: 0, y: 16 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.5, ease }}
+              className="rounded-2xl bg-[#F7C948]/8 border border-[#F7C948]/20 px-8 py-5 text-center max-w-sm w-full"
+            >
+              <p className="text-[11px] font-mono text-[#F7C948]/60 uppercase tracking-widest mb-1">Built for builders</p>
+              <p className="text-[17px] font-semibold text-white">Everything in one dashboard</p>
             </motion.div>
-          ))}
-        </motion.div>
+          </div>
+
+          {/* 5 feature cards */}
+          <motion.div
+            className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"
+            initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-50px' }}
+            variants={stagger}
+          >
+            {FEATURE_ITEMS.map((f) => (
+              <motion.div key={f.title} variants={fadeUp}
+                className="rounded-2xl border-0 bg-[#111118] p-7 hover:bg-[#131320] transition-colors group relative overflow-hidden">
+                {/* Divider line at top instead of border */}
+                <div className="absolute inset-x-0 top-0 h-[1px]"
+                  style={{ background: 'linear-gradient(90deg, transparent, rgba(247,201,72,0.15), transparent)' }} />
+                <div className="w-10 h-10 rounded-xl bg-[#F7C948]/8 flex items-center justify-center text-[#F7C948] text-[18px] mb-5">
+                  {f.icon}
+                </div>
+                <h3 className="text-[15px] font-semibold text-white mb-2">{f.title}</h3>
+                <p className="text-[12px] text-white/40 leading-relaxed">{f.body}</p>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
       </div>
     </section>
   );
@@ -476,24 +508,34 @@ const MOBILE_SHOTS = [
   { file: 'mobile-analytics.png',  label: 'Analytics' },
 ];
 
-function ScreenshotCard({ file, label, isMobile }: { file: string; label: string; isMobile: boolean }) {
+function ScreenshotCard({ file, label, isMobile, onClick }: {
+  file: string; label: string; isMobile: boolean; onClick: () => void;
+}) {
   const [loaded, setLoaded] = useState(false);
   const src = `/screenshots/${file}`;
   return (
-    <div className={`relative shrink-0 rounded-xl overflow-hidden border border-[#1E1E2E] bg-[#111118] ${
-      isMobile ? 'w-[200px] sm:w-[230px]' : 'w-[420px] sm:w-[520px]'
-    }`}
-    style={{ aspectRatio: isMobile ? '9/19.5' : '16/10' }}>
+    <div
+      className={`relative shrink-0 rounded-xl overflow-hidden border border-[#1E1E2E] bg-[#111118] cursor-pointer hover:border-[#2A2A3A] transition-colors group ${
+        isMobile ? 'w-[180px] sm:w-[210px]' : 'w-[480px] sm:w-[580px]'
+      }`}
+      style={{ aspectRatio: isMobile ? '9/19.5' : '16/10' }}
+      onClick={onClick}
+    >
       {!loaded && (
         <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 p-4">
           <div className="w-10 h-10 rounded-xl bg-[#1E1E2E] flex items-center justify-center text-white/20 text-xl">◫</div>
           <p className="text-[10px] font-mono text-white/20 text-center">{label}</p>
-          <p className="text-[9px] font-mono text-white/12 text-center break-all">/screenshots/{file}</p>
         </div>
       )}
       {/* eslint-disable-next-line @next/next/no-img-element */}
       <img src={src} alt={label} onLoad={() => setLoaded(true)} onError={() => setLoaded(false)}
            className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`} />
+      {/* Hover overlay */}
+      <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
+        <div className="w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center">
+          <span className="text-white/80 text-[14px]">⊕</span>
+        </div>
+      </div>
       <div className="absolute bottom-0 inset-x-0 h-12 pointer-events-none"
            style={{ background: 'linear-gradient(to bottom, transparent, rgba(0,0,0,0.7))' }} />
       <div className="absolute bottom-3 left-3">
@@ -505,192 +547,146 @@ function ScreenshotCard({ file, label, isMobile }: { file: string; label: string
 
 function Screenshots() {
   const [mode, setMode] = useState<'desktop' | 'mobile'>('desktop');
+  const [lightbox, setLightbox] = useState<string | null>(null);
   const shots = mode === 'desktop' ? DESKTOP_SHOTS : MOBILE_SHOTS;
+  const scrollRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll on desktop
+  useEffect(() => {
+    if (mode !== 'desktop') return;
+    const el = scrollRef.current;
+    if (!el) return;
+    let paused = false;
+    const handleEnter = () => { paused = true; };
+    const handleLeave = () => { paused = false; };
+    el.addEventListener('mouseenter', handleEnter);
+    el.addEventListener('mouseleave', handleLeave);
+    const interval = setInterval(() => {
+      if (paused) return;
+      el.scrollBy({ left: 1, behavior: 'auto' });
+      if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 10) el.scrollLeft = 0;
+    }, 20);
+    return () => {
+      clearInterval(interval);
+      el.removeEventListener('mouseenter', handleEnter);
+      el.removeEventListener('mouseleave', handleLeave);
+    };
+  }, [mode]);
 
   return (
     <section className="py-24 overflow-hidden">
+      {/* Lightbox */}
+      <AnimatePresence>
+        {lightbox && (
+          <motion.div
+            className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-6 cursor-pointer"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            onClick={() => setLightbox(null)}
+          >
+            <motion.div
+              initial={{ scale: 0.92 }}
+              animate={{ scale: 1 }}
+              exit={{ scale: 0.92 }}
+              className="relative max-w-5xl w-full"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={`/screenshots/${lightbox}`} alt="" className="w-full rounded-2xl border border-[#1E1E2E]" />
+              <button
+                className="absolute top-4 right-4 w-9 h-9 rounded-full bg-black/50 border border-white/20 flex items-center justify-center text-white/70 hover:text-white transition-colors"
+                onClick={() => setLightbox(null)}
+              >✕</button>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <div className="max-w-5xl mx-auto px-6">
         <InView className="text-center mb-10">
           <p className="text-[10px] font-mono text-[#F7C948] uppercase tracking-widest mb-3">In the wild</p>
-          <h2 className="text-[38px] sm:text-[48px] font-bold text-white mb-6">See it in action</h2>
-          <div className="inline-flex rounded-xl border border-[#1E1E2E] bg-[#111118] p-1 gap-1">
-            {(['desktop', 'mobile'] as const).map((m) => (
-              <button key={m} onClick={() => setMode(m)}
-                className={`px-5 py-2 rounded-lg text-[12px] font-mono transition-all capitalize ${
-                  mode === m ? 'bg-[#F7C948] text-[#0A0A0F] font-semibold' : 'text-white/40 hover:text-white/70'
-                }`}>
-                {m}
-              </button>
-            ))}
+          <h2 className="text-[34px] sm:text-[44px] font-bold text-white mb-4">See it in action</h2>
+          <div className="flex items-center justify-center gap-4 flex-wrap">
+            <div className="inline-flex rounded-xl border border-[#1E1E2E] bg-[#111118] p-1 gap-1">
+              {(['desktop', 'mobile'] as const).map((m) => (
+                <button key={m} onClick={() => setMode(m)}
+                  className={`px-5 py-2 rounded-lg text-[12px] font-mono transition-all capitalize ${
+                    mode === m ? 'bg-[#F7C948] text-[#0A0A0F] font-semibold' : 'text-white/40 hover:text-white/70'
+                  }`}>
+                  {m}
+                </button>
+              ))}
+            </div>
+            <a
+              href="/demo"
+              className="h-9 px-5 rounded-xl bg-[#F7C948]/10 border border-[#F7C948]/20 text-[#F7C948] text-[12px] font-semibold hover:bg-[#F7C948]/20 transition-colors"
+            >
+              Try the demo →
+            </a>
           </div>
         </InView>
       </div>
 
       <AnimatePresence mode="wait">
-        <motion.div key={mode}
-          initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
-          transition={{ duration: 0.3 }}
-          className="flex gap-4 px-6 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-[#1E1E2E]"
-          style={{ scrollSnapType: 'x mandatory' }}>
+        <motion.div
+          key={mode}
+          ref={mode === 'desktop' ? scrollRef : undefined}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.25 }}
+          className={`flex gap-4 px-6 overflow-x-auto pb-4 ${mode === 'mobile' ? 'justify-center flex-wrap' : ''}`}
+          style={{ scrollSnapType: mode === 'desktop' ? 'x mandatory' : undefined }}
+        >
           {shots.map((s) => (
             <div key={s.file} style={{ scrollSnapAlign: 'start' }}>
-              <ScreenshotCard {...s} isMobile={mode === 'mobile'} />
+              <ScreenshotCard {...s} isMobile={mode === 'mobile'} onClick={() => setLightbox(s.file)} />
             </div>
           ))}
         </motion.div>
       </AnimatePresence>
-
-      <p className="text-center text-[11px] font-mono text-white/20 mt-6 px-6">
-        Scroll to see more →
-      </p>
     </section>
   );
 }
 
 /* ─── Privacy ───────────────────────────────────────────────────────────── */
-function Privacy() {
-  const points = [
-    { icon: '◑', title: 'Zero conversation storage', body: 'Your raw conversation text is processed locally and never stored on our servers. We only store statistical metadata — word counts, code lines, dates.' },
-    { icon: '⊞', title: 'No training on your data', body: 'Nothing you upload is used to train any AI model. Your ideas and conversations are not our data.' },
-    { icon: '↗', title: 'Export and delete anytime', body: 'You own your data. Download everything or delete your account instantly — no waiting periods, no dark patterns.' },
-  ];
+const PRIVACY_CARDS = [
+  { icon: '◑', title: 'Zero conversation storage', body: 'Your raw conversation text is processed and never stored on our servers. We only keep statistical metadata — word counts, code lines, dates.' },
+  { icon: '⊞', title: 'No training on your data', body: 'Nothing you upload is used to train any AI model. Your ideas and conversations are not our data.' },
+  { icon: '↗', title: 'Export and delete anytime', body: 'You own your data. Download everything or delete your account instantly — no waiting periods, no dark patterns.' },
+  { icon: '⛨', title: 'Auth without password', body: 'Magic link sign-in only — no passwords to manage or compromise. Your account is as secure as your email inbox.' },
+];
 
+function Privacy() {
   return (
     <section className="px-6 py-24 bg-[#0D0D14]">
       <div className="max-w-5xl mx-auto">
-        <InView className="text-center mb-14">
-          <p className="text-[10px] font-mono text-[#F7C948] uppercase tracking-widest mb-3">We take this seriously</p>
-          <h2 className="text-[38px] sm:text-[48px] font-bold text-white mb-4">Privacy by design</h2>
-          <p className="text-[16px] text-white/40 max-w-xl mx-auto">
-            Your conversations are some of the most sensitive data you have. We designed Idea OS from day one so that data stays with you.
-          </p>
-        </InView>
-
-        <div className="grid sm:grid-cols-3 gap-5">
-          {points.map((p, i) => (
-            <InView key={p.title} delay={i * 0.1}
-              className="rounded-2xl border border-[#1E1E2E] bg-[#111118] p-8">
-              <div className="w-10 h-10 rounded-xl bg-[#F7C948]/8 flex items-center justify-center text-[#F7C948] text-xl mb-5">
-                {p.icon}
-              </div>
-              <h3 className="text-[16px] font-semibold text-white mb-2">{p.title}</h3>
-              <p className="text-[13px] text-white/40 leading-relaxed">{p.body}</p>
-            </InView>
-          ))}
-        </div>
-      </div>
-    </section>
-  );
-}
-
-/* ─── Pricing ───────────────────────────────────────────────────────────── */
-function Pricing() {
-  const plans = [
-    {
-      name: 'Free Trial',
-      price: '$0',
-      period: 'forever',
-      highlight: false,
-      badge: null,
-      features: [
-        'Last 7 days of conversation analysis',
-        'AI builder profile card',
-        'Basic usage stats',
-        'AI personality type',
-        '1 export per week',
-        'Idea capture (up to 10 ideas)',
-      ],
-      cta: 'Start free',
-    },
-    {
-      name: 'Builder',
-      price: '$10',
-      period: '/month',
-      highlight: true,
-      badge: 'Most popular',
-      features: [
-        'Full conversation history (unlimited)',
-        'AI productivity score + trends',
-        'Unlimited idea tracking & grading',
-        'Insights engine (pattern detection)',
-        'Signals board',
-        'Analytics & charts with time filters',
-        'Weekly AI digest email',
-        'Multi-tool support (Claude + ChatGPT + Gemini)',
-        'Priority sync',
-      ],
-      cta: 'Join waitlist',
-    },
-    {
-      name: 'Family',
-      price: '$50',
-      period: '/month',
-      highlight: false,
-      badge: 'Up to 5 users',
-      features: [
-        'Everything in Builder',
-        'Up to 5 user accounts',
-        'Family/team overview dashboard',
-        'Shared signals board',
-        'Bulk conversation sync',
-        'Usage comparison across members',
-        'Dedicated support',
-      ],
-      cta: 'Join waitlist',
-    },
-  ];
-
-  return (
-    <section id="pricing" className="px-6 py-24 max-w-5xl mx-auto">
-      <InView className="text-center mb-14">
-        <p className="text-[10px] font-mono text-[#F7C948] uppercase tracking-widest mb-3">Simple pricing</p>
-        <h2 className="text-[38px] sm:text-[48px] font-bold text-white mb-4">Start free, grow as you build</h2>
-        <p className="text-[15px] text-white/40">Try the last 7 days for free. Unlock the full picture for $10/mo.</p>
-      </InView>
-
-      <div className="grid sm:grid-cols-3 gap-5">
-        {plans.map((p, i) => (
-          <InView key={p.name} delay={i * 0.1}
-            className={`rounded-2xl border p-8 flex flex-col relative ${
-              p.highlight
-                ? 'border-[#F7C948]/40 bg-[#F7C948]/5'
-                : 'border-[#1E1E2E] bg-[#111118]'
-            }`}>
-            {p.badge && (
-              <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-mono ${
-                p.highlight ? 'bg-[#F7C948] text-[#0A0A0F]' : 'bg-[#1E1E2E] text-white/50'
-              }`}>
-                {p.badge}
-              </div>
-            )}
-            <div className="mb-6">
-              <p className="text-[12px] font-mono text-white/40 mb-2">{p.name}</p>
-              <div className="flex items-baseline gap-1">
-                <span className="text-[42px] font-bold text-white leading-none">{p.price}</span>
-                <span className="text-[13px] text-white/30">{p.period}</span>
-              </div>
-            </div>
-
-            <ul className="space-y-2.5 flex-1 mb-8">
-              {p.features.map((f) => (
-                <li key={f} className="flex gap-2.5 text-[13px] text-white/55">
-                  <span className={`mt-0.5 shrink-0 text-[11px] ${p.highlight ? 'text-[#F7C948]' : 'text-white/25'}`}>✓</span>
-                  <span>{f}</span>
-                </li>
-              ))}
-            </ul>
-
-            <button
-              className={`w-full h-11 rounded-xl text-[13px] font-semibold transition-colors ${
-                p.highlight
-                  ? 'bg-[#F7C948] text-[#0A0A0F] hover:bg-[#E6B830]'
-                  : 'border border-[#1E1E2E] text-white/60 hover:border-[#2A2A3A] hover:text-white/80'
-              }`}
-            >
-              {p.cta}
-            </button>
+        <div className="grid lg:grid-cols-[1fr_1fr] gap-16 items-start">
+          <InView>
+            <p className="text-[10px] font-mono text-[#F7C948] uppercase tracking-widest mb-4">We take this seriously</p>
+            <h2 className="text-[34px] sm:text-[44px] font-bold text-white mb-6 leading-tight">Privacy by design</h2>
+            <p className="text-[15px] text-white/40 leading-relaxed max-w-md">
+              Your conversations are some of the most sensitive data you have. We designed Idea OS from day one so that data stays with you.
+            </p>
           </InView>
-        ))}
+          <motion.div
+            className="grid grid-cols-2 gap-3"
+            initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-50px' }}
+            variants={stagger}
+          >
+            {PRIVACY_CARDS.map((p) => (
+              <motion.div key={p.title} variants={fadeUp}
+                className="bg-[#111118] border border-[#1E1E2E] rounded-2xl p-5">
+                <div className="w-8 h-8 rounded-lg bg-[#F7C948]/8 flex items-center justify-center text-[#F7C948] text-[14px] mb-3">
+                  {p.icon}
+                </div>
+                <h3 className="text-[13px] font-semibold text-white mb-1.5">{p.title}</h3>
+                <p className="text-[11px] text-white/35 leading-relaxed">{p.body}</p>
+              </motion.div>
+            ))}
+          </motion.div>
+        </div>
       </div>
     </section>
   );
@@ -716,7 +712,7 @@ const EXPORT_GUIDES = [
       'Go to chat.openai.com and sign in',
       'Click your profile in the bottom-left → Settings',
       'Go to "Data controls" tab',
-      'Click "Export data" → "Confirm export" in the modal',
+      'Click "Export data" → "Confirm export"',
       'Check your email for the download link (can take up to 24 hours)',
       'Download and extract the zip file',
       'Upload the conversations.json file to Idea OS',
@@ -727,7 +723,7 @@ const EXPORT_GUIDES = [
     steps: [
       'Go to takeout.google.com (Google Takeout)',
       'Click "Deselect all" to start fresh',
-      'Scroll down and enable "Google AI" or "Gemini Apps Activity"',
+      'Enable "Google AI" or "Gemini Apps Activity"',
       'Click "Next step" → choose delivery method (email link recommended)',
       'Click "Create export" — this can take a few hours',
       'Download and extract the archive when the email arrives',
@@ -742,7 +738,7 @@ const EXPORT_GUIDES = [
       'Select your data categories and request a download',
       'Note: Grok-specific export is limited — full Grok support is coming soon to Idea OS',
     ],
-    note: 'Full Grok export support coming soon',
+    note: 'Support coming soon',
   },
   {
     id: 'copilot', name: 'Copilot', color: '#0078D4',
@@ -751,19 +747,17 @@ const EXPORT_GUIDES = [
       'Navigate to Privacy → Export your data',
       'Select "Copilot" and request an export',
       'Download your data archive when ready',
-      'Note: Microsoft Copilot export is currently limited — enhanced support coming soon',
     ],
-    note: 'Enhanced Copilot support coming soon',
+    note: 'Enhanced support coming soon',
   },
   {
     id: 'perplexity', name: 'Perplexity', color: '#20808D',
     steps: [
       'Go to perplexity.ai and sign in',
-      'Navigate to Settings',
-      'Look for "Export" in the Data section (Pro users)',
-      'Note: Perplexity export is in beta — Idea OS support is in progress',
+      'Navigate to Settings → Data section (Pro users)',
+      'Look for "Export" option',
     ],
-    note: 'Perplexity support coming soon',
+    note: 'Support coming soon',
   },
 ];
 
@@ -772,18 +766,18 @@ function ExportGuide() {
   const guide = EXPORT_GUIDES.find((g) => g.id === active)!;
 
   return (
-    <section id="export-guide" className="px-6 py-24 bg-[#0D0D14]">
+    <section id="export-guide" className="px-6 py-24">
       <div className="max-w-5xl mx-auto">
         <InView className="text-center mb-12">
           <p className="text-[10px] font-mono text-[#F7C948] uppercase tracking-widest mb-3">Works with every major AI tool</p>
-          <h2 className="text-[38px] sm:text-[48px] font-bold text-white">How to export your conversations</h2>
+          <h2 className="text-[34px] sm:text-[44px] font-bold text-white">How to export your conversations</h2>
         </InView>
 
-        {/* Tabs */}
-        <div className="flex flex-wrap gap-2 mb-8">
+        {/* Centred agent tabs */}
+        <div className="flex flex-wrap gap-2 mb-8 justify-center">
           {EXPORT_GUIDES.map((g) => (
             <button key={g.id} onClick={() => setActive(g.id)}
-              className={`px-4 py-2 rounded-xl text-[13px] font-medium transition-all ${
+              className={`px-4 py-2 rounded-xl text-[12px] font-medium transition-all ${
                 active === g.id
                   ? 'text-[#0A0A0F] font-semibold'
                   : 'border border-[#1E1E2E] text-white/40 hover:text-white/70 hover:border-[#2A2A3A]'
@@ -794,63 +788,216 @@ function ExportGuide() {
           ))}
         </div>
 
-        {/* Content */}
-        <AnimatePresence mode="wait">
-          <motion.div key={active}
-            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
-            transition={{ duration: 0.25 }}
-            className="rounded-2xl border border-[#1E1E2E] bg-[#111118] p-8">
-            <div className="flex items-center gap-3 mb-7">
-              <div className="w-3 h-3 rounded-full" style={{ backgroundColor: guide.color }} />
-              <h3 className="text-[17px] font-semibold text-white">Exporting from {guide.name}</h3>
-              {guide.note && (
-                <span className="ml-auto px-3 py-1 rounded-full bg-[#1E1E2E] text-[10px] font-mono text-white/40">
-                  {guide.note}
-                </span>
-              )}
-            </div>
-            <ol className="space-y-4">
-              {guide.steps.map((step, i) => (
-                <li key={i} className="flex gap-4">
-                  <span className="text-[11px] font-mono text-white/20 mt-0.5 w-5 shrink-0">{String(i + 1).padStart(2, '0')}</span>
-                  <p className="text-[14px] text-white/60 leading-relaxed">{step}</p>
-                </li>
-              ))}
-            </ol>
-          </motion.div>
-        </AnimatePresence>
+        {/* 60% width centered content */}
+        <div className="max-w-[60%] mx-auto min-w-[300px]">
+          <AnimatePresence mode="wait">
+            <motion.div key={active}
+              initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.25 }}
+              className="rounded-2xl border border-[#1E1E2E] bg-[#111118] p-8">
+              <div className="flex items-center gap-3 mb-7">
+                <div className="w-3 h-3 rounded-full" style={{ backgroundColor: guide.color }} />
+                <h3 className="text-[16px] font-semibold text-white">Exporting from {guide.name}</h3>
+                {guide.note && (
+                  <span className="ml-auto px-3 py-1 rounded-full bg-[#1E1E2E] text-[10px] font-mono text-white/40">
+                    {guide.note}
+                  </span>
+                )}
+              </div>
+              <ol className="space-y-4">
+                {guide.steps.map((step, i) => (
+                  <li key={i} className="flex gap-4">
+                    <span className="text-[11px] font-mono text-white/20 mt-0.5 w-5 shrink-0">{String(i + 1).padStart(2, '0')}</span>
+                    <p className="text-[13px] text-white/60 leading-relaxed">{step}</p>
+                  </li>
+                ))}
+              </ol>
+            </motion.div>
+          </AnimatePresence>
+        </div>
       </div>
     </section>
   );
 }
 
-/* ─── Future of AI ──────────────────────────────────────────────────────── */
+/* ─── Pricing ───────────────────────────────────────────────────────────── */
+const PLANS = [
+  {
+    name: 'Demo',
+    price: 'Free',
+    period: 'forever',
+    highlight: false,
+    badge: null,
+    features: [
+      'Sample data dashboard (no real data)',
+      'See the full UI and features',
+      'Ideas, analytics, profile views',
+      'No sign-up required',
+    ],
+    cta: 'Visit demo',
+    ctaHref: '/demo',
+  },
+  {
+    name: 'Trial',
+    price: '$1',
+    period: 'one-time',
+    highlight: false,
+    badge: 'Try it out',
+    features: [
+      'Analyse your last ~7 days of convos',
+      'Up to 20 conversations per sync',
+      'Full idea extraction & grading',
+      'Builder profile snapshot',
+      'Valid for 7 days',
+    ],
+    cta: 'Start trial',
+    ctaHref: '/login',
+  },
+  {
+    name: 'Full analysis',
+    price: '$5',
+    period: 'one-time',
+    highlight: true,
+    badge: 'Best value',
+    features: [
+      'Analyse up to 150 conversations',
+      'Full idea intelligence & grouping',
+      'Analytics & productivity score',
+      'Signals engine & insights',
+      'Export your data anytime',
+    ],
+    cta: 'Get full access',
+    ctaHref: '/login',
+  },
+  {
+    name: 'Monthly',
+    price: '$10',
+    period: '/month',
+    highlight: false,
+    badge: null,
+    features: [
+      'Everything in Full analysis',
+      '4 syncs per month (weekly cadence)',
+      'Incremental — only new convos',
+      'Unlimited total conversations',
+      'Priority support',
+    ],
+    cta: 'Subscribe',
+    ctaHref: '/login',
+  },
+];
+
+function Pricing() {
+  return (
+    <section id="pricing" className="px-6 py-24 bg-[#0D0D14]">
+      <div className="max-w-5xl mx-auto">
+        <InView className="text-center mb-14">
+          <p className="text-[10px] font-mono text-[#F7C948] uppercase tracking-widest mb-3">Simple pricing</p>
+          <h2 className="text-[34px] sm:text-[44px] font-bold text-white mb-3">Try free, pay only if it&apos;s useful</h2>
+          <p className="text-[14px] text-white/35">Start with the demo. Pay $1 to try with your own data. Go deeper from there.</p>
+        </InView>
+
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {PLANS.map((p, i) => (
+            <InView key={p.name} delay={i * 0.08}
+              className={`rounded-2xl border p-6 flex flex-col relative ${
+                p.highlight
+                  ? 'border-[#F7C948]/40 bg-[#F7C948]/5'
+                  : 'border-[#1E1E2E] bg-[#111118]'
+              }`}>
+              {p.badge && (
+                <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-mono whitespace-nowrap ${
+                  p.highlight ? 'bg-[#F7C948] text-[#0A0A0F]' : 'bg-[#1E1E2E] text-white/50'
+                }`}>
+                  {p.badge}
+                </div>
+              )}
+              <div className="mb-5">
+                <p className="text-[11px] font-mono text-white/40 mb-2">{p.name}</p>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-[34px] font-bold text-white leading-none">{p.price}</span>
+                  <span className="text-[12px] text-white/30">{p.period}</span>
+                </div>
+              </div>
+
+              <ul className="space-y-2 flex-1 mb-6">
+                {p.features.map((f) => (
+                  <li key={f} className="flex gap-2 text-[12px] text-white/55">
+                    <span className={`mt-0.5 shrink-0 text-[10px] ${p.highlight ? 'text-[#F7C948]' : 'text-white/25'}`}>✓</span>
+                    <span>{f}</span>
+                  </li>
+                ))}
+              </ul>
+
+              <a
+                href={p.ctaHref}
+                className={`w-full h-10 rounded-xl text-[12px] font-semibold transition-colors flex items-center justify-center ${
+                  p.highlight
+                    ? 'bg-[#F7C948] text-[#0A0A0F] hover:bg-[#E6B830]'
+                    : 'border border-[#1E1E2E] text-white/60 hover:border-[#2A2A3A] hover:text-white/80'
+                }`}
+              >
+                {p.cta}
+              </a>
+            </InView>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/* ─── Bigger picture ─────────────────────────────────────────────────────── */
+const BIGGER_CARDS = [
+  { title: 'The most valuable skill', body: 'In the next decade — knowing how to think, prompt, and build alongside AI at a sustained, high level.' },
+  { title: 'Know your patterns', body: 'The builders who win will be the ones who understand their own patterns — what they\'re building toward and where they get stuck.' },
+  { title: 'Just the beginning', body: 'Real-time sync, cross-tool intelligence, team collaboration, AI coaching — all coming, built on understanding how you work.' },
+];
+
 function FutureOfAI() {
   return (
-    <section className="px-6 py-28 max-w-4xl mx-auto text-center">
-      <InView>
-        <p className="text-[10px] font-mono text-[#F7C948] uppercase tracking-widest mb-4">A bigger picture</p>
-        <h2 className="text-[38px] sm:text-[52px] font-bold text-white mb-8 leading-tight">
-          The future is AI-native builders
-        </h2>
-      </InView>
-      <div className="space-y-6 text-[16px] sm:text-[17px] text-white/45 leading-relaxed max-w-2xl mx-auto">
-        <InView delay={0.1}>
-          <p>The most valuable skill in the next decade won&apos;t be knowing how to code. It&apos;ll be knowing how to think, prompt, and build alongside AI at a sustained, high level.</p>
+    <section className="px-6 py-24">
+      <div className="max-w-5xl mx-auto">
+        <InView className="text-center mb-14">
+          <p className="text-[10px] font-mono text-[#F7C948] uppercase tracking-widest mb-4">A bigger picture</p>
+          <h2 className="text-[34px] sm:text-[44px] font-bold text-white leading-tight">
+            The future is AI-native builders
+          </h2>
         </InView>
-        <InView delay={0.15}>
-          <p>The builders who win will be the ones who understand their own patterns — what they&apos;re building toward, where they get stuck, how their prompting evolves. That&apos;s the mirror Idea OS holds up.</p>
-        </InView>
-        <InView delay={0.2}>
-          <p>This is just the beginning. Real-time sync, cross-tool intelligence, team collaboration, and AI coaching layers are all on the roadmap — built on the foundation of understanding how <em>you</em> work.</p>
-        </InView>
+
+        <motion.div
+          className="grid sm:grid-cols-3 gap-4"
+          initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-50px' }}
+          variants={stagger}
+        >
+          {BIGGER_CARDS.map((card, i) => (
+            <motion.div key={card.title} variants={fadeUp} custom={i}
+              className="relative p-6 rounded-2xl bg-[#111118]"
+              style={{ marginTop: i % 2 !== 0 ? 20 : 0 }}
+            >
+              {/* Camera-corner-bracket decoration */}
+              {['top-3 left-3', 'top-3 right-3', 'bottom-3 left-3', 'bottom-3 right-3'].map((pos, j) => (
+                <div key={j} className={`absolute ${pos} w-3 h-3 pointer-events-none`}>
+                  <svg viewBox="0 0 12 12" className="w-full h-full">
+                    {j === 0 && <><line x1="0" y1="6" x2="0" y2="0" stroke="#F7C948" strokeWidth="1.5" strokeOpacity="0.3" /><line x1="0" y1="0" x2="6" y2="0" stroke="#F7C948" strokeWidth="1.5" strokeOpacity="0.3" /></>}
+                    {j === 1 && <><line x1="12" y1="6" x2="12" y2="0" stroke="#F7C948" strokeWidth="1.5" strokeOpacity="0.3" /><line x1="12" y1="0" x2="6" y2="0" stroke="#F7C948" strokeWidth="1.5" strokeOpacity="0.3" /></>}
+                    {j === 2 && <><line x1="0" y1="6" x2="0" y2="12" stroke="#F7C948" strokeWidth="1.5" strokeOpacity="0.3" /><line x1="0" y1="12" x2="6" y2="12" stroke="#F7C948" strokeWidth="1.5" strokeOpacity="0.3" /></>}
+                    {j === 3 && <><line x1="12" y1="6" x2="12" y2="12" stroke="#F7C948" strokeWidth="1.5" strokeOpacity="0.3" /><line x1="12" y1="12" x2="6" y2="12" stroke="#F7C948" strokeWidth="1.5" strokeOpacity="0.3" /></>}
+                  </svg>
+                </div>
+              ))}
+              <h3 className="text-[14px] font-semibold text-white mb-3">{card.title}</h3>
+              <p className="text-[12px] text-white/45 leading-relaxed">{card.body}</p>
+            </motion.div>
+          ))}
+        </motion.div>
       </div>
     </section>
   );
 }
 
-/* ─── Final CTA ─────────────────────────────────────────────────────────── */
-function FinalCTA() {
+/* ─── Contact CTA ─────────────────────────────────────────────────────────── */
+function ContactCTA() {
   return (
     <section className="px-6 py-24 bg-[#0D0D14]">
       <div className="max-w-3xl mx-auto text-center">
@@ -858,14 +1005,56 @@ function FinalCTA() {
           <div className="inline-flex w-16 h-16 rounded-2xl bg-[#F7C948] items-center justify-center text-[#0A0A0F] font-bold text-[18px] mb-8">
             IO
           </div>
-          <h2 className="text-[38px] sm:text-[52px] font-bold text-white mb-5 leading-tight">
+          <h2 className="text-[34px] sm:text-[48px] font-bold text-white mb-5 leading-tight">
             Ready to see your<br />AI journey?
           </h2>
-          <p className="text-[16px] text-white/40 mb-10 max-w-lg mx-auto">
-            Join the waitlist for early access. Free to try — no credit card needed.
+          <p className="text-[15px] text-white/40 mb-10 max-w-md mx-auto">
+            Start with the demo — no sign-up needed. Or get started with your own data.
           </p>
-          <div className="flex justify-center">
-            <WaitlistForm size="lg" />
+          <div className="flex items-center justify-center gap-3 flex-wrap mb-14">
+            <a href="/demo"
+              className="h-12 px-7 rounded-xl border border-[#1E1E2E] text-white/70 text-[14px] font-medium hover:border-[#2A2A3A] hover:text-white transition-colors">
+              Visit demo
+            </a>
+            <a href="/login"
+              className="h-12 px-8 rounded-xl bg-[#F7C948] text-[#0A0A0F] text-[14px] font-semibold hover:bg-[#E6B830] transition-colors">
+              Get started →
+            </a>
+          </div>
+
+          {/* Contact links */}
+          <div className="border-t border-[#1A1A28] pt-10">
+            <p className="text-[11px] font-mono text-[#3A3A55] uppercase tracking-widest mb-6">Get in touch</p>
+            <div className="flex items-center justify-center gap-5 flex-wrap">
+              <a href={CONTACT_LINKEDIN} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-2 text-[13px] text-white/40 hover:text-white/70 transition-colors">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M19 0H5C2.24 0 0 2.24 0 5v14c0 2.76 2.24 5 5 5h14c2.76 0 5-2.24 5-5V5c0-2.76-2.24-5-5-5zM8 19H5V8h3v11zM6.5 6.73c-.97 0-1.75-.79-1.75-1.75s.78-1.75 1.75-1.75 1.75.79 1.75 1.75-.78 1.75-1.75 1.75zM20 19h-3v-5.6c0-1.34-.03-3.07-1.87-3.07-1.87 0-2.16 1.46-2.16 2.97V19h-3V8h2.89v1.5h.04c.4-.76 1.38-1.56 2.84-1.56 3.04 0 3.6 2 3.6 4.59V19z"/>
+                </svg>
+                LinkedIn
+              </a>
+              <a href={CONTACT_X} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-2 text-[13px] text-white/40 hover:text-white/70 transition-colors">
+                <svg className="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                  <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-4.714-6.231-5.401 6.231H2.744l7.734-8.836L1.524 2.25H8.08l4.253 5.622 5.911-5.622zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                </svg>
+                X (Twitter)
+              </a>
+              <a href={`mailto:${CONTACT_EMAIL}`}
+                className="flex items-center gap-2 text-[13px] text-white/40 hover:text-white/70 transition-colors">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                </svg>
+                {CONTACT_EMAIL}
+              </a>
+              <a href={CONTACT_FORM_URL} target="_blank" rel="noopener noreferrer"
+                className="flex items-center gap-2 text-[13px] text-white/40 hover:text-white/70 transition-colors">
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
+                </svg>
+                Send a message
+              </a>
+            </div>
           </div>
         </InView>
       </div>
@@ -884,11 +1073,10 @@ function Footer() {
           </div>
           <span className="text-white/60 text-[13px]">Idea OS</span>
         </div>
-        <p className="text-[12px] text-white/20 font-mono">© 2025 Idea OS. Built by a builder, for builders.</p>
+        <p className="text-[12px] text-white/20 font-mono">© {new Date().getFullYear()} Idea OS. Built by a builder, for builders.</p>
         <div className="flex gap-6">
-          {['Privacy', 'Terms', 'Contact'].map((l) => (
-            <a key={l} href="#" className="text-[12px] text-white/30 hover:text-white/60 transition-colors">{l}</a>
-          ))}
+          <a href="#how-it-works" className="text-[12px] text-white/30 hover:text-white/60 transition-colors">How it works</a>
+          <a href="/login" className="text-[12px] text-white/30 hover:text-white/60 transition-colors">Get started</a>
         </div>
       </div>
     </footer>
@@ -897,24 +1085,17 @@ function Footer() {
 
 /* ─── Root ──────────────────────────────────────────────────────────────── */
 export function WaitlistPage() {
-  const formRef = useRef<HTMLDivElement>(null);
-
-  const scrollToForm = useCallback(() => {
-    formRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }, []);
+  // Prevent scroll-restoration flash
+  useCallback(() => {}, []);
 
   return (
     <div
       data-landing=""
       className="bg-[#0A0A0F] min-h-screen text-white"
-      style={{
-        '--accent': '#F7C948',
-        '--accent-rgb': '247, 201, 72',
-        fontFamily: 'var(--font-geist-sans), system-ui, sans-serif',
-      } as React.CSSProperties}
+      style={{ fontFamily: 'var(--font-geist-sans), system-ui, sans-serif' } as React.CSSProperties}
     >
-      <Nav scrollToForm={scrollToForm} />
-      <Hero formRef={formRef} />
+      <Nav />
+      <Hero />
       <WhatItIs />
       <HowItWorks />
       <TheJourney />
@@ -924,7 +1105,7 @@ export function WaitlistPage() {
       <ExportGuide />
       <Pricing />
       <FutureOfAI />
-      <FinalCTA />
+      <ContactCTA />
       <Footer />
     </div>
   );
