@@ -1,21 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { DEMO_COOKIE } from '@/lib/demo-mode';
 
+// Legacy route — kept for backward compat with existing waitlist links.
+// Now redirects to the standalone /demo page instead of setting a cookie.
 export function GET(req: NextRequest) {
   const action = req.nextUrl.searchParams.get('action');
 
   if (action === 'end') {
-    const res = NextResponse.redirect(new URL('/', req.url));
-    res.cookies.delete(DEMO_COOKIE);
-    return res;
+    return NextResponse.redirect(new URL('/', req.url));
   }
 
-  const res = NextResponse.redirect(new URL('/app', req.url));
-  res.cookies.set(DEMO_COOKIE, '1', {
-    maxAge: 60 * 60 * 4,
-    path: '/',
-    httpOnly: false,
-    sameSite: 'lax',
-  });
-  return res;
+  return NextResponse.redirect(new URL('/demo', req.url));
 }

@@ -1,16 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
+import { getUserFromRequest } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET(req: NextRequest) {
+  const user = await getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   const supabase = createServiceClient();
   const { searchParams } = new URL(req.url);
 
   let query = supabase
     .from('ideas')
     .select('*')
-    .eq('user_id', 'favour')
+    .eq('user_id', user.id)
     .order('created_at', { ascending: false });
 
   const status = searchParams.get('status');
@@ -35,6 +39,9 @@ export async function GET(req: NextRequest) {
 }
 
 export async function POST(req: NextRequest) {
+  const user = await getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   const supabase = createServiceClient();
 
   try {
@@ -42,7 +49,7 @@ export async function POST(req: NextRequest) {
 
     const { data, error } = await supabase
       .from('ideas')
-      .insert({ ...body, user_id: 'favour' })
+      .insert({ ...body, user_id: user.id })
       .select()
       .single();
 

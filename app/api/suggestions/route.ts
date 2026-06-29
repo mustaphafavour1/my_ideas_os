@@ -2,11 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
 import { refreshSuggestions } from '@/lib/claude';
 import { Idea } from '@/lib/types';
+import { getUserFromRequest } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
 
 export async function POST(req: NextRequest) {
+  const user = await getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   try {
     const supabase = createServiceClient();
     const body = await req.json();
@@ -23,7 +27,7 @@ export async function POST(req: NextRequest) {
         .from('ideas')
         .update({ ai_suggestions: s.suggestion })
         .eq('id', s.id)
-        .eq('user_id', 'favour');
+        .eq('user_id', user.id);
     }
 
     return NextResponse.json({ updated: suggestions.length });

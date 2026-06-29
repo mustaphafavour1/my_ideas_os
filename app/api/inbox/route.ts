@@ -1,17 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
+import { getUserFromRequest } from '@/lib/auth';
 import { processInboxItems } from '@/lib/claude';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
 
-export async function GET() {
+export async function GET(req: NextRequest) {
+  const user = await getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   const supabase = createServiceClient();
 
   const { data, error } = await supabase
     .from('inbox')
     .select('*')
-    .eq('user_id', 'favour')
+    .eq('user_id', user.id)
     .order('created_at', { ascending: false });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -19,6 +23,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const user = await getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   const supabase = createServiceClient();
 
   try {
@@ -30,7 +37,7 @@ export async function POST(req: NextRequest) {
       const { data: items } = await supabase
         .from('inbox')
         .select('*')
-        .eq('user_id', 'favour')
+        .eq('user_id', user.id)
         .eq('processed', false);
 
       if (!items || items.length === 0) {
@@ -44,7 +51,7 @@ export async function POST(req: NextRequest) {
       for (const idea of ideas) {
         await supabase.from('ideas').insert({
           ...idea,
-          user_id: 'favour',
+          user_id: user.id,
           status: idea.status || 'captured',
           source_type: 'import',
           next_steps: idea.next_steps || [],
@@ -68,7 +75,7 @@ export async function POST(req: NextRequest) {
       .from('inbox')
       .insert({
         raw_text: body.raw_text,
-        user_id: 'favour',
+        user_id: user.id,
         source: body.source || 'manual',
       })
       .select()

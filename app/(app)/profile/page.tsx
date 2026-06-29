@@ -1,21 +1,22 @@
 export const dynamic = 'force-dynamic';
 
+import { redirect } from 'next/navigation';
 import { TopBar } from '@/components/layout/TopBar';
 import { ProfileContent } from '@/components/profile/ProfileContent';
 import { createServiceClient } from '@/lib/supabase';
+import { getUser } from '@/lib/auth';
 import { Idea, UserStats } from '@/lib/types';
-import { DEMO_USER_STATS } from '@/lib/demo-data';
 
-async function getData() {
+async function getData(userId: string) {
   const supabase = createServiceClient();
   const [{ data: ideas }, { data: stats }] = await Promise.all([
-    supabase.from('ideas').select('*').eq('user_id', 'favour'),
-    supabase.from('user_stats').select('*').eq('user_id', 'favour').single(),
+    supabase.from('ideas').select('*').eq('user_id', userId),
+    supabase.from('user_stats').select('*').eq('user_id', userId).single(),
   ]);
-  const allIdeas = (ideas || []) as Idea[];
-  const isDemoActive = allIdeas.some((i) => i.source_ref === 'demo_mode');
-  const effectiveStats = (stats as UserStats | null) ?? (isDemoActive ? DEMO_USER_STATS : null);
-  return { ideas: allIdeas, stats: effectiveStats };
+  return {
+    ideas: (ideas || []) as Idea[],
+    stats: stats as UserStats | null,
+  };
 }
 
 function topEntries(items: (string | null)[]): { label: string; count: number }[] {
@@ -28,7 +29,10 @@ function topEntries(items: (string | null)[]): { label: string; count: number }[
 }
 
 export default async function ProfilePage() {
-  const { ideas, stats } = await getData();
+  const user = await getUser();
+  if (!user) redirect('/login');
+
+  const { ideas, stats } = await getData(user.id);
 
   const completed = ideas.filter((i) => i.status === 'completed').length;
   const inProgress = ideas.filter((i) => i.status === 'in_progress').length;

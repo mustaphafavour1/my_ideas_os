@@ -1,36 +1,39 @@
 export const dynamic = 'force-dynamic';
 
+import { redirect } from 'next/navigation';
 import { TopBar } from '@/components/layout/TopBar';
 import { ConversationsContent } from '@/components/conversations/ConversationsContent';
 import { createServiceClient } from '@/lib/supabase';
+import { getUser } from '@/lib/auth';
 import { ConversationLog, Idea, UserStats } from '@/lib/types';
-import { DEMO_CONVERSATIONS_LOG, DEMO_USER_STATS } from '@/lib/demo-data';
 import { computeProductivityScore, scoreLabel } from '@/lib/productivity';
 
-async function getData() {
+async function getData(userId: string) {
   const supabase = createServiceClient();
-  const [{ data: logs }, { data: stats }, { count: demoCount }, { data: ideas }] = await Promise.all([
-    supabase.from('conversations_log').select('*').eq('user_id', 'favour').order('created_at', { ascending: false }),
-    supabase.from('user_stats').select('*').eq('user_id', 'favour').single(),
-    supabase.from('ideas').select('id', { count: 'exact', head: true }).eq('user_id', 'favour').eq('source_ref', 'demo_mode'),
-    supabase.from('ideas').select('*').eq('user_id', 'favour'),
+  const [{ data: logs }, { data: stats }, { data: ideas }] = await Promise.all([
+    supabase.from('conversations_log').select('*').eq('user_id', userId).order('created_at', { ascending: false }),
+    supabase.from('user_stats').select('*').eq('user_id', userId).single(),
+    supabase.from('ideas').select('*').eq('user_id', userId),
   ]);
 
-  const isDemoActive = (demoCount ?? 0) > 0;
-  const effectiveLogs = (logs && logs.length > 0)
-    ? (logs as ConversationLog[])
-    : isDemoActive ? (DEMO_CONVERSATIONS_LOG as unknown as ConversationLog[]) : [];
-  const effectiveStats = (stats as UserStats | null) ?? (isDemoActive ? DEMO_USER_STATS : null);
   const allIdeas = (ideas || []) as Idea[];
-
+  const effectiveStats = stats as UserStats | null;
   const productivityScore = computeProductivityScore(allIdeas, effectiveStats);
-  const productivityLbl   = scoreLabel(productivityScore);
+  const productivityLbl = scoreLabel(productivityScore);
 
-  return { logs: effectiveLogs, stats: effectiveStats, productivityScore, productivityLabel: productivityLbl };
+  return {
+    logs: (logs || []) as ConversationLog[],
+    stats: effectiveStats,
+    productivityScore,
+    productivityLabel: productivityLbl,
+  };
 }
 
 export default async function ConversationsPage() {
-  const { logs, stats, productivityScore, productivityLabel } = await getData();
+  const user = await getUser();
+  if (!user) redirect('/login');
+
+  const { logs, stats, productivityScore, productivityLabel } = await getData(user.id);
 
   return (
     <div className="flex flex-col flex-1">

@@ -3,11 +3,15 @@ import { createServiceClient } from '@/lib/supabase';
 import { extractIdeasFromConversations } from '@/lib/claude';
 import { ParsedConversation, parseConversationExport, batchConversations, fuzzyMatchTitle, extractConversationStats } from '@/lib/parser';
 import { Idea } from '@/lib/types';
+import { getUserFromRequest } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
 
 export async function POST(req: NextRequest) {
+  const user = await getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   try {
     const supabase = createServiceClient();
     const body = await req.json().catch(() => ({}));
@@ -42,7 +46,7 @@ export async function POST(req: NextRequest) {
     const { data: syncedRows } = await supabase
       .from('synced_conversations')
       .select('conversation_uuid')
-      .eq('user_id', 'favour');
+      .eq('user_id', user.id);
 
     const alreadySyncedUuids = new Set(
       (syncedRows || []).map((r: { conversation_uuid: string }) => r.conversation_uuid)
@@ -79,7 +83,7 @@ export async function POST(req: NextRequest) {
     const { data: existingIdeas } = await supabase
       .from('ideas')
       .select('id, title, updated_at')
-      .eq('user_id', 'favour');
+      .eq('user_id', user.id);
 
     const existing = (existingIdeas || []) as Pick<Idea, 'id' | 'title' | 'updated_at'>[];
 
@@ -91,7 +95,7 @@ export async function POST(req: NextRequest) {
       const match = existing.find((e) => fuzzyMatchTitle(e.title, idea.title!));
 
       const payload = {
-        user_id: 'favour',
+        user_id: user.id,
         title: idea.title.trim(),
         description: idea.description || null,
         sector: idea.sector || null,
@@ -130,7 +134,7 @@ export async function POST(req: NextRequest) {
     if (newConversations.length > 0) {
       const upsertRows = newConversations.map((c) => ({
         conversation_uuid: c.uuid,
-        user_id: 'favour',
+        user_id: user.id,
         ideas_extracted: allExtracted.length > 0
           ? Math.round(allExtracted.length / newConversations.length)
           : 0,
@@ -147,7 +151,7 @@ export async function POST(req: NextRequest) {
         const stats = extractConversationStats(conv.fullText);
         return {
           conversation_uuid: conv.uuid,
-          user_id: 'favour',
+          user_id: user.id,
           title: conv.name,
           created_at: conv.created_at,
           human_messages: stats.human_messages,
@@ -179,7 +183,7 @@ export async function POST(req: NextRequest) {
       const { data: existingStats } = await supabase
         .from('user_stats')
         .select('*')
-        .eq('user_id', 'favour')
+        .eq('user_id', user.id)
         .single();
 
       const sortedDates = newConversations.map((c) => c.created_at).sort();
@@ -187,7 +191,7 @@ export async function POST(req: NextRequest) {
       const latest = sortedDates[sortedDates.length - 1];
 
       await supabase.from('user_stats').upsert({
-        user_id: 'favour',
+        user_id: user.id,
         total_conversations: (existingStats?.total_conversations || 0) + totalsNew.total_conversations,
         total_words: (existingStats?.total_words || 0) + totalsNew.total_words,
         total_human_words: (existingStats?.total_human_words || 0) + totalsNew.total_human_words,
@@ -208,7 +212,7 @@ export async function POST(req: NextRequest) {
 
     // Record sync log entry
     await supabase.from('sync_log').insert({
-      user_id: 'favour',
+      user_id: user.id,
       source: 'claude_export',
       ideas_found: allExtracted.length,
       ideas_added: added,

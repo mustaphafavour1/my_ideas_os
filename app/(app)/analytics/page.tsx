@@ -1,5 +1,6 @@
 export const dynamic = 'force-dynamic';
 
+import { redirect } from 'next/navigation';
 import { TopBar } from '@/components/layout/TopBar';
 import {
   IdeasByTypeChart,
@@ -13,28 +14,22 @@ import {
 } from '@/components/analytics/Charts';
 import { TimeRangeFilter } from '@/components/ui/TimeRangeFilter';
 import { createServiceClient } from '@/lib/supabase';
+import { getUser } from '@/lib/auth';
 import { Idea, ConversationLog, UserStats } from '@/lib/types';
-import { DEMO_CONVERSATIONS_LOG, DEMO_USER_STATS } from '@/lib/demo-data';
 
-async function getData() {
+async function getData(userId: string) {
   const supabase = createServiceClient();
   const [{ data: ideas }, { count: syncCount }, { data: logs }, { data: userStats }] = await Promise.all([
-    supabase.from('ideas').select('*').eq('user_id', 'favour'),
-    supabase.from('sync_log').select('*', { count: 'exact', head: true }).eq('user_id', 'favour'),
-    supabase.from('conversations_log').select('*').eq('user_id', 'favour').order('created_at', { ascending: true }),
-    supabase.from('user_stats').select('*').eq('user_id', 'favour').single(),
+    supabase.from('ideas').select('*').eq('user_id', userId),
+    supabase.from('sync_log').select('*', { count: 'exact', head: true }).eq('user_id', userId),
+    supabase.from('conversations_log').select('*').eq('user_id', userId).order('created_at', { ascending: true }),
+    supabase.from('user_stats').select('*').eq('user_id', userId).single(),
   ]);
-  const allIdeas = (ideas || []) as Idea[];
-  const isDemoActive = allIdeas.some((i) => i.source_ref === 'demo_mode');
-  const effectiveLogs = (logs && logs.length > 0)
-    ? (logs as ConversationLog[])
-    : isDemoActive ? ([...DEMO_CONVERSATIONS_LOG].sort((a, b) => a.created_at.localeCompare(b.created_at)) as unknown as ConversationLog[]) : [];
-  const effectiveStats = (userStats as UserStats | null) ?? (isDemoActive ? DEMO_USER_STATS : null);
   return {
-    ideas: allIdeas,
+    ideas: (ideas || []) as Idea[],
     syncCount: syncCount || 0,
-    logs: effectiveLogs,
-    userStats: effectiveStats,
+    logs: (logs || []) as ConversationLog[],
+    userStats: (userStats as UserStats | null),
   };
 }
 
@@ -153,8 +148,11 @@ export default async function AnalyticsPage({
 }: {
   searchParams: Promise<{ range?: string; from?: string; to?: string }>;
 }) {
+  const user = await getUser();
+  if (!user) redirect('/login');
+
   const { range = 'all', from, to } = await searchParams;
-  const { ideas: allIdeas, syncCount, logs: allLogs, userStats } = await getData();
+  const { ideas: allIdeas, syncCount, logs: allLogs, userStats } = await getData(user.id);
 
   const cutoff = getRangeCutoff(range, from, to);
   const ideas = filterByRange(allIdeas, cutoff);

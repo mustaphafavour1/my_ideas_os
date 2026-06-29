@@ -1,13 +1,9 @@
 import { Sidebar } from '@/components/layout/Sidebar';
 import { Toaster } from 'sonner';
-import { DemoBanner } from '@/components/layout/DemoBanner';
-import { isDemoMode } from '@/lib/demo-mode';
 
-export default async function AppLayout({ children }: { children: React.ReactNode }) {
-  const demo = await isDemoMode();
+export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <>
-      {/* Ambient glow */}
       <div
         className="pointer-events-none fixed bottom-0 right-0 z-0"
         style={{
@@ -17,9 +13,8 @@ export default async function AppLayout({ children }: { children: React.ReactNod
             'radial-gradient(ellipse at 100% 100%, rgba(247,201,72,0.055) 0%, rgba(247,201,72,0.025) 35%, rgba(247,201,72,0.008) 60%, transparent 80%)',
         }}
       />
-      <DemoBanner />
       <Sidebar />
-      <div className={`lg:pl-[220px] pb-16 lg:pb-0 min-h-full flex flex-col relative z-10 ${demo ? 'pt-[42px]' : ''}`}>
+      <div className="lg:pl-[220px] pb-16 lg:pb-0 min-h-full flex flex-col relative z-10">
         {children}
       </div>
       <Toaster

@@ -1,34 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createServiceClient } from '@/lib/supabase';
-import { DEMO_SIGNALS } from '@/lib/demo-data';
+import { getUserFromRequest } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
-async function isDemoActive(supabase: ReturnType<typeof createServiceClient>): Promise<boolean> {
-  const { count } = await supabase
-    .from('ideas')
-    .select('id', { count: 'exact', head: true })
-    .eq('user_id', 'favour')
-    .eq('source_ref', 'demo_mode');
-  return (count ?? 0) > 0;
-}
+export async function GET(req: NextRequest) {
+  const user = await getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-export async function GET() {
   const supabase = createServiceClient();
   const { data, error } = await supabase
     .from('signals')
     .select('*, ideas(title)')
-    .eq('user_id', 'favour')
+    .eq('user_id', user.id)
     .order('created_at', { ascending: false });
 
-  if (error) {
-    if (await isDemoActive(supabase)) return NextResponse.json(DEMO_SIGNALS);
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  if (!data || data.length === 0) {
-    if (await isDemoActive(supabase)) return NextResponse.json(DEMO_SIGNALS);
-  }
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 });
 
   const signals = (data || []).map((s: Record<string, unknown> & { ideas?: { title: string } | null }) => ({
     ...s,
@@ -40,6 +27,9 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  const user = await getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   try {
     const { title, content, signal_type, idea_id } = await req.json();
     if (!title || !content) return NextResponse.json({ error: 'title and content required' }, { status: 400 });
@@ -47,7 +37,7 @@ export async function POST(req: NextRequest) {
     const supabase = createServiceClient();
     const { data, error } = await supabase
       .from('signals')
-      .insert({ user_id: 'favour', title, content, signal_type: signal_type || 'strategy', idea_id: idea_id || null })
+      .insert({ user_id: user.id, title, content, signal_type: signal_type || 'strategy', idea_id: idea_id || null })
       .select()
       .single();
 
@@ -59,6 +49,9 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
+  const user = await getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   try {
     const { id, title, content, signal_type } = await req.json();
     if (!id) return NextResponse.json({ error: 'id required' }, { status: 400 });
@@ -73,7 +66,7 @@ export async function PATCH(req: NextRequest) {
       .from('signals')
       .update(updates)
       .eq('id', id)
-      .eq('user_id', 'favour')
+      .eq('user_id', user.id)
       .select()
       .single();
 
@@ -85,9 +78,12 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
+  const user = await getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   const { id } = await req.json();
   const supabase = createServiceClient();
-  const { error } = await supabase.from('signals').delete().eq('id', id).eq('user_id', 'favour');
+  const { error } = await supabase.from('signals').delete().eq('id', id).eq('user_id', user.id);
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
   return NextResponse.json({ success: true });
 }

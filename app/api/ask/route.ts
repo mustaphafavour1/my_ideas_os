@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
 import { createServiceClient } from '@/lib/supabase';
+import { getUserFromRequest } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,6 +10,9 @@ function getClient() {
 }
 
 export async function POST(req: NextRequest) {
+  const user = await getUserFromRequest(req);
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
   try {
     const { message, idea_id } = await req.json();
     if (!message) return NextResponse.json({ error: 'message required' }, { status: 400 });
@@ -21,7 +25,7 @@ export async function POST(req: NextRequest) {
         .from('ideas')
         .select('*')
         .eq('id', idea_id)
-        .eq('user_id', 'favour')
+        .eq('user_id', user.id)
         .single();
 
       if (idea) {
@@ -44,7 +48,7 @@ Answer questions about this idea concisely and helpfully. Be specific.`;
       const { data: ideas } = await supabase
         .from('ideas')
         .select('id, title, status, sector, idea_type, grade_overall, description')
-        .eq('user_id', 'favour')
+        .eq('user_id', user.id)
         .limit(40);
 
       const ideasCtx = (ideas || [])

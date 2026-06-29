@@ -1,9 +1,10 @@
 export const dynamic = 'force-dynamic';
 
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import { TopBar } from '@/components/layout/TopBar';
 import { IdeaDetail } from '@/components/ideas/IdeaDetail';
 import { createServiceClient } from '@/lib/supabase';
+import { getUser } from '@/lib/auth';
 import { Idea } from '@/lib/types';
 
 interface Props {
@@ -11,6 +12,9 @@ interface Props {
 }
 
 export default async function IdeaDetailPage({ params }: Props) {
+  const user = await getUser();
+  if (!user) redirect('/login');
+
   const { id } = await params;
   const supabase = createServiceClient();
 
@@ -18,7 +22,7 @@ export default async function IdeaDetailPage({ params }: Props) {
     .from('ideas')
     .select('*')
     .eq('id', id)
-    .eq('user_id', 'favour')
+    .eq('user_id', user.id)
     .single();
 
   if (error || !data) notFound();
