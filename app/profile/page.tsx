@@ -35,8 +35,8 @@ export default async function ProfilePage() {
   const topSectors = topEntries(ideas.map((i) => i.sector));
   const completionPct = ideas.length > 0 ? Math.round((completed / ideas.length) * 100) : 0;
 
-  const firstConvDate = effectiveStats?.first_conversation_at
-    ? new Date(effectiveStats.first_conversation_at)
+  const firstConvDate = stats?.first_conversation_at
+    ? new Date(stats.first_conversation_at)
     : null;
   const monthsExp = firstConvDate
     ? Math.max(1, Math.round((Date.now() - firstConvDate.getTime()) / (1000 * 60 * 60 * 24 * 30.44)))
