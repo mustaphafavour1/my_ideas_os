@@ -97,7 +97,7 @@ function Nav() {
         scrolled ? 'bg-[#0A0A0F]/90 backdrop-blur-lg border-b border-[#1E1E2E]' : ''
       }`}
     >
-      <div className="max-w-6xl mx-auto px-6 h-[62px] flex items-center justify-between">
+      <div className="px-6 h-[62px] grid grid-cols-[1fr_auto_1fr] items-center">
         <div className="flex items-center gap-2.5">
           <div className="w-7 h-7 rounded-lg bg-[#F7C948] flex items-center justify-center shrink-0">
             <span className="text-[#0A0A0F] font-bold text-[10px]">IO</span>
@@ -112,7 +112,7 @@ function Nav() {
             </a>
           ))}
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 justify-end">
           <a
             href="/demo"
             className="h-9 px-4 rounded-full border border-[#1E1E2E] text-white/60 text-[13px] font-medium hover:border-[#2A2A3A] hover:text-white/80 transition-colors hidden sm:flex items-center justify-center"
@@ -173,8 +173,10 @@ function CyclingWord() {
 
 /* ─── Smooth full-width animated graph ───────────────────────────────────── */
 function AnimatedGraph() {
-  const pts = [8, 22, 15, 38, 30, 52, 44, 65, 58, 74, 68, 86];
   const w = 1000, h = 200, pad = 12;
+
+  // Modest baseline in the left ~80%, then dramatic spike on the right
+  const pts = [5, 15, 10, 22, 8, 25, 16, 20, 22, 28, 18, 32, 26, 88, 80, 90];
   const xs = pts.map((_, i) => (i / (pts.length - 1)) * w);
   const ys = pts.map((v) => h - pad - (v / 100) * (h - pad * 2));
 
@@ -185,44 +187,89 @@ function AnimatedGraph() {
   }
   const fillPath = `${linePath} L${w},${h} L0,${h} Z`;
 
+  // Texture oscillation path spanning the pre-spike region (~first 80%)
+  const txPts = [5, 20, 6, 26, 14, 20, 10, 28, 20, 24, 15, 32];
+  const txN = txPts.length;
+  const txMaxX = xs[12];
+  const txXs = txPts.map((_, i) => (i / (txN - 1)) * txMaxX);
+  const txYs = txPts.map((v) => h - pad - (v / 100) * (h - pad * 2));
+  let texturePath = `M${txXs[0]},${txYs[0]}`;
+  for (let i = 1; i < txN; i++) {
+    const cpx = (txXs[i - 1] + txXs[i]) / 2;
+    texturePath += ` C${cpx},${txYs[i - 1]} ${cpx},${txYs[i]} ${txXs[i]},${txYs[i]}`;
+  }
+
   const chips = [
-    { label: '↑ Productivity score', x: '60%', y: '8%',  delay: 0.6 },
-    { label: '47 ideas captured',    x: '18%', y: '48%', delay: 0.9 },
-    { label: '🔁 Recurring pattern', x: '70%', y: '62%', delay: 1.2 },
-    { label: '🔥 14-day streak',      x: '2%',  y: '72%', delay: 1.5 },
-    { label: '✦ 3 signals saved',    x: '42%', y: '26%', delay: 1.8 },
-    { label: '↗ +32% this month',    x: '76%', y: '18%', delay: 2.1 },
+    { label: '↑ Productivity score',    x: '67%', y: '4%',  delay: 0.6 },
+    { label: '47 ideas captured',       x: '12%', y: '44%', delay: 0.9 },
+    { label: '🔁 Recurring pattern',    x: '72%', y: '60%', delay: 1.2 },
+    { label: '🔥 14-day streak',        x: '2%',  y: '70%', delay: 1.5 },
+    { label: '✦ 3 signals saved',       x: '38%', y: '16%', delay: 1.8 },
+    { label: '↗ +32% this month',      x: '78%', y: '10%', delay: 2.1 },
+    { label: '→ Started using Idea OS', x: '57%', y: '42%', delay: 2.4 },
   ];
 
   return (
-    <div className="relative w-full h-[220px]">
+    <div className="relative w-full h-[220px] overflow-hidden">
+      {/* Top fade to background */}
+      <div className="absolute inset-x-0 top-0 h-16 z-10 pointer-events-none"
+           style={{ background: 'linear-gradient(to bottom, #0A0A0F, transparent)' }} />
+      {/* Bottom fade to background */}
+      <div className="absolute inset-x-0 bottom-0 h-16 z-10 pointer-events-none"
+           style={{ background: 'linear-gradient(to top, #0A0A0F, transparent)' }} />
+
       <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-full" preserveAspectRatio="none">
         <defs>
           <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#F7C948" stopOpacity="0.12" />
-            <stop offset="100%" stopColor="#F7C948" stopOpacity="0.95" />
+            <stop offset="0%" stopColor="#F7C948" stopOpacity="0.1" />
+            <stop offset="100%" stopColor="#F7C948" stopOpacity="0.9" />
           </linearGradient>
           <linearGradient id="fillGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#F7C948" stopOpacity="0.09" />
+            <stop offset="0%" stopColor="#F7C948" stopOpacity="0.08" />
             <stop offset="100%" stopColor="#F7C948" stopOpacity="0" />
           </linearGradient>
+          <filter id="dot-glow" x="-100%" y="-100%" width="300%" height="300%">
+            <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
         </defs>
+
+        {/* Area fill */}
         <motion.path d={fillPath} fill="url(#fillGrad)"
           initial={{ opacity: 0 }} animate={{ opacity: 1 }}
           transition={{ duration: 1.2, delay: 0.3 }} />
+
+        {/* Texture oscillation path (behind main line) */}
+        <motion.path d={texturePath} fill="none" stroke="#F7C948"
+          strokeWidth="1" strokeLinecap="round" strokeOpacity="0.2"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          transition={{ duration: 1.5, delay: 0.5 }} />
+
+        {/* Main line */}
         <motion.path d={linePath} fill="none" stroke="url(#lineGrad)"
           strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
           initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
           transition={{ duration: 1.8, ease: 'easeInOut', delay: 0.2 }} />
-        {pts.map((_, i) => (
-          <motion.circle key={i} cx={xs[i]} cy={ys[i]} r={3.5} fill="#F7C948"
-            initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.2 + (i / pts.length) * 1.5, duration: 0.3 }} />
-        ))}
+
+        {/* Hidden path reference for animateMotion */}
+        <path id="travel-path" d={linePath} fill="none" stroke="none" />
+
+        {/* Single traveling glowing dot */}
+        <motion.g initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.0, duration: 0.5 }}>
+          <circle r="3.5" fill="#F7C948" filter="url(#dot-glow)">
+            <animateMotion dur="14s" repeatCount="indefinite" calcMode="linear">
+              <mpath href="#travel-path" />
+            </animateMotion>
+          </circle>
+        </motion.g>
       </svg>
+
       {chips.map((chip) => (
         <motion.div key={chip.label}
-          className="absolute px-3 py-1.5 rounded-full bg-[#111118] border border-[#F7C948]/25 text-[10px] font-mono text-[#F7C948]/80 whitespace-nowrap pointer-events-none"
+          className="absolute z-20 px-3 py-1.5 rounded-full bg-[#111118] border border-[#F7C948]/25 text-[10px] font-mono text-[#F7C948]/80 whitespace-nowrap pointer-events-none"
           style={{ left: chip.x, top: chip.y }}
           initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: chip.delay, duration: 0.4, ease }}>
@@ -245,7 +292,7 @@ function Hero() {
              style={{ background: 'radial-gradient(ellipse, #F7C948, transparent 70%)' }} />
       </div>
 
-      <motion.div style={{ y }} className="relative z-10 max-w-6xl mx-auto px-6">
+      <motion.div style={{ y }} className="relative z-10 w-full px-6">
         <motion.div variants={stagger} initial="hidden" animate="visible">
             <motion.h1 variants={fadeUp} custom={0}
               className="font-bold text-white leading-[1.05] tracking-tight mb-5 whitespace-nowrap"
@@ -302,7 +349,7 @@ const ISNT_CARDS = [
   { emoji: '✕', text: 'A replacement for Claude, ChatGPT, or any AI tool' },
   { emoji: '✕', text: 'A data collector — your conversation text stays on your device' },
   { emoji: '✕', text: 'A social platform — your data is private and yours alone' },
-  { emoji: '✕', text: 'A tool for casual users — if you don\'t build with AI regularly, there\'s little here for you' },
+  { emoji: '✕', text: 'A tool for casual users — built exclusively for active AI builders' },
 ];
 
 function IsCard({ item, isNot }: { item: { emoji: string; text: string }; isNot: boolean }) {
@@ -341,7 +388,7 @@ function WhatItIs() {
             variants={stagger}
           >
             {IS_CARDS.map((item, i) => (
-              <div key={i} className={i === IS_CARDS.length - 1 && IS_CARDS.length % 2 !== 0 ? 'col-span-2 max-w-[calc(50%-6px)] w-full' : ''}>
+              <div key={i} className={i === IS_CARDS.length - 1 && IS_CARDS.length % 2 !== 0 ? 'col-span-2 mx-auto max-w-[calc(50%-6px)] w-full' : ''}>
                 <IsCard item={item} isNot={false} />
               </div>
             ))}
@@ -366,7 +413,7 @@ function WhatItIs() {
             variants={stagger}
           >
             {ISNT_CARDS.map((item, i) => (
-              <div key={i} className={i === ISNT_CARDS.length - 1 && ISNT_CARDS.length % 2 !== 0 ? 'col-span-2 max-w-[calc(50%-6px)] w-full' : ''}>
+              <div key={i} className={i === ISNT_CARDS.length - 1 && ISNT_CARDS.length % 2 !== 0 ? 'col-span-2 mx-auto max-w-[calc(50%-6px)] w-full' : ''}>
                 <IsCard item={item} isNot />
               </div>
             ))}
