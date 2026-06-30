@@ -1047,15 +1047,15 @@ const PLANS = [
   {
     name: 'One-time',   price: '$3',   period: 'one-time',
     highlight: true,    badge: 'Best value', note: null,
-    checkout: 'one-time', ctaHref: null,
-    cta: 'Get full access',
+    checkout: null,     ctaHref: null,    comingSoon: true,
+    cta: 'Notify me',
     features: ['Analyse up to 150 conversations', 'Full idea intelligence & grading', 'Analytics & productivity score', 'Signals engine & insights', 'Export your data anytime'],
   },
   {
     name: 'Monthly',    price: '$10',  period: '/month',
     highlight: false,   badge: null,   note: null,
-    checkout: 'monthly', ctaHref: null,
-    cta: 'Subscribe',
+    checkout: null,     ctaHref: null,    comingSoon: true,
+    cta: 'Notify me',
     features: ['Everything in One-time', '4 syncs per month (weekly)', 'Incremental — new convos only', 'Unlimited total conversations', 'Priority support'],
   },
   {
@@ -1240,7 +1240,11 @@ function Pricing() {
                 </ul>
                 {p.note && <p className="text-[10px] text-white/30 font-mono leading-relaxed mb-4 italic">{p.note}</p>}
 
-                {p.checkout ? (
+                {(p as { comingSoon?: boolean }).comingSoon ? (
+                  <span className="w-full h-10 rounded-xl text-[12px] font-semibold flex items-center justify-center border border-[#1E1E2E] text-white/25 cursor-not-allowed select-none">
+                    Coming soon
+                  </span>
+                ) : p.checkout ? (
                   <button
                     onClick={() => setCheckoutPlan({ name: p.name, price: p.price, checkout: p.checkout! })}
                     className={`w-full h-10 rounded-xl text-[12px] font-semibold transition-colors flex items-center justify-center cursor-pointer ${
