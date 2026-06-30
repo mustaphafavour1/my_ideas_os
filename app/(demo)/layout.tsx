@@ -31,7 +31,7 @@ export default function DemoLayout({ children }: { children: React.ReactNode }) 
           Sign in
         </a>
       </div>
-      <Sidebar />
+      <Sidebar prefix="/demo" />
       <div className="lg:pl-[220px] pb-16 lg:pb-0 min-h-full flex flex-col relative z-10">
         {children}
       </div>

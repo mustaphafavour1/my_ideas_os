@@ -36,14 +36,26 @@ const MORE_NAV = [
 
 const ALL_NAV = [...MAIN_NAV, ...MORE_NAV];
 
-function isActive(href: string, pathname: string) {
-  return href === '/app' ? pathname === '/app' : pathname.startsWith(href);
+function isActive(resolvedHref: string, pathname: string, isRoot: boolean) {
+  return isRoot ? pathname === resolvedHref : pathname.startsWith(resolvedHref);
 }
 
-export function Sidebar() {
+export function Sidebar({ prefix = '' }: { prefix?: string }) {
   const pathname = usePathname();
   const [moreOpen, setMoreOpen] = useState(false);
   const popoverRef = useRef<HTMLDivElement>(null);
+
+  function link(href: string) {
+    if (!prefix) return href;
+    // Dashboard maps to the prefix root itself
+    if (href === '/app') return prefix;
+    return prefix + href;
+  }
+
+  function active(href: string) {
+    const resolved = link(href);
+    return isActive(resolved, pathname, href === '/app');
+  }
 
   useEffect(() => { setMoreOpen(false); }, [pathname]);
 
@@ -58,7 +70,7 @@ export function Sidebar() {
     return () => document.removeEventListener('mousedown', onClickOutside);
   }, [moreOpen]);
 
-  const anyMoreActive = [...MORE_NAV, { href: '/profile' }].some((item) => isActive(item.href, pathname));
+  const anyMoreActive = [...MORE_NAV, { href: '/profile' }].some((item) => active(item.href));
 
   return (
     <>
@@ -80,24 +92,24 @@ export function Sidebar() {
         {/* Nav */}
         <nav className="flex-1 px-3 py-4 space-y-0.5">
           {ALL_NAV.map(({ href, label, Icon }) => {
-            const active = isActive(href, pathname);
+            const isAct = active(href);
             return (
               <Link
                 key={href}
-                href={href}
+                href={link(href)}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-150 relative group ${
-                  active
+                  isAct
                     ? 'text-[#F7C948] bg-[#F7C948]/8'
                     : 'text-[#6A6A80] hover:text-[#D0D0DA] hover:bg-[#1E1E2E]/60'
                 }`}
               >
-                {active && (
+                {isAct && (
                   <motion.div
                     layoutId="sidebar-active"
                     className="absolute left-0 top-1/2 -translate-y-1/2 w-0.5 h-5 bg-[#F7C948] rounded-r"
                   />
                 )}
-                <Icon size={18} weight={active ? 'fill' : 'regular'} />
+                <Icon size={18} weight={isAct ? 'fill' : 'regular'} />
                 <span className="font-medium">{label}</span>
               </Link>
             );
@@ -106,14 +118,14 @@ export function Sidebar() {
 
         <div className="px-3 pb-3 border-t border-[#1E1E2E] pt-2">
           <Link
-            href="/profile"
+            href={link('/profile')}
             className={`flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm transition-all duration-150 relative group ${
-              isActive('/profile', pathname)
+              active('/profile')
                 ? 'text-[#F7C948] bg-[#F7C948]/8'
                 : 'text-[#6A6A80] hover:text-[#D0D0DA] hover:bg-[#1E1E2E]/60'
             }`}
           >
-            <User size={18} weight={isActive('/profile', pathname) ? 'fill' : 'regular'} />
+            <User size={18} weight={active('/profile') ? 'fill' : 'regular'} />
             <span className="font-medium">Profile</span>
           </Link>
           <p className="text-[#4A4A60] text-[10px] font-mono px-3 pt-1">v0.1.0</p>
@@ -125,16 +137,16 @@ export function Sidebar() {
         <div className="flex" ref={popoverRef}>
           {/* Main 5 tabs */}
           {MAIN_NAV.map(({ href, label, Icon }) => {
-            const active = isActive(href, pathname);
+            const isAct = active(href);
             return (
               <Link
                 key={href}
-                href={href}
+                href={link(href)}
                 className={`flex-1 flex flex-col items-center gap-1 py-3 text-[10px] font-medium transition-colors ${
-                  active ? 'text-[#F7C948]' : 'text-[#4A4A60]'
+                  isAct ? 'text-[#F7C948]' : 'text-[#4A4A60]'
                 }`}
               >
-                <Icon size={18} weight={active ? 'fill' : 'regular'} />
+                <Icon size={18} weight={isAct ? 'fill' : 'regular'} />
                 <span>{label}</span>
               </Link>
             );
@@ -162,18 +174,18 @@ export function Sidebar() {
                 className="absolute bottom-full right-0 mb-2 mr-2 bg-[#111118] border border-[#1E1E2E] rounded-xl overflow-hidden shadow-xl min-w-[160px]"
               >
                 {[...MORE_NAV, { href: '/profile', label: 'Profile', Icon: User }].map(({ href, label, Icon }) => {
-                  const active = isActive(href, pathname);
+                  const isAct = active(href);
                   return (
                     <Link
                       key={href}
-                      href={href}
+                      href={link(href)}
                       className={`flex items-center gap-3 px-4 py-3 text-[13px] transition-colors ${
-                        active
+                        isAct
                           ? 'text-[#F7C948] bg-[#F7C948]/8'
                           : 'text-[#6A6A80] hover:text-[#D0D0DA] hover:bg-[#1A1A28]'
                       }`}
                     >
-                      <Icon size={16} weight={active ? 'fill' : 'regular'} />
+                      <Icon size={16} weight={isAct ? 'fill' : 'regular'} />
                       <span className="font-medium">{label}</span>
                     </Link>
                   );

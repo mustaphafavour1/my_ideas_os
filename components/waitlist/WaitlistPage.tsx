@@ -3,10 +3,10 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 
-/* ─── Contact config (replace with real values) ─────────────────────────── */
-const CONTACT_LINKEDIN = 'https://linkedin.com/in/YOUR_HANDLE';
-const CONTACT_X        = 'https://x.com/YOUR_HANDLE';
-const CONTACT_FORM_URL = 'https://docs.google.com/forms/d/e/1FAIpQLSctPvWvt8XcO0UYIyw57ik240a9fsBEZKnMpC35O3vBrUEKtA/viewform?usp=pp_url&entry.181480148=fave&entry.463801258=fave&entry.1926220507=Question&entry.1619198101=favvv&entry.19317049=well';
+/* ─── Contact config ─────────────────────────────────────────────────────── */
+const CONTACT_LINKEDIN = 'https://linkedin.com/in/favourmustapha1';
+const CONTACT_X        = 'https://x.com/headfavour';
+const CONTACT_FORM_EMBED = 'https://docs.google.com/forms/d/e/1FAIpQLSctPvWvt8XcO0UYIyw57ik240a9fsBEZKnMpC35O3vBrUEKtA/viewform?embedded=true&entry.181480148=fave&entry.463801258=fave&entry.1926220507=Question&entry.1619198101=favvv&entry.19317049=well';
 
 /* ─── Animation helpers ─────────────────────────────────────────────────── */
 const ease = [0.22, 1, 0.36, 1] as const;
@@ -24,8 +24,8 @@ const stagger = {
   visible: { transition: { staggerChildren: 0.08, delayChildren: 0.05 } },
 };
 
-function InView({ children, className = '', delay = 0 }: {
-  children: React.ReactNode; className?: string; delay?: number;
+function InView({ children, className = '', delay = 0, style }: {
+  children: React.ReactNode; className?: string; delay?: number; style?: React.CSSProperties;
 }) {
   return (
     <motion.div
@@ -34,8 +34,47 @@ function InView({ children, className = '', delay = 0 }: {
       viewport={{ once: true, margin: '-50px' }}
       transition={{ duration: 0.6, delay, ease }}
       className={className}
+      style={style}
     >
       {children}
+    </motion.div>
+  );
+}
+
+/* ─── Contact form modal ─────────────────────────────────────────────────── */
+function ContactFormModal({ onClose }: { onClose: () => void }) {
+  return (
+    <motion.div
+      className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center p-6"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      onClick={onClose}
+    >
+      <motion.div
+        className="relative bg-[#111118] border border-[#1E1E2E] rounded-2xl overflow-hidden w-full max-w-lg"
+        initial={{ scale: 0.92, opacity: 0 }}
+        animate={{ scale: 1, opacity: 1 }}
+        exit={{ scale: 0.92, opacity: 0 }}
+        transition={{ duration: 0.25, ease }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[#1E1E2E]">
+          <p className="text-[13px] font-semibold text-white">Send a message</p>
+          <button
+            onClick={onClose}
+            className="w-8 h-8 rounded-full flex items-center justify-center hover:bg-[#1E1E2E] text-white/40 hover:text-white transition-colors text-[13px]"
+          >
+            ✕
+          </button>
+        </div>
+        <iframe
+          src={CONTACT_FORM_EMBED}
+          className="w-full"
+          style={{ height: 520, border: 'none' }}
+          title="Contact form"
+        />
+      </motion.div>
     </motion.div>
   );
 }
@@ -76,13 +115,13 @@ function Nav() {
         <div className="flex items-center gap-2">
           <a
             href="/demo"
-            className="h-9 px-4 rounded-full border border-[#1E1E2E] text-white/60 text-[13px] font-medium hover:border-[#2A2A3A] hover:text-white/80 transition-colors hidden sm:flex items-center"
+            className="h-9 px-4 rounded-full border border-[#1E1E2E] text-white/60 text-[13px] font-medium hover:border-[#2A2A3A] hover:text-white/80 transition-colors hidden sm:flex items-center justify-center"
           >
             Visit demo
           </a>
           <a
             href="/login"
-            className="h-9 px-5 rounded-full bg-[#F7C948] text-[#0A0A0F] text-[13px] font-semibold hover:bg-[#E6B830] transition-colors flex items-center"
+            className="h-9 px-5 rounded-full bg-[#F7C948] text-[#0A0A0F] text-[13px] font-semibold hover:bg-[#E6B830] transition-colors flex items-center justify-center"
           >
             Get started
           </a>
@@ -92,98 +131,98 @@ function Nav() {
   );
 }
 
-/* ─── Cycling animated word ──────────────────────────────────────────────── */
+/* ─── Number-scramble cycling word ──────────────────────────────────────── */
 const CYCLING_WORDS = ['Visualized', 'Analysed', 'Optimized', 'Decoded', 'Understood'];
+const DIGITS = '0123456789';
 
 function CyclingWord() {
-  const [idx, setIdx] = useState(0);
+  const [wordIdx, setWordIdx] = useState(0);
+  const [display, setDisplay] = useState(CYCLING_WORDS[0] + '.');
+
   useEffect(() => {
-    const t = setInterval(() => setIdx((i) => (i + 1) % CYCLING_WORDS.length), 2200);
-    return () => clearInterval(t);
+    const cycle = setInterval(() => setWordIdx((i) => (i + 1) % CYCLING_WORDS.length), 2800);
+    return () => clearInterval(cycle);
   }, []);
-  return (
-    <span className="inline-block overflow-hidden relative" style={{ minWidth: '8ch' }}>
-      <AnimatePresence mode="wait">
-        <motion.span
-          key={idx}
-          initial={{ y: 48, opacity: 0 }}
-          animate={{ y: 0, opacity: 1 }}
-          exit={{ y: -48, opacity: 0 }}
-          transition={{ duration: 0.38, ease }}
-          className="text-[#F7C948] inline-block"
-        >
-          {CYCLING_WORDS[idx]}.
-        </motion.span>
-      </AnimatePresence>
-    </span>
-  );
+
+  useEffect(() => {
+    const target = CYCLING_WORDS[wordIdx];
+    let frame = 0;
+    const totalFrames = 20;
+    const t = setInterval(() => {
+      frame++;
+      if (frame >= totalFrames) {
+        setDisplay(target + '.');
+        clearInterval(t);
+        return;
+      }
+      const progress = frame / totalFrames;
+      const scrambled = target
+        .split('')
+        .map((char, i) => {
+          if (i < Math.floor(progress * target.length)) return char;
+          return DIGITS[Math.floor(Math.random() * DIGITS.length)];
+        })
+        .join('');
+      setDisplay(scrambled + '.');
+    }, 25);
+    return () => clearInterval(t);
+  }, [wordIdx]);
+
+  return <span className="text-[#F7C948] font-mono tabular-nums">{display}</span>;
 }
 
-/* ─── Animated line graph with floating insight chips ────────────────────── */
+/* ─── Smooth full-width animated graph ───────────────────────────────────── */
 function AnimatedGraph() {
-  const points = [12, 28, 18, 42, 35, 55, 48, 68, 62, 78, 72, 88];
-  const w = 500, h = 180;
-  const xs = points.map((_, i) => (i / (points.length - 1)) * w);
-  const ys = points.map((v) => h - (v / 100) * h);
-  const path = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x},${ys[i]}`).join(' ');
+  const pts = [8, 22, 15, 38, 30, 52, 44, 65, 58, 74, 68, 86];
+  const w = 1000, h = 200, pad = 12;
+  const xs = pts.map((_, i) => (i / (pts.length - 1)) * w);
+  const ys = pts.map((v) => h - pad - (v / 100) * (h - pad * 2));
+
+  let linePath = `M${xs[0]},${ys[0]}`;
+  for (let i = 1; i < xs.length; i++) {
+    const cpx = (xs[i - 1] + xs[i]) / 2;
+    linePath += ` C${cpx},${ys[i - 1]} ${cpx},${ys[i]} ${xs[i]},${ys[i]}`;
+  }
+  const fillPath = `${linePath} L${w},${h} L0,${h} Z`;
 
   const chips = [
-    { label: '↑ Productivity score', x: '62%', y: '12%', delay: 0.5 },
-    { label: '47 ideas captured', x: '20%', y: '52%', delay: 0.8 },
-    { label: '🔁 Recurring pattern', x: '72%', y: '60%', delay: 1.1 },
+    { label: '↑ Productivity score', x: '60%', y: '8%', delay: 0.6 },
+    { label: '47 ideas captured',    x: '18%', y: '48%', delay: 0.9 },
+    { label: '🔁 Recurring pattern', x: '70%', y: '62%', delay: 1.2 },
   ];
 
   return (
-    <div className="relative w-full max-w-2xl mx-auto h-[200px]">
+    <div className="relative w-full h-[220px]">
       <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-full" preserveAspectRatio="none">
         <defs>
           <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#F7C948" stopOpacity="0.2" />
-            <stop offset="100%" stopColor="#F7C948" stopOpacity="1" />
+            <stop offset="0%" stopColor="#F7C948" stopOpacity="0.12" />
+            <stop offset="100%" stopColor="#F7C948" stopOpacity="0.95" />
           </linearGradient>
           <linearGradient id="fillGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#F7C948" stopOpacity="0.12" />
+            <stop offset="0%" stopColor="#F7C948" stopOpacity="0.09" />
             <stop offset="100%" stopColor="#F7C948" stopOpacity="0" />
           </linearGradient>
         </defs>
-        <motion.path
-          d={`${path} L${w},${h} L0,${h} Z`}
-          fill="url(#fillGrad)"
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ duration: 1.2, delay: 0.3 }}
-        />
-        <motion.path
-          d={path}
-          fill="none"
-          stroke="url(#lineGrad)"
-          strokeWidth="2.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          initial={{ pathLength: 0 }}
-          animate={{ pathLength: 1 }}
-          transition={{ duration: 1.6, ease: 'easeInOut', delay: 0.2 }}
-        />
-        {points.map((_, i) => (
-          <motion.circle
-            key={i}
-            cx={xs[i]} cy={ys[i]} r={3}
-            fill="#F7C948"
-            initial={{ scale: 0, opacity: 0 }}
-            animate={{ scale: 1, opacity: 1 }}
-            transition={{ delay: 0.2 + (i / points.length) * 1.2, duration: 0.3 }}
-          />
+        <motion.path d={fillPath} fill="url(#fillGrad)"
+          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+          transition={{ duration: 1.2, delay: 0.3 }} />
+        <motion.path d={linePath} fill="none" stroke="url(#lineGrad)"
+          strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+          initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
+          transition={{ duration: 1.8, ease: 'easeInOut', delay: 0.2 }} />
+        {pts.map((_, i) => (
+          <motion.circle key={i} cx={xs[i]} cy={ys[i]} r={3.5} fill="#F7C948"
+            initial={{ scale: 0, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.2 + (i / pts.length) * 1.5, duration: 0.3 }} />
         ))}
       </svg>
       {chips.map((chip) => (
-        <motion.div
-          key={chip.label}
+        <motion.div key={chip.label}
           className="absolute px-3 py-1.5 rounded-full bg-[#111118] border border-[#F7C948]/25 text-[10px] font-mono text-[#F7C948]/80 whitespace-nowrap pointer-events-none"
           style={{ left: chip.x, top: chip.y }}
-          initial={{ opacity: 0, scale: 0.85 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: chip.delay, duration: 0.4, ease }}
-        >
+          initial={{ opacity: 0, scale: 0.85 }} animate={{ opacity: 1, scale: 1 }}
+          transition={{ delay: chip.delay, duration: 0.4, ease }}>
           {chip.label}
         </motion.div>
       ))}
@@ -197,53 +236,50 @@ function Hero() {
   const y = useTransform(scrollYProgress, [0, 0.35], [0, -50]);
 
   return (
-    <section className="relative min-h-screen flex flex-col items-center justify-center px-6 pt-28 pb-20 overflow-hidden">
+    <section className="relative min-h-screen flex flex-col justify-center pt-36 pb-10 overflow-hidden">
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
-        <div className="absolute top-[18%] left-1/2 -translate-x-1/2 w-[800px] h-[500px] opacity-[0.065]"
+        <div className="absolute top-[22%] left-[25%] w-[700px] h-[400px] opacity-[0.06]"
              style={{ background: 'radial-gradient(ellipse, #F7C948, transparent 70%)' }} />
       </div>
 
-      <motion.div style={{ y }} className="relative z-10 text-center max-w-4xl mx-auto w-full">
-        <motion.div variants={stagger} initial="hidden" animate="visible">
-          <motion.div variants={fadeUp} custom={0}
-            className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full border border-[#F7C948]/20 bg-[#F7C948]/5 mb-8">
-            <span className="w-1.5 h-1.5 rounded-full bg-[#F7C948] animate-pulse" />
-            <span className="text-[#F7C948] text-[10px] font-mono uppercase tracking-widest">Now open · Start free</span>
+      <motion.div style={{ y }} className="relative z-10 w-full px-8 lg:px-20">
+        <div className="max-w-4xl">
+          <motion.div variants={stagger} initial="hidden" animate="visible">
+            <motion.h1 variants={fadeUp} custom={0}
+              className="text-[42px] sm:text-[56px] lg:text-[68px] font-bold text-white leading-[1.05] tracking-tight mb-5"
+              style={{ transform: 'rotate(-0.3deg)' }}>
+              Your AI journey, <CyclingWord />
+            </motion.h1>
+
+            <motion.p variants={fadeUp} custom={1}
+              className="text-[15px] sm:text-[16px] text-white/45 max-w-md mb-10 leading-relaxed">
+              Turn your Claude conversations into a personal intelligence dashboard — ideas, patterns, and insights, all in one place.
+            </motion.p>
+
+            <motion.div variants={fadeUp} custom={2} className="flex items-center gap-3 flex-wrap mb-6">
+              <a
+                href="/demo"
+                className="h-12 px-7 rounded-xl border border-[#1E1E2E] text-white/70 text-[14px] font-medium hover:border-[#2A2A3A] hover:text-white transition-colors flex items-center justify-center"
+              >
+                Visit demo
+              </a>
+              <a
+                href="/login"
+                className="h-12 px-8 rounded-xl bg-[#F7C948] text-[#0A0A0F] text-[14px] font-semibold hover:bg-[#E6B830] transition-colors flex items-center justify-center"
+              >
+                Get started →
+              </a>
+            </motion.div>
+
+            <motion.p variants={fadeUp} custom={3} className="text-white/20 text-[11px] font-mono">
+              Free to try · No credit card · Works with Claude, ChatGPT, Gemini &amp; more
+            </motion.p>
           </motion.div>
-
-          <motion.h1 variants={fadeUp} custom={1}
-            className="text-[48px] sm:text-[68px] lg:text-[84px] font-bold text-white leading-[0.93] tracking-tight mb-5">
-            Your AI journey,<br />
-            <CyclingWord />
-          </motion.h1>
-
-          <motion.p variants={fadeUp} custom={2}
-            className="text-[15px] sm:text-[17px] text-white/45 max-w-md mx-auto mb-10 leading-relaxed">
-            Turn your Claude conversations into a personal intelligence dashboard — ideas, patterns, and insights, all in one place.
-          </motion.p>
-
-          <motion.div variants={fadeUp} custom={3} className="flex items-center justify-center gap-3 flex-wrap mb-6">
-            <a
-              href="/demo"
-              className="h-12 px-7 rounded-xl border border-[#1E1E2E] text-white/70 text-[14px] font-medium hover:border-[#2A2A3A] hover:text-white transition-colors"
-            >
-              Visit demo
-            </a>
-            <a
-              href="/login"
-              className="h-12 px-8 rounded-xl bg-[#F7C948] text-[#0A0A0F] text-[14px] font-semibold hover:bg-[#E6B830] transition-colors"
-            >
-              Get started →
-            </a>
-          </motion.div>
-
-          <motion.p variants={fadeUp} custom={4} className="text-white/20 text-[11px] font-mono">
-            Free to try · No credit card · Works with Claude, ChatGPT, Gemini &amp; more
-          </motion.p>
-        </motion.div>
+        </div>
       </motion.div>
 
-      <InView className="relative z-10 w-full max-w-3xl mx-auto mt-20 px-2">
+      {/* Full-width graph */}
+      <InView className="relative z-10 w-full mt-16">
         <AnimatedGraph />
         <div className="absolute -bottom-px inset-x-0 h-24 pointer-events-none"
              style={{ background: 'linear-gradient(to bottom, transparent, #0A0A0F)' }} />
@@ -265,13 +301,14 @@ const ISNT_CARDS = [
   { emoji: '✕', text: 'A replacement for Claude, ChatGPT, or any AI tool' },
   { emoji: '✕', text: 'A data collector — your conversation text stays on your device' },
   { emoji: '✕', text: 'A social platform — your data is private and yours alone' },
+  { emoji: '✕', text: 'A tool for casual users — if you don\'t build with AI regularly, there\'s little here for you' },
 ];
 
 function IsCard({ item, isNot }: { item: { emoji: string; text: string }; isNot: boolean }) {
   return (
     <motion.div
       variants={fadeUp}
-      className={`rounded-2xl p-6 border ${isNot ? 'border-[#1E1E2E] bg-[#0D0D14]' : 'border-[#F7C948]/15 bg-[#F7C948]/3'}`}
+      className={`rounded-2xl p-6 border h-full ${isNot ? 'border-[#1E1E2E] bg-[#0D0D14]' : 'border-[#F7C948]/15 bg-[#F7C948]/3'}`}
     >
       <div className={`w-8 h-8 rounded-lg flex items-center justify-center text-[14px] mb-4 ${isNot ? 'bg-white/5 text-white/30' : 'bg-[#F7C948]/10 text-[#F7C948]'}`}>
         {item.emoji}
@@ -291,30 +328,44 @@ function WhatItIs() {
         <h2 className="text-[34px] sm:text-[44px] font-bold text-white">What Idea OS is — and isn&apos;t</h2>
       </InView>
 
-      <div className="grid sm:grid-cols-2 gap-12">
-        <div>
+      {/* 3-col: IS | dashed divider | ISNT */}
+      <div className="grid sm:grid-cols-[1fr_1px_1fr] gap-0">
+        {/* IS column */}
+        <div className="sm:pr-10">
           <p className="text-[10px] font-mono text-[#F7C948]/60 uppercase tracking-widest mb-5">It IS</p>
           <motion.div
             className="grid grid-cols-2 gap-3"
+            style={{ gridAutoRows: '1fr' }}
             initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-50px' }}
             variants={stagger}
           >
             {IS_CARDS.map((item, i) => (
-              <div key={i} className={i === IS_CARDS.length - 1 && IS_CARDS.length % 2 !== 0 ? 'col-span-2 max-w-[calc(50%-6px)] mx-auto w-full' : ''}>
+              <div key={i} className={i === IS_CARDS.length - 1 && IS_CARDS.length % 2 !== 0 ? 'col-span-2 max-w-[calc(50%-6px)] w-full' : ''}>
                 <IsCard item={item} isNot={false} />
               </div>
             ))}
           </motion.div>
         </div>
-        <div>
+
+        {/* Dashed vertical divider */}
+        <div className="hidden sm:flex flex-col items-center py-4">
+          <svg width="1" height="100%" viewBox="0 0 1 400" preserveAspectRatio="none" className="h-full min-h-[300px]">
+            <line x1="0.5" y1="0" x2="0.5" y2="400"
+              stroke="#1E1E2E" strokeWidth="1" strokeDasharray="6 5" />
+          </svg>
+        </div>
+
+        {/* ISNT column */}
+        <div className="sm:pl-10 mt-10 sm:mt-0">
           <p className="text-[10px] font-mono text-white/20 uppercase tracking-widest mb-5">It&apos;s NOT</p>
           <motion.div
             className="grid grid-cols-2 gap-3"
+            style={{ gridAutoRows: '1fr' }}
             initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-50px' }}
             variants={stagger}
           >
             {ISNT_CARDS.map((item, i) => (
-              <div key={i} className={i === ISNT_CARDS.length - 1 && ISNT_CARDS.length % 2 !== 0 ? 'col-span-2 max-w-[calc(50%-6px)] mx-auto w-full' : ''}>
+              <div key={i} className={i === ISNT_CARDS.length - 1 && ISNT_CARDS.length % 2 !== 0 ? 'col-span-2 max-w-[calc(50%-6px)] w-full' : ''}>
                 <IsCard item={item} isNot />
               </div>
             ))}
@@ -335,35 +386,75 @@ const HOW_STEPS = [
 
 function HowItWorks() {
   return (
-    <section id="how-it-works" className="px-6 py-24 bg-[#0D0D14]">
-      <div className="max-w-5xl mx-auto">
-        <InView className="text-center mb-16">
+    <section id="how-it-works" className="py-24 bg-[#0D0D14] overflow-hidden">
+      <div className="max-w-[1320px] mx-auto px-6">
+        <InView className="text-center mb-20">
           <p className="text-[10px] font-mono text-[#F7C948] uppercase tracking-widest mb-3">Simple by design</p>
           <h2 className="text-[34px] sm:text-[44px] font-bold text-white">How it works</h2>
         </InView>
 
-        <div className="relative grid sm:grid-cols-2 lg:grid-cols-4 gap-5">
-          {/* Loopy connector line behind cards */}
-          <div className="hidden lg:block absolute top-1/2 left-0 right-0 pointer-events-none -translate-y-1/2 px-16" style={{ zIndex: 0 }}>
-            <svg viewBox="0 0 800 60" className="w-full" style={{ height: 60 }}>
-              <path
-                d="M0,30 C80,10 120,50 200,30 C280,10 320,50 400,30 C480,10 520,50 600,30 C680,10 720,50 800,30"
-                fill="none" stroke="#1E1E2E" strokeWidth="1.5" strokeDasharray="6 4"
-              />
-            </svg>
-          </div>
-
-          {HOW_STEPS.map((s, i) => (
-            <motion.div
-              key={s.n}
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: i % 2 === 0 ? 0 : 24 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.55, delay: i * 0.12, ease }}
-              className="relative z-10"
-              style={{ marginTop: i % 2 !== 0 ? 32 : 0 }}
+        {/* Desktop layout: flex with large spacing */}
+        <div className="hidden lg:block relative">
+          {/* 3 standalone loopy connector SVGs between the 4 cards */}
+          {[25, 50, 75].map((pct, j) => (
+            <div
+              key={j}
+              className="absolute top-0 pointer-events-none"
+              style={{
+                left: `${pct}%`,
+                transform: 'translateX(-50%)',
+                width: 80,
+                /* vertically centre between the two row heights */
+                top: j % 2 === 0 ? 60 : 100,
+              }}
             >
-              <div className="rounded-2xl bg-[#111118] border border-[#1E1E2E] p-6 font-mono relative overflow-hidden">
+              <svg viewBox="0 0 80 50" className="w-full" style={{ height: 50 }}>
+                <path
+                  d="M0,25 C20,5 30,45 40,25 C50,5 60,45 80,25"
+                  fill="none" stroke="#1E1E2E" strokeWidth="1.5" strokeDasharray="5 4"
+                />
+              </svg>
+            </div>
+          ))}
+
+          <div className="flex items-start justify-between gap-8">
+            {HOW_STEPS.map((s, i) => (
+              <motion.div
+                key={s.n}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.55, delay: i * 0.12, ease }}
+                className="w-[22%] shrink-0"
+                style={{ marginTop: i % 2 !== 0 ? 64 : 0 }}
+              >
+                <div className="rounded-2xl bg-[#111118] border border-[#1E1E2E] p-6 font-mono relative overflow-hidden">
+                  <div className="absolute inset-x-0 top-0 h-px"
+                    style={{ background: 'linear-gradient(90deg, transparent, rgba(247,201,72,0.2), transparent)' }} />
+                  <div className="flex items-center gap-2 mb-4">
+                    <span className="text-[10px] text-[#F7C948]/40">{s.n}</span>
+                    <div className="w-px h-3 bg-[#1E1E2E]" />
+                    <div className="flex gap-1">
+                      <div className="w-2 h-2 rounded-sm bg-[#F7C948]/30" />
+                      <div className="w-2 h-2 rounded-sm bg-[#1E1E2E]" />
+                      <div className="w-2 h-2 rounded-sm bg-[#1E1E2E]" />
+                    </div>
+                  </div>
+                  <h3 className="text-[14px] font-semibold text-white mb-2 font-sans">{s.title}</h3>
+                  <p className="text-[12px] text-white/40 leading-relaxed font-sans">{s.body}</p>
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+
+        {/* Mobile/tablet layout */}
+        <div className="lg:hidden grid sm:grid-cols-2 gap-5">
+          {HOW_STEPS.map((s, i) => (
+            <motion.div key={s.n}
+              initial={{ opacity: 0, y: 24 }} whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }} transition={{ duration: 0.55, delay: i * 0.12, ease }}>
+              <div className="rounded-2xl bg-[#111118] border border-[#1E1E2E] p-6 font-mono relative overflow-hidden h-full">
                 <div className="absolute inset-x-0 top-0 h-px"
                   style={{ background: 'linear-gradient(90deg, transparent, rgba(247,201,72,0.2), transparent)' }} />
                 <div className="flex items-center gap-2 mb-4">
@@ -387,10 +478,15 @@ function HowItWorks() {
 }
 
 /* ─── Origin story ───────────────────────────────────────────────────────── */
+const JOURNEY_PARAS = [
+  'I\'d been building with Claude every single day. Ideas in the morning, code reviews at night. But I had no idea how I was actually using it — what patterns I was falling into, which sessions were most productive, or where my ideas were coming from.',
+  'One day I exported my conversations just to see what was in there. Thousands of messages. Hundreds of code blocks. Ideas scattered across dozens of chats that I\'d completely forgotten about.',
+  'I wanted a mirror — something that could show me my own AI usage like a Spotify Wrapped for how I build. The peaks, the patterns, the productivity score. So I built it. For me first. Then people started asking to use it. This is Idea OS.',
+];
+
 function TheJourney() {
   return (
     <section className="px-6 py-28 relative overflow-hidden">
-      {/* Graph paper background */}
       <div className="absolute inset-0 pointer-events-none opacity-[0.025]"
         style={{
           backgroundImage:
@@ -399,8 +495,8 @@ function TheJourney() {
         }}
       />
 
-      <div className="max-w-2xl mx-auto relative z-10">
-        <InView className="text-center mb-12">
+      <div className="max-w-5xl mx-auto relative z-10">
+        <InView className="text-center mb-16">
           <p className="text-[10px] font-mono text-[#F7C948] uppercase tracking-widest mb-3">The origin story</p>
           <h2 className="text-[34px] sm:text-[44px] font-bold text-white leading-tight"
             style={{ transform: 'rotate(-0.5deg)' }}>
@@ -408,22 +504,11 @@ function TheJourney() {
           </h2>
         </InView>
 
-        <div className="space-y-6 text-[15px] sm:text-[16px] text-white/50 leading-relaxed relative">
-          {/* Loopy connector between paragraphs */}
-          <div className="absolute -left-8 top-0 bottom-0 pointer-events-none hidden sm:block" style={{ width: 24 }}>
-            <svg viewBox="0 0 24 600" className="w-full h-full" preserveAspectRatio="none">
-              <path d="M12,0 C4,80 20,120 12,200 C4,280 20,320 12,400 C4,480 20,520 12,600"
-                fill="none" stroke="#1E1E2E" strokeWidth="1" strokeDasharray="4 4" />
-            </svg>
-          </div>
-
-          {[
-            'I\'d been building with Claude every single day. Ideas in the morning, code reviews at night. But I had no idea how I was actually using it — what patterns I was falling into, which sessions were most productive, or where my ideas were coming from.',
-            'One day I exported my conversations just to see what was in there. Thousands of messages. Hundreds of code blocks. Ideas scattered across dozens of chats that I\'d completely forgotten about.',
-            'I wanted a mirror — something that could show me my own AI usage like a Spotify Wrapped for how I build. The peaks, the patterns, the productivity score. So I built it. For me first. Then people started asking to use it. This is Idea OS.',
-          ].map((text, i) => (
-            <InView key={i} delay={i * 0.1}>
-              <p>{text}</p>
+        {/* 3 paragraphs side-by-side in wavy format */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {JOURNEY_PARAS.map((text, i) => (
+            <InView key={i} delay={i * 0.1} style={{ marginTop: i % 2 !== 0 ? 40 : 0 }}>
+              <p className="text-[14px] sm:text-[15px] text-white/50 leading-relaxed">{text}</p>
             </InView>
           ))}
         </div>
@@ -450,9 +535,8 @@ function Features() {
           <h2 className="text-[34px] sm:text-[44px] font-bold text-white">The features</h2>
         </InView>
 
-        {/* Title card centred at top + 5 feature cards */}
         <div className="relative">
-          {/* Top title card */}
+          {/* Title card centred above */}
           <div className="flex justify-center mb-4">
             <motion.div
               initial={{ opacity: 0, y: 16 }}
@@ -466,16 +550,20 @@ function Features() {
             </motion.div>
           </div>
 
-          {/* 5 feature cards */}
+          {/* 5 feature cards — last one centred in its row */}
           <motion.div
             className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4"
             initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-50px' }}
             variants={stagger}
           >
-            {FEATURE_ITEMS.map((f) => (
+            {FEATURE_ITEMS.map((f, idx) => (
               <motion.div key={f.title} variants={fadeUp}
-                className="rounded-2xl border-0 bg-[#111118] p-7 hover:bg-[#131320] transition-colors group relative overflow-hidden">
-                {/* Divider line at top instead of border */}
+                className={`rounded-2xl border-0 bg-[#111118] p-7 hover:bg-[#131320] transition-colors group relative overflow-hidden ${
+                  idx === FEATURE_ITEMS.length - 1 && FEATURE_ITEMS.length % 3 !== 0
+                    ? 'lg:col-start-2'
+                    : ''
+                }`}
+              >
                 <div className="absolute inset-x-0 top-0 h-[1px]"
                   style={{ background: 'linear-gradient(90deg, transparent, rgba(247,201,72,0.15), transparent)' }} />
                 <div className="w-10 h-10 rounded-xl bg-[#F7C948]/8 flex items-center justify-center text-[#F7C948] text-[18px] mb-5">
@@ -498,26 +586,17 @@ const DESKTOP_SHOTS = [
   { file: 'desktop-ideas.png',     label: 'Ideas' },
   { file: 'desktop-analytics.png', label: 'Analytics' },
   { file: 'desktop-profile.png',   label: 'Profile' },
-  { file: 'desktop-insights.png',  label: 'Insights' },
-];
-const MOBILE_SHOTS = [
-  { file: 'mobile-dashboard.png',  label: 'Dashboard' },
-  { file: 'mobile-ideas.png',      label: 'Ideas' },
-  { file: 'mobile-profile.png',    label: 'Profile' },
-  { file: 'mobile-analytics.png',  label: 'Analytics' },
 ];
 
-function ScreenshotCard({ file, label, isMobile, onClick }: {
-  file: string; label: string; isMobile: boolean; onClick: () => void;
+function ScreenshotCard({ file, label, onClick }: {
+  file: string; label: string; onClick: () => void;
 }) {
   const [loaded, setLoaded] = useState(false);
   const src = `/screenshots/${file}`;
   return (
     <div
-      className={`relative shrink-0 rounded-xl overflow-hidden border border-[#1E1E2E] bg-[#111118] cursor-pointer hover:border-[#2A2A3A] transition-colors group ${
-        isMobile ? 'w-[180px] sm:w-[210px]' : 'w-[480px] sm:w-[580px]'
-      }`}
-      style={{ aspectRatio: isMobile ? '9/19.5' : '16/10' }}
+      className="relative shrink-0 rounded-xl overflow-hidden border border-[#1E1E2E] bg-[#111118] cursor-pointer hover:border-[#2A2A3A] transition-colors group w-[480px] sm:w-[580px]"
+      style={{ aspectRatio: '16/10' }}
       onClick={onClick}
     >
       {!loaded && (
@@ -527,9 +606,11 @@ function ScreenshotCard({ file, label, isMobile, onClick }: {
         </div>
       )}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt={label} onLoad={() => setLoaded(true)} onError={() => setLoaded(false)}
-           className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`} />
-      {/* Hover overlay */}
+      <img src={src} alt={label}
+        onLoad={() => setLoaded(true)}
+        onError={() => setLoaded(false)}
+        className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
+      />
       <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center opacity-0 group-hover:opacity-100">
         <div className="w-10 h-10 rounded-full bg-white/10 border border-white/20 flex items-center justify-center">
           <span className="text-white/80 text-[14px]">⊕</span>
@@ -545,49 +626,53 @@ function ScreenshotCard({ file, label, isMobile, onClick }: {
 }
 
 function Screenshots() {
-  const [mode, setMode] = useState<'desktop' | 'mobile'>('desktop');
   const [lightbox, setLightbox] = useState<string | null>(null);
-  const shots = mode === 'desktop' ? DESKTOP_SHOTS : MOBILE_SHOTS;
   const scrollRef = useRef<HTMLDivElement>(null);
+  const pausedRef = useRef(false);
 
-  // Auto-scroll on desktop
   useEffect(() => {
-    if (mode !== 'desktop') return;
     const el = scrollRef.current;
     if (!el) return;
-    let paused = false;
-    const handleEnter = () => { paused = true; };
-    const handleLeave = () => { paused = false; };
+    const handleEnter = () => { pausedRef.current = true; };
+    const handleLeave = () => { pausedRef.current = false; };
     el.addEventListener('mouseenter', handleEnter);
     el.addEventListener('mouseleave', handleLeave);
-    const interval = setInterval(() => {
-      if (paused) return;
-      el.scrollBy({ left: 1, behavior: 'auto' });
-      if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 10) el.scrollLeft = 0;
-    }, 20);
+
+    let animId: number;
+    let lastTime = 0;
+    const speed = 0.6; // px per ms at 60fps
+
+    function step(ts: number) {
+      if (!pausedRef.current && el) {
+        const dt = lastTime ? ts - lastTime : 0;
+        el.scrollLeft += speed * dt;
+        if (el.scrollLeft + el.clientWidth >= el.scrollWidth - 4) {
+          el.scrollLeft = 0;
+        }
+      }
+      lastTime = ts;
+      animId = requestAnimationFrame(step);
+    }
+    animId = requestAnimationFrame(step);
+
     return () => {
-      clearInterval(interval);
+      cancelAnimationFrame(animId);
       el.removeEventListener('mouseenter', handleEnter);
       el.removeEventListener('mouseleave', handleLeave);
     };
-  }, [mode]);
+  }, []);
 
   return (
     <section className="py-24 overflow-hidden">
-      {/* Lightbox */}
       <AnimatePresence>
         {lightbox && (
           <motion.div
             className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-6 cursor-pointer"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
+            initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
             onClick={() => setLightbox(null)}
           >
             <motion.div
-              initial={{ scale: 0.92 }}
-              animate={{ scale: 1 }}
-              exit={{ scale: 0.92 }}
+              initial={{ scale: 0.92 }} animate={{ scale: 1 }} exit={{ scale: 0.92 }}
               className="relative max-w-5xl w-full"
               onClick={(e) => e.stopPropagation()}
             >
@@ -606,45 +691,32 @@ function Screenshots() {
         <InView className="text-center mb-10">
           <p className="text-[10px] font-mono text-[#F7C948] uppercase tracking-widest mb-3">In the wild</p>
           <h2 className="text-[34px] sm:text-[44px] font-bold text-white mb-4">See it in action</h2>
-          <div className="flex items-center justify-center gap-4 flex-wrap">
-            <div className="inline-flex rounded-xl border border-[#1E1E2E] bg-[#111118] p-1 gap-1">
-              {(['desktop', 'mobile'] as const).map((m) => (
-                <button key={m} onClick={() => setMode(m)}
-                  className={`px-5 py-2 rounded-lg text-[12px] font-mono transition-all capitalize ${
-                    mode === m ? 'bg-[#F7C948] text-[#0A0A0F] font-semibold' : 'text-white/40 hover:text-white/70'
-                  }`}>
-                  {m}
-                </button>
-              ))}
-            </div>
-            <a
-              href="/demo"
-              className="h-9 px-5 rounded-xl bg-[#F7C948]/10 border border-[#F7C948]/20 text-[#F7C948] text-[12px] font-semibold hover:bg-[#F7C948]/20 transition-colors"
-            >
-              Try the demo →
-            </a>
-          </div>
+          <a
+            href="/demo"
+            className="inline-flex h-9 px-5 rounded-xl bg-[#F7C948]/10 border border-[#F7C948]/20 text-[#F7C948] text-[12px] font-semibold hover:bg-[#F7C948]/20 transition-colors items-center justify-center"
+          >
+            Try the demo →
+          </a>
         </InView>
       </div>
 
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={mode}
-          ref={mode === 'desktop' ? scrollRef : undefined}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.25 }}
-          className={`flex gap-4 px-6 overflow-x-auto pb-4 ${mode === 'mobile' ? 'justify-center flex-wrap' : ''}`}
-          style={{ scrollSnapType: mode === 'desktop' ? 'x mandatory' : undefined }}
-        >
-          {shots.map((s) => (
-            <div key={s.file} style={{ scrollSnapAlign: 'start' }}>
-              <ScreenshotCard {...s} isMobile={mode === 'mobile'} onClick={() => setLightbox(s.file)} />
-            </div>
-          ))}
-        </motion.div>
-      </AnimatePresence>
+      <div
+        ref={scrollRef}
+        className="flex gap-4 px-6 overflow-x-auto pb-4 select-none"
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+      >
+        {DESKTOP_SHOTS.map((s) => (
+          <div key={s.file} className="shrink-0">
+            <ScreenshotCard {...s} onClick={() => setLightbox(s.file)} />
+          </div>
+        ))}
+        {/* Duplicate for seamless loop */}
+        {DESKTOP_SHOTS.map((s) => (
+          <div key={`dup-${s.file}`} className="shrink-0">
+            <ScreenshotCard {...s} onClick={() => setLightbox(s.file)} />
+          </div>
+        ))}
+      </div>
     </section>
   );
 }
@@ -661,7 +733,7 @@ function Privacy() {
   return (
     <section className="px-6 py-24 bg-[#0D0D14]">
       <div className="max-w-5xl mx-auto">
-        <div className="grid lg:grid-cols-[1fr_1fr] gap-16 items-start">
+        <div className="grid lg:grid-cols-[1fr_1fr] gap-16 items-center">
           <InView>
             <p className="text-[10px] font-mono text-[#F7C948] uppercase tracking-widest mb-4">We take this seriously</p>
             <h2 className="text-[34px] sm:text-[44px] font-bold text-white mb-6 leading-tight">Privacy by design</h2>
@@ -772,7 +844,6 @@ function ExportGuide() {
           <h2 className="text-[34px] sm:text-[44px] font-bold text-white">How to export your conversations</h2>
         </InView>
 
-        {/* Centred agent tabs */}
         <div className="flex flex-wrap gap-2 mb-8 justify-center">
           {EXPORT_GUIDES.map((g) => (
             <button key={g.id} onClick={() => setActive(g.id)}
@@ -787,13 +858,13 @@ function ExportGuide() {
           ))}
         </div>
 
-        {/* 60% width centered content */}
-        <div className="max-w-[60%] mx-auto min-w-[300px]">
+        {/* Fixed-height wrapper so switching tabs doesn't shift content below */}
+        <div className="max-w-[60%] mx-auto min-w-[300px]" style={{ height: 460, overflow: 'hidden' }}>
           <AnimatePresence mode="wait">
             <motion.div key={active}
               initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}
               transition={{ duration: 0.25 }}
-              className="rounded-2xl border border-[#1E1E2E] bg-[#111118] p-8">
+              className="rounded-2xl border border-[#1E1E2E] bg-[#111118] p-8 h-full overflow-hidden">
               <div className="flex items-center gap-3 mb-7">
                 <div className="w-3 h-3 rounded-full" style={{ backgroundColor: guide.color }} />
                 <h3 className="text-[16px] font-semibold text-white">Exporting from {guide.name}</h3>
@@ -974,7 +1045,6 @@ function FutureOfAI() {
               className="relative p-6 rounded-2xl bg-[#111118]"
               style={{ marginTop: i % 2 !== 0 ? 20 : 0 }}
             >
-              {/* Camera-corner-bracket decoration */}
               {['top-3 left-3', 'top-3 right-3', 'bottom-3 left-3', 'bottom-3 right-3'].map((pos, j) => (
                 <div key={j} className={`absolute ${pos} w-3 h-3 pointer-events-none`}>
                   <svg viewBox="0 0 12 12" className="w-full h-full">
@@ -997,8 +1067,14 @@ function FutureOfAI() {
 
 /* ─── Contact CTA ─────────────────────────────────────────────────────────── */
 function ContactCTA() {
+  const [showForm, setShowForm] = useState(false);
+
   return (
     <section className="px-6 py-24 bg-[#0D0D14]">
+      <AnimatePresence>
+        {showForm && <ContactFormModal onClose={() => setShowForm(false)} />}
+      </AnimatePresence>
+
       <div className="max-w-3xl mx-auto text-center">
         <InView>
           <div className="inline-flex w-16 h-16 rounded-2xl bg-[#F7C948] items-center justify-center text-[#0A0A0F] font-bold text-[18px] mb-8">
@@ -1012,11 +1088,11 @@ function ContactCTA() {
           </p>
           <div className="flex items-center justify-center gap-3 flex-wrap mb-14">
             <a href="/demo"
-              className="h-12 px-7 rounded-xl border border-[#1E1E2E] text-white/70 text-[14px] font-medium hover:border-[#2A2A3A] hover:text-white transition-colors">
+              className="h-12 px-7 rounded-xl border border-[#1E1E2E] text-white/70 text-[14px] font-medium hover:border-[#2A2A3A] hover:text-white transition-colors flex items-center justify-center">
               Visit demo
             </a>
             <a href="/login"
-              className="h-12 px-8 rounded-xl bg-[#F7C948] text-[#0A0A0F] text-[14px] font-semibold hover:bg-[#E6B830] transition-colors">
+              className="h-12 px-8 rounded-xl bg-[#F7C948] text-[#0A0A0F] text-[14px] font-semibold hover:bg-[#E6B830] transition-colors flex items-center justify-center">
               Get started →
             </a>
           </div>
@@ -1039,13 +1115,15 @@ function ContactCTA() {
                 </svg>
                 X (Twitter)
               </a>
-              <a href={CONTACT_FORM_URL} target="_blank" rel="noopener noreferrer"
-                className="flex items-center gap-2 text-[13px] text-white/40 hover:text-white/70 transition-colors">
+              <button
+                onClick={() => setShowForm(true)}
+                className="flex items-center gap-2 text-[13px] text-white/40 hover:text-white/70 transition-colors"
+              >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"/>
                 </svg>
                 Send a message
-              </a>
+              </button>
             </div>
           </div>
         </InView>
@@ -1077,7 +1155,6 @@ function Footer() {
 
 /* ─── Root ──────────────────────────────────────────────────────────────── */
 export function WaitlistPage() {
-  // Prevent scroll-restoration flash
   useCallback(() => {}, []);
 
   return (
