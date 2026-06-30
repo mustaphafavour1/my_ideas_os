@@ -15,6 +15,10 @@ function fmt(n: number): string {
   return n.toString();
 }
 
+function pages(n: number): string {
+  return `~${Math.max(1, Math.round(n / 250))} pp`;
+}
+
 function topEntries(items: (string | null)[]): { label: string; count: number }[] {
   const counts: Record<string, number> = {};
   items.forEach((v) => { if (v) counts[v] = (counts[v] || 0) + 1; });
@@ -428,12 +432,13 @@ export function ProfileContent({ ideas, stats, completed, inProgress, completion
               { label: 'Total Words',   value: fmt(stats.total_words) },
               { label: 'Code Lines',    value: fmt(stats.total_code_lines) },
               { label: 'Code Blocks',   value: fmt(stats.total_code_blocks) },
-              { label: 'Human Words',   value: fmt(stats.total_human_words) },
-              { label: 'AI Words',      value: fmt(stats.total_assistant_words) },
-            ].map(({ label, value }) => (
+              { label: 'Human Words',   value: fmt(stats.total_human_words),      sub: pages(stats.total_human_words) },
+              { label: 'AI Words',      value: fmt(stats.total_assistant_words),  sub: pages(stats.total_assistant_words) },
+            ].map(({ label, value, sub }) => (
               <div key={label}>
                 <p className="text-[9px] font-mono text-white/40 uppercase tracking-widest mb-1.5">{label}</p>
                 <p className="text-[20px] font-bold text-[#D0D0DA]">{value}</p>
+                {sub && <p className="text-[10px] font-mono text-white/30 mt-0.5">{sub}</p>}
               </div>
             ))}
           </div>

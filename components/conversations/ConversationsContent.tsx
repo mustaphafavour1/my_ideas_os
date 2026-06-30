@@ -16,6 +16,10 @@ function fmtLines(n: number): string {
   return fmt(n);
 }
 
+function pages(n: number): string {
+  return `~${Math.max(1, Math.round(n / 250))} pp`;
+}
+
 function pct(part: number, total: number) {
   return total === 0 ? 0 : Math.round((part / total) * 100);
 }
@@ -114,13 +118,19 @@ export function ConversationsContent({ logs, stats, productivityScore, productiv
                   <div className="w-2.5 h-2.5 rounded-sm bg-[#F7C948] shrink-0" />
                   <span className="text-[12px] text-white/60 flex-1">You</span>
                   <span className="text-[20px] font-bold text-[#F7C948] leading-none">{humanPct}%</span>
-                  <span className="text-[13px] font-semibold text-white/70 w-20 text-right">{fmt(stats.total_human_words)} words</span>
+                  <div className="text-right">
+                    <p className="text-[13px] font-semibold text-white/70">{fmt(stats.total_human_words)} words</p>
+                    <p className="text-[10px] font-mono text-white/30">{pages(stats.total_human_words)}</p>
+                  </div>
                 </div>
                 <div className="flex items-center gap-3">
                   <div className="w-2.5 h-2.5 rounded-sm bg-[#7A7AF0] shrink-0" />
                   <span className="text-[12px] text-white/60 flex-1">Claude</span>
                   <span className="text-[20px] font-bold text-[#7A7AF0] leading-none">{aiPct}%</span>
-                  <span className="text-[13px] font-semibold text-white/70 w-20 text-right">{fmt(stats.total_assistant_words)} words</span>
+                  <div className="text-right">
+                    <p className="text-[13px] font-semibold text-white/70">{fmt(stats.total_assistant_words)} words</p>
+                    <p className="text-[10px] font-mono text-white/30">{pages(stats.total_assistant_words)}</p>
+                  </div>
                 </div>
               </div>
             </div>
@@ -167,7 +177,7 @@ export function ConversationsContent({ logs, stats, productivityScore, productiv
                   <div className="flex items-center gap-4 shrink-0 mt-0.5">
                     <div className="text-right hidden sm:block">
                       <p className="text-[12px] font-mono text-white/50">{fmt(log.total_words)}</p>
-                      <p className="text-[9px] font-mono text-white/30">words</p>
+                      <p className="text-[9px] font-mono text-white/30">words · {pages(log.total_words)}</p>
                     </div>
                     <div className="text-right">
                       <p className="text-[12px] font-mono text-white/50">{log.human_messages + log.assistant_messages}</p>
