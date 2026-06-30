@@ -1,11 +1,12 @@
 import type { Metadata } from 'next';
-import { Geist, Geist_Mono, Rancho, JetBrains_Mono } from 'next/font/google';
+import { Geist, Geist_Mono, Rancho, JetBrains_Mono, Edu_SA_Beginner } from 'next/font/google';
 import './globals.css';
 
 const geistSans     = Geist({ variable: '--font-geist-sans', subsets: ['latin'] });
 const geistMono     = Geist_Mono({ variable: '--font-geist-mono', subsets: ['latin'] });
 const rancho        = Rancho({ weight: '400', variable: '--font-rancho', subsets: ['latin'] });
 const jetbrainsMono = JetBrains_Mono({ variable: '--font-jetbrains-mono', subsets: ['latin'] });
+const eduSA         = Edu_SA_Beginner({ weight: ['400', '500', '600', '700'], variable: '--font-edu-sa', subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'Idea OS',
@@ -16,7 +17,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${rancho.variable} ${jetbrainsMono.variable} h-full`}
+      className={`${geistSans.variable} ${geistMono.variable} ${rancho.variable} ${jetbrainsMono.variable} ${eduSA.variable} h-full`}
     >
       <head>
         {/* Apply theme/color/font before first paint to avoid flash — app pages only */}

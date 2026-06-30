@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef, useEffect, useCallback } from 'react';
+import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
 
 /* ─── Contact config ─────────────────────────────────────────────────────── */
@@ -105,7 +105,7 @@ function Nav() {
           <span className="text-white font-semibold text-[15px] tracking-tight">Idea OS</span>
         </div>
         <div className="hidden md:flex items-center gap-8">
-          {[['how-it-works', 'How it works'], ['features', 'Features'], ['pricing', 'Pricing'], ['export-guide', 'Export guide']].map(([id, label]) => (
+          {[['how-it-works', 'How it works'], ['features', 'Features'], ['for-businesses', 'For businesses'], ['pricing', 'Pricing'], ['export-guide', 'Export guide']].map(([id, label]) => (
             <a key={id} href={`#${id}`}
                className="text-[13px] text-white/40 hover:text-white/80 transition-colors">
               {label}
@@ -173,10 +173,10 @@ function CyclingWord() {
 
 /* ─── Smooth full-width animated graph ───────────────────────────────────── */
 function AnimatedGraph() {
-  const w = 1000, h = 200, pad = 12;
+  const w = 1000, h = 220, pad = 16;
 
-  // Modest baseline in the left ~80%, then dramatic spike on the right
-  const pts = [5, 15, 10, 22, 8, 25, 16, 20, 22, 28, 18, 32, 26, 88, 80, 90];
+  // Very low baseline left ~80%, then dramatic 4× spike on the right
+  const pts = [4, 9, 6, 13, 5, 11, 8, 14, 6, 12, 9, 15, 11, 17, 14, 97, 86, 93];
   const xs = pts.map((_, i) => (i / (pts.length - 1)) * w);
   const ys = pts.map((v) => h - pad - (v / 100) * (h - pad * 2));
 
@@ -187,45 +187,38 @@ function AnimatedGraph() {
   }
   const fillPath = `${linePath} L${w},${h} L0,${h} Z`;
 
-  // Texture oscillation path spanning the pre-spike region (~first 80%)
-  const txPts = [5, 20, 6, 26, 14, 20, 10, 28, 20, 24, 15, 32];
-  const txN = txPts.length;
-  const txMaxX = xs[12];
-  const txXs = txPts.map((_, i) => (i / (txN - 1)) * txMaxX);
-  const txYs = txPts.map((v) => h - pad - (v / 100) * (h - pad * 2));
-  let texturePath = `M${txXs[0]},${txYs[0]}`;
-  for (let i = 1; i < txN; i++) {
-    const cpx = (txXs[i - 1] + txXs[i]) / 2;
-    texturePath += ` C${cpx},${txYs[i - 1]} ${cpx},${txYs[i]} ${txXs[i]},${txYs[i]}`;
-  }
-
+  // spike starts at index 15 (~83% of width)
   const chips = [
-    { label: '↑ Productivity score',    x: '67%', y: '4%',  delay: 0.6 },
-    { label: '47 ideas captured',       x: '12%', y: '44%', delay: 0.9 },
-    { label: '🔁 Recurring pattern',    x: '72%', y: '60%', delay: 1.2 },
-    { label: '🔥 14-day streak',        x: '2%',  y: '70%', delay: 1.5 },
-    { label: '✦ 3 signals saved',       x: '38%', y: '16%', delay: 1.8 },
-    { label: '↗ +32% this month',      x: '78%', y: '10%', delay: 2.1 },
-    { label: '→ Started using Idea OS', x: '57%', y: '42%', delay: 2.4 },
+    // before the spike
+    { label: '🔁 Recurring pattern', x: '14%', y: '28%', delay: 0.6 },
+    { label: '🔥 14-day streak',     x: '3%',  y: '62%', delay: 0.9 },
+    { label: '↗ +32% this month',   x: '48%', y: '10%', delay: 1.2 },
+    // immediately before the bump (~80%)
+    { label: '→ Started using Idea OS', x: '69%', y: '44%', delay: 1.5 },
+    // after the spike — Idea OS features
+    { label: '↑ Productivity score', x: '82%', y: '4%',  delay: 1.8 },
+    { label: '47 ideas captured',    x: '80%', y: '20%', delay: 2.1 },
+    { label: '✦ 3 signals saved',   x: '85%', y: '36%', delay: 2.4 },
   ];
 
   return (
-    <div className="relative w-full h-[220px] overflow-hidden">
-      {/* Top fade to background */}
+    <div className="relative w-full h-[240px] overflow-hidden">
+      {/* Top fade */}
       <div className="absolute inset-x-0 top-0 h-16 z-10 pointer-events-none"
            style={{ background: 'linear-gradient(to bottom, #0A0A0F, transparent)' }} />
-      {/* Bottom fade to background */}
-      <div className="absolute inset-x-0 bottom-0 h-16 z-10 pointer-events-none"
+      {/* Bottom fade */}
+      <div className="absolute inset-x-0 bottom-0 h-20 z-10 pointer-events-none"
            style={{ background: 'linear-gradient(to top, #0A0A0F, transparent)' }} />
 
       <svg viewBox={`0 0 ${w} ${h}`} className="w-full h-full" preserveAspectRatio="none">
         <defs>
           <linearGradient id="lineGrad" x1="0" y1="0" x2="1" y2="0">
-            <stop offset="0%" stopColor="#F7C948" stopOpacity="0.1" />
-            <stop offset="100%" stopColor="#F7C948" stopOpacity="0.9" />
+            <stop offset="0%" stopColor="#F7C948" stopOpacity="0.08" />
+            <stop offset="74%" stopColor="#F7C948" stopOpacity="0.45" />
+            <stop offset="100%" stopColor="#F7C948" stopOpacity="0.95" />
           </linearGradient>
           <linearGradient id="fillGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#F7C948" stopOpacity="0.08" />
+            <stop offset="0%" stopColor="#F7C948" stopOpacity="0.07" />
             <stop offset="100%" stopColor="#F7C948" stopOpacity="0" />
           </linearGradient>
           <filter id="dot-glow" x="-100%" y="-100%" width="300%" height="300%">
@@ -242,25 +235,19 @@ function AnimatedGraph() {
           initial={{ opacity: 0 }} animate={{ opacity: 1 }}
           transition={{ duration: 1.2, delay: 0.3 }} />
 
-        {/* Texture oscillation path (behind main line) */}
-        <motion.path d={texturePath} fill="none" stroke="#F7C948"
-          strokeWidth="1" strokeLinecap="round" strokeOpacity="0.2"
-          initial={{ opacity: 0 }} animate={{ opacity: 1 }}
-          transition={{ duration: 1.5, delay: 0.5 }} />
-
         {/* Main line */}
         <motion.path d={linePath} fill="none" stroke="url(#lineGrad)"
           strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
           initial={{ pathLength: 0 }} animate={{ pathLength: 1 }}
-          transition={{ duration: 1.8, ease: 'easeInOut', delay: 0.2 }} />
+          transition={{ duration: 2.0, ease: 'easeInOut', delay: 0.2 }} />
 
-        {/* Hidden path reference for animateMotion */}
+        {/* Hidden path for animateMotion */}
         <path id="travel-path" d={linePath} fill="none" stroke="none" />
 
         {/* Single traveling glowing dot */}
-        <motion.g initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.0, duration: 0.5 }}>
-          <circle r="3.5" fill="#F7C948" filter="url(#dot-glow)">
-            <animateMotion dur="14s" repeatCount="indefinite" calcMode="linear">
+        <motion.g initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ delay: 2.2, duration: 0.5 }}>
+          <circle r="3" fill="#F7C948" filter="url(#dot-glow)">
+            <animateMotion dur="16s" repeatCount="indefinite" calcMode="linear">
               <mpath href="#travel-path" />
             </animateMotion>
           </circle>
@@ -527,9 +514,9 @@ function HowItWorks() {
 
 /* ─── Origin story ───────────────────────────────────────────────────────── */
 const JOURNEY_PARAS = [
-  'I\'d been building with Claude every single day. Ideas in the morning, code reviews at night. But I had no idea how I was actually using it — what patterns I was falling into, which sessions were most productive, or where my ideas were coming from.',
-  'One day I exported my conversations just to see what was in there. Thousands of messages. Hundreds of code blocks. Ideas scattered across dozens of chats that I\'d completely forgotten about.',
-  'I wanted a mirror — something that could show me my own AI usage like a Spotify Wrapped for how I build. The peaks, the patterns, the productivity score. So I built it. For me first. Then people started asking to use it. This is Idea OS.',
+  { text: 'I build with Claude every day — ideas in the morning, code at night. But I had no clue how I was actually using it or what patterns I was repeating.', rotate: '-3deg' },
+  { text: 'One day I exported my conversations and found thousands of messages, hundreds of code blocks, and ideas I\'d completely forgotten about.', rotate: '3deg' },
+  { text: 'I wanted a Spotify Wrapped for how I build with AI. So I built it. For myself first. Then people started asking. This is Idea OS.', rotate: '-3deg' },
 ];
 
 function TheJourney() {
@@ -552,11 +539,20 @@ function TheJourney() {
           </h2>
         </InView>
 
-        {/* 3 paragraphs side-by-side in wavy format */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {JOURNEY_PARAS.map((text, i) => (
-            <InView key={i} delay={i * 0.1} style={{ marginTop: i % 2 !== 0 ? 40 : 0 }}>
-              <p className="text-[14px] sm:text-[15px] text-white/50 leading-relaxed">{text}</p>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+          {JOURNEY_PARAS.map((para, i) => (
+            <InView key={i} delay={i * 0.1} style={{ marginTop: i % 2 !== 0 ? 32 : 0 }}>
+              <p
+                className="text-[19px] sm:text-[21px] leading-relaxed"
+                style={{
+                  fontFamily: 'var(--font-edu-sa)',
+                  color: '#5B9BD5',
+                  transform: `rotate(${para.rotate})`,
+                  display: 'inline-block',
+                }}
+              >
+                {para.text}
+              </p>
             </InView>
           ))}
         </div>
@@ -608,7 +604,7 @@ function Features() {
               <motion.div key={f.title} variants={fadeUp}
                 className={`rounded-2xl border-0 bg-[#111118] p-7 hover:bg-[#131320] transition-colors group relative overflow-hidden ${
                   idx === FEATURE_ITEMS.length - 1 && FEATURE_ITEMS.length % 3 !== 0
-                    ? 'lg:col-start-2'
+                    ? 'sm:col-span-2 sm:mx-auto sm:max-w-[calc(50%-8px)] sm:w-full lg:col-span-1 lg:max-w-none lg:w-auto lg:col-start-2'
                     : ''
                 }`}
               >
@@ -628,6 +624,71 @@ function Features() {
   );
 }
 
+/* ─── For Businesses ─────────────────────────────────────────────────────── */
+const BIZ_FEATURES = [
+  { icon: '◎', title: 'Team-wide AI intelligence', body: 'See how every person on your team builds with AI — usage patterns, productivity scores, and idea generation across the whole org.' },
+  { icon: '⚡', title: 'Per-member analytics', body: 'Break down conversations, code output, and ideas by team member. Spot your highest-leverage contributors and the patterns that drive them.' },
+  { icon: '◆', title: 'Enterprise export support', body: 'Works with Claude Team & Enterprise exports. Auto-detects the format, groups conversations by member, and surfaces team-level insights.' },
+  { icon: '↗', title: 'Bring your own API key', body: 'No extra cost for AI analysis — connect your organisation\'s existing API key. Your data never flows through our servers unencrypted.' },
+  { icon: '⊕', title: 'Idea intelligence across teams', body: 'Spot duplicate work, recurring strategic signals, and cross-team patterns your team would never see by looking at individual conversations alone.' },
+  { icon: '⛨', title: 'Privacy by design', body: 'Conversation text is processed and never stored. We keep statistical metadata only — so compliance stays clean and your IP stays yours.' },
+];
+
+function ForBusinesses() {
+  return (
+    <section id="for-businesses" className="px-6 py-24">
+      <div className="max-w-5xl mx-auto">
+        <InView className="mb-16">
+          <p className="text-[10px] font-mono text-[#F7C948] uppercase tracking-widest mb-3">For teams & enterprises</p>
+          <div className="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
+            <h2 className="text-[34px] sm:text-[44px] font-bold text-white leading-tight max-w-lg">
+              Turn your team&apos;s AI usage into a competitive edge
+            </h2>
+            <p className="text-[14px] text-white/40 leading-relaxed max-w-sm">
+              Most companies know their teams use AI. Idea OS shows you exactly <em>how</em> — and where the leverage is.
+            </p>
+          </div>
+        </InView>
+
+        <motion.div
+          className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-12"
+          initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-50px' }}
+          variants={stagger}
+        >
+          {BIZ_FEATURES.map((f) => (
+            <motion.div key={f.title} variants={fadeUp}
+              className="rounded-2xl bg-[#111118] border border-[#1E1E2E] p-6 relative overflow-hidden"
+            >
+              <div className="absolute inset-x-0 top-0 h-px"
+                style={{ background: 'linear-gradient(90deg, transparent, rgba(247,201,72,0.12), transparent)' }} />
+              <div className="w-9 h-9 rounded-xl bg-[#F7C948]/8 flex items-center justify-center text-[#F7C948] text-[16px] mb-4">
+                {f.icon}
+              </div>
+              <h3 className="text-[13px] font-semibold text-white mb-2">{f.title}</h3>
+              <p className="text-[12px] text-white/40 leading-relaxed">{f.body}</p>
+            </motion.div>
+          ))}
+        </motion.div>
+
+        <InView className="flex flex-col sm:flex-row items-center gap-4 justify-center">
+          <a
+            href="/login"
+            className="h-11 px-7 rounded-xl bg-[#F7C948] text-[#0A0A0F] text-[13px] font-semibold hover:bg-[#E6B830] transition-colors flex items-center justify-center"
+          >
+            Set up for your team →
+          </a>
+          <a
+            href="#pricing"
+            className="h-11 px-7 rounded-xl border border-[#1E1E2E] text-white/60 text-[13px] font-medium hover:border-[#2A2A3A] hover:text-white/80 transition-colors flex items-center justify-center"
+          >
+            See enterprise pricing
+          </a>
+        </InView>
+      </div>
+    </section>
+  );
+}
+
 /* ─── Screenshot showcase ───────────────────────────────────────────────── */
 const DESKTOP_SHOTS = [
   { file: 'desktop-dashboard.png', label: 'Dashboard' },
@@ -636,15 +697,28 @@ const DESKTOP_SHOTS = [
   { file: 'desktop-profile.png',   label: 'Profile' },
 ];
 
-function ScreenshotCard({ file, label, onClick }: {
-  file: string; label: string; onClick: () => void;
+// Add mobile screenshots here when ready (same keys, different files)
+const MOBILE_SHOTS: { file: string; label: string }[] = [];
+
+function ScreenshotCard({ file, label, onClick, mobile = false }: {
+  file: string; label: string; onClick: () => void; mobile?: boolean;
 }) {
   const [loaded, setLoaded] = useState(false);
+  const imgRef = useRef<HTMLImageElement>(null);
   const src = `/screenshots/${file}`;
+
+  useEffect(() => {
+    if (imgRef.current?.complete && imgRef.current.naturalWidth > 0) {
+      setLoaded(true);
+    }
+  }, []);
+
   return (
     <div
-      className="relative shrink-0 rounded-xl overflow-hidden border border-[#1E1E2E] bg-[#111118] cursor-pointer hover:border-[#2A2A3A] transition-colors group w-[480px] sm:w-[580px]"
-      style={{ aspectRatio: '16/10' }}
+      className={`relative shrink-0 rounded-xl overflow-hidden border border-[#1E1E2E] bg-[#111118] cursor-pointer hover:border-[#2A2A3A] transition-colors group ${
+        mobile ? 'w-[220px] sm:w-[260px]' : 'w-[480px] sm:w-[580px]'
+      }`}
+      style={{ aspectRatio: mobile ? '9/19' : '16/10' }}
       onClick={onClick}
     >
       {!loaded && (
@@ -654,7 +728,7 @@ function ScreenshotCard({ file, label, onClick }: {
         </div>
       )}
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src={src} alt={label}
+      <img ref={imgRef} src={src} alt={label}
         onLoad={() => setLoaded(true)}
         onError={() => setLoaded(false)}
         className={`absolute inset-0 w-full h-full object-cover transition-opacity duration-300 ${loaded ? 'opacity-100' : 'opacity-0'}`}
@@ -677,6 +751,17 @@ function Screenshots() {
   const [lightbox, setLightbox] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const pausedRef = useRef(false);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 767px)');
+    setIsMobile(mq.matches);
+    const fn = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener('change', fn);
+    return () => mq.removeEventListener('change', fn);
+  }, []);
+
+  const shots = useMemo(() => (isMobile && MOBILE_SHOTS.length ? MOBILE_SHOTS : DESKTOP_SHOTS), [isMobile]);
 
   useEffect(() => {
     const el = scrollRef.current;
@@ -753,15 +838,15 @@ function Screenshots() {
         className="flex gap-4 px-6 overflow-x-auto pb-4 select-none"
         style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
-        {DESKTOP_SHOTS.map((s) => (
+        {shots.map((s) => (
           <div key={s.file} className="shrink-0">
-            <ScreenshotCard {...s} onClick={() => setLightbox(s.file)} />
+            <ScreenshotCard {...s} mobile={isMobile} onClick={() => setLightbox(s.file)} />
           </div>
         ))}
         {/* Duplicate for seamless loop */}
-        {DESKTOP_SHOTS.map((s) => (
+        {shots.map((s) => (
           <div key={`dup-${s.file}`} className="shrink-0">
-            <ScreenshotCard {...s} onClick={() => setLightbox(s.file)} />
+            <ScreenshotCard {...s} mobile={isMobile} onClick={() => setLightbox(s.file)} />
           </div>
         ))}
       </div>
@@ -946,40 +1031,41 @@ const PLANS = [
     period: 'forever',
     highlight: false,
     badge: null,
+    note: null,
     features: [
-      'Sample data dashboard (no real data)',
-      'See the full UI and features',
-      'Ideas, analytics, profile views',
+      'Sample data dashboard — no real data',
+      'Full UI preview across all features',
       'No sign-up required',
     ],
     cta: 'Visit demo',
     ctaHref: '/demo',
   },
   {
-    name: 'Trial',
-    price: '$1',
-    period: 'one-time',
+    name: 'Free',
+    price: 'Free',
+    period: 'own API key',
     highlight: false,
-    badge: 'Try it out',
+    badge: 'Privacy-first',
+    note: 'We never receive or store your API key — it lives only in your browser.',
     features: [
-      'Analyse your last ~7 days of convos',
-      'Up to 20 conversations per sync',
-      'Full idea extraction & grading',
-      'Builder profile snapshot',
-      'Valid for 7 days',
+      'Use your own Claude API key',
+      'Unlimited conversations',
+      'Full analysis & idea extraction',
+      'API key stays in your browser only',
     ],
-    cta: 'Start trial',
+    cta: 'Get started',
     ctaHref: '/login',
   },
   {
-    name: 'Full analysis',
-    price: '$5',
+    name: 'One-time',
+    price: '$3',
     period: 'one-time',
     highlight: true,
     badge: 'Best value',
+    note: null,
     features: [
       'Analyse up to 150 conversations',
-      'Full idea intelligence & grouping',
+      'Full idea intelligence & grading',
       'Analytics & productivity score',
       'Signals engine & insights',
       'Export your data anytime',
@@ -993,32 +1079,54 @@ const PLANS = [
     period: '/month',
     highlight: false,
     badge: null,
+    note: null,
     features: [
-      'Everything in Full analysis',
-      '4 syncs per month (weekly cadence)',
-      'Incremental — only new convos',
+      'Everything in One-time',
+      '4 syncs per month (weekly)',
+      'Incremental — new convos only',
       'Unlimited total conversations',
       'Priority support',
     ],
     cta: 'Subscribe',
     ctaHref: '/login',
   },
+  {
+    name: 'Enterprise',
+    price: 'Custom',
+    period: 'contact us',
+    highlight: false,
+    badge: null,
+    note: null,
+    features: [
+      'Team conversation analytics',
+      'Per-member insights & breakdowns',
+      'Bring your own API key',
+      'SSO & admin controls',
+      'Dedicated support',
+    ],
+    cta: 'Contact us',
+    ctaHref: '#contact',
+  },
 ];
 
 function Pricing() {
   return (
     <section id="pricing" className="px-6 py-24 bg-[#0D0D14]">
-      <div className="max-w-5xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         <InView className="text-center mb-14">
           <p className="text-[10px] font-mono text-[#F7C948] uppercase tracking-widest mb-3">Simple pricing</p>
           <h2 className="text-[34px] sm:text-[44px] font-bold text-white mb-3">Try free, pay only if it&apos;s useful</h2>
-          <p className="text-[14px] text-white/35">Start with the demo. Pay $1 to try with your own data. Go deeper from there.</p>
+          <p className="text-[14px] text-white/35">Start with the demo or your own API key. Pay $3 for full access. Scale from there.</p>
         </InView>
 
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
           {PLANS.map((p, i) => (
-            <InView key={p.name} delay={i * 0.08}
+            <InView key={p.name} delay={i * 0.07}
               className={`rounded-2xl border p-6 flex flex-col relative ${
+                i === PLANS.length - 1 && PLANS.length % 3 !== 0
+                  ? 'sm:col-span-2 sm:mx-auto sm:max-w-[calc(50%-8px)] sm:w-full lg:col-span-1 lg:max-w-none lg:w-auto xl:col-span-1'
+                  : ''
+              } ${
                 p.highlight
                   ? 'border-[#F7C948]/40 bg-[#F7C948]/5'
                   : 'border-[#1E1E2E] bg-[#111118]'
@@ -1033,12 +1141,12 @@ function Pricing() {
               <div className="mb-5">
                 <p className="text-[11px] font-mono text-white/40 mb-2">{p.name}</p>
                 <div className="flex items-baseline gap-1">
-                  <span className="text-[34px] font-bold text-white leading-none">{p.price}</span>
-                  <span className="text-[12px] text-white/30">{p.period}</span>
+                  <span className="text-[30px] font-bold text-white leading-none">{p.price}</span>
+                  <span className="text-[11px] text-white/30">{p.period}</span>
                 </div>
               </div>
 
-              <ul className="space-y-2 flex-1 mb-6">
+              <ul className="space-y-2 flex-1 mb-4">
                 {p.features.map((f) => (
                   <li key={f} className="flex gap-2 text-[12px] text-white/55">
                     <span className={`mt-0.5 shrink-0 text-[10px] ${p.highlight ? 'text-[#F7C948]' : 'text-white/25'}`}>✓</span>
@@ -1046,6 +1154,10 @@ function Pricing() {
                   </li>
                 ))}
               </ul>
+
+              {p.note && (
+                <p className="text-[10px] text-white/30 font-mono leading-relaxed mb-4 italic">{p.note}</p>
+              )}
 
               <a
                 href={p.ctaHref}
@@ -1090,20 +1202,34 @@ function FutureOfAI() {
         >
           {BIGGER_CARDS.map((card, i) => (
             <motion.div key={card.title} variants={fadeUp} custom={i}
-              className="relative p-6 rounded-2xl bg-[#111118]"
-              style={{ marginTop: i % 2 !== 0 ? 20 : 0 }}
+              className="relative rounded-2xl aspect-square flex flex-col justify-center p-8"
             >
-              {['top-3 left-3', 'top-3 right-3', 'bottom-3 left-3', 'bottom-3 right-3'].map((pos, j) => (
-                <div key={j} className={`absolute ${pos} w-3 h-3 pointer-events-none`}>
-                  <svg viewBox="0 0 12 12" className="w-full h-full">
-                    {j === 0 && <><line x1="0" y1="6" x2="0" y2="0" stroke="#F7C948" strokeWidth="1.5" strokeOpacity="0.3" /><line x1="0" y1="0" x2="6" y2="0" stroke="#F7C948" strokeWidth="1.5" strokeOpacity="0.3" /></>}
-                    {j === 1 && <><line x1="12" y1="6" x2="12" y2="0" stroke="#F7C948" strokeWidth="1.5" strokeOpacity="0.3" /><line x1="12" y1="0" x2="6" y2="0" stroke="#F7C948" strokeWidth="1.5" strokeOpacity="0.3" /></>}
-                    {j === 2 && <><line x1="0" y1="6" x2="0" y2="12" stroke="#F7C948" strokeWidth="1.5" strokeOpacity="0.3" /><line x1="0" y1="12" x2="6" y2="12" stroke="#F7C948" strokeWidth="1.5" strokeOpacity="0.3" /></>}
-                    {j === 3 && <><line x1="12" y1="6" x2="12" y2="12" stroke="#F7C948" strokeWidth="1.5" strokeOpacity="0.3" /><line x1="12" y1="12" x2="6" y2="12" stroke="#F7C948" strokeWidth="1.5" strokeOpacity="0.3" /></>}
-                  </svg>
-                </div>
-              ))}
-              <h3 className="text-[14px] font-semibold text-white mb-3">{card.title}</h3>
+              {/* Prominent corner brackets — 3× size */}
+              <div className="absolute top-0 left-0 w-9 h-9 pointer-events-none">
+                <svg viewBox="0 0 36 36" className="w-full h-full">
+                  <line x1="0" y1="20" x2="0" y2="0" stroke="#F7C948" strokeWidth="2.5" strokeOpacity="0.7" />
+                  <line x1="0" y1="0" x2="20" y2="0" stroke="#F7C948" strokeWidth="2.5" strokeOpacity="0.7" />
+                </svg>
+              </div>
+              <div className="absolute top-0 right-0 w-9 h-9 pointer-events-none">
+                <svg viewBox="0 0 36 36" className="w-full h-full">
+                  <line x1="36" y1="20" x2="36" y2="0" stroke="#F7C948" strokeWidth="2.5" strokeOpacity="0.7" />
+                  <line x1="36" y1="0" x2="16" y2="0" stroke="#F7C948" strokeWidth="2.5" strokeOpacity="0.7" />
+                </svg>
+              </div>
+              <div className="absolute bottom-0 left-0 w-9 h-9 pointer-events-none">
+                <svg viewBox="0 0 36 36" className="w-full h-full">
+                  <line x1="0" y1="16" x2="0" y2="36" stroke="#F7C948" strokeWidth="2.5" strokeOpacity="0.7" />
+                  <line x1="0" y1="36" x2="20" y2="36" stroke="#F7C948" strokeWidth="2.5" strokeOpacity="0.7" />
+                </svg>
+              </div>
+              <div className="absolute bottom-0 right-0 w-9 h-9 pointer-events-none">
+                <svg viewBox="0 0 36 36" className="w-full h-full">
+                  <line x1="36" y1="16" x2="36" y2="36" stroke="#F7C948" strokeWidth="2.5" strokeOpacity="0.7" />
+                  <line x1="36" y1="36" x2="16" y2="36" stroke="#F7C948" strokeWidth="2.5" strokeOpacity="0.7" />
+                </svg>
+              </div>
+              <h3 className="text-[15px] font-semibold text-white mb-3">{card.title}</h3>
               <p className="text-[12px] text-white/45 leading-relaxed">{card.body}</p>
             </motion.div>
           ))}
@@ -1217,6 +1343,7 @@ export function WaitlistPage() {
       <HowItWorks />
       <TheJourney />
       <Features />
+      <ForBusinesses />
       <Screenshots />
       <Privacy />
       <ExportGuide />
