@@ -16,7 +16,7 @@ function fmt(n: number): string {
 }
 
 function pages(n: number): string {
-  return `~${Math.max(1, Math.round(n / 250))} pp`;
+  return `~${Math.max(1, Math.round(n / 250))} pages`;
 }
 
 function topEntries(items: (string | null)[]): { label: string; count: number }[] {

@@ -17,7 +17,7 @@ function fmtLines(n: number): string {
 }
 
 function pages(n: number): string {
-  return `~${Math.max(1, Math.round(n / 250))} pp`;
+  return `~${Math.max(1, Math.round(n / 250))} pages`;
 }
 
 function pct(part: number, total: number) {
@@ -113,23 +113,48 @@ export function ConversationsContent({ logs, stats, productivityScore, productiv
               </div>
 
               {/* Legend rows */}
-              <div className="space-y-2.5">
-                <div className="flex items-center gap-3">
-                  <div className="w-2.5 h-2.5 rounded-sm bg-[#F7C948] shrink-0" />
-                  <span className="text-[12px] text-white/60 flex-1">You</span>
-                  <span className="text-[20px] font-bold text-[#F7C948] leading-none">{humanPct}%</span>
-                  <div className="text-right">
-                    <p className="text-[13px] font-semibold text-white/70">{fmt(stats.total_human_words)} words</p>
-                    <p className="text-[10px] font-mono text-white/30">{pages(stats.total_human_words)}</p>
+              <div className="space-y-3">
+                {/* You */}
+                <div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-2.5 h-2.5 rounded-sm bg-[#F7C948] shrink-0" />
+                    <span className="text-[12px] text-white/60 flex-1">You</span>
+                    {/* Desktop: all inline */}
+                    <div className="hidden sm:flex items-center gap-3">
+                      <span className="text-[20px] font-bold text-[#F7C948] leading-none">{humanPct}%</span>
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-[11px] font-semibold text-white/70">{fmt(stats.total_human_words)} words</span>
+                        <span className="text-[12px] font-mono text-white/40">{pages(stats.total_human_words)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Mobile: stacked below label */}
+                  <div className="sm:hidden mt-1.5 pl-[22px] space-y-0.5">
+                    <p className="text-[18px] font-bold text-[#F7C948] leading-none">{humanPct}%</p>
+                    <p className="text-[11px] font-semibold text-white/70">{fmt(stats.total_human_words)} words</p>
+                    <p className="text-[12px] font-mono text-white/40">{pages(stats.total_human_words)}</p>
                   </div>
                 </div>
-                <div className="flex items-center gap-3">
-                  <div className="w-2.5 h-2.5 rounded-sm bg-[#7A7AF0] shrink-0" />
-                  <span className="text-[12px] text-white/60 flex-1">Claude</span>
-                  <span className="text-[20px] font-bold text-[#7A7AF0] leading-none">{aiPct}%</span>
-                  <div className="text-right">
-                    <p className="text-[13px] font-semibold text-white/70">{fmt(stats.total_assistant_words)} words</p>
-                    <p className="text-[10px] font-mono text-white/30">{pages(stats.total_assistant_words)}</p>
+
+                {/* Claude */}
+                <div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-2.5 h-2.5 rounded-sm bg-[#7A7AF0] shrink-0" />
+                    <span className="text-[12px] text-white/60 flex-1">Claude</span>
+                    {/* Desktop: all inline */}
+                    <div className="hidden sm:flex items-center gap-3">
+                      <span className="text-[20px] font-bold text-[#7A7AF0] leading-none">{aiPct}%</span>
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-[11px] font-semibold text-white/70">{fmt(stats.total_assistant_words)} words</span>
+                        <span className="text-[12px] font-mono text-white/40">{pages(stats.total_assistant_words)}</span>
+                      </div>
+                    </div>
+                  </div>
+                  {/* Mobile: stacked below label */}
+                  <div className="sm:hidden mt-1.5 pl-[22px] space-y-0.5">
+                    <p className="text-[18px] font-bold text-[#7A7AF0] leading-none">{aiPct}%</p>
+                    <p className="text-[11px] font-semibold text-white/70">{fmt(stats.total_assistant_words)} words</p>
+                    <p className="text-[12px] font-mono text-white/40">{pages(stats.total_assistant_words)}</p>
                   </div>
                 </div>
               </div>
