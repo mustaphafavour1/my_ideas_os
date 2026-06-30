@@ -3,7 +3,7 @@
 import { useMemo } from 'react';
 import { TopBar } from '@/components/layout/TopBar';
 import { StatusChip } from '@/components/ui/StatusChip';
-import { Badge } from '@/components/ui/Badge';
+import { TagBadge } from '@/components/ui/Badge';
 import { DEMO_IDEAS } from '@/lib/demo-data';
 import { Idea } from '@/lib/types';
 import Link from 'next/link';
@@ -55,7 +55,7 @@ export default function DemoInsightsPage() {
                       <p className="text-[13px] font-semibold text-white hover:text-[#F7C948] transition-colors truncate">{pair.a.title}</p>
                       <div className="flex items-center gap-2 mt-1">
                         <StatusChip status={pair.a.status} />
-                        {pair.a.sector && <Badge label={pair.a.sector} />}
+                        {pair.a.sector && <TagBadge label={pair.a.sector} />}
                       </div>
                     </Link>
                     <div className="text-[#F7C948]/40 text-[18px] shrink-0 mt-1">⟷</div>
@@ -63,7 +63,7 @@ export default function DemoInsightsPage() {
                       <p className="text-[13px] font-semibold text-white hover:text-[#F7C948] transition-colors truncate">{pair.b.title}</p>
                       <div className="flex items-center gap-2 mt-1 justify-end">
                         <StatusChip status={pair.b.status} />
-                        {pair.b.sector && <Badge label={pair.b.sector} />}
+                        {pair.b.sector && <TagBadge label={pair.b.sector} />}
                       </div>
                     </Link>
                   </div>
