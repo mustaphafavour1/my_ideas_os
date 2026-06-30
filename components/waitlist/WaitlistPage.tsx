@@ -282,8 +282,8 @@ function Hero() {
       <motion.div style={{ y }} className="relative z-10 w-full px-6">
         <motion.div variants={stagger} initial="hidden" animate="visible">
             <motion.h1 variants={fadeUp} custom={0}
-              className="font-bold text-white leading-[1.05] tracking-tight mb-5 whitespace-nowrap"
-              style={{ fontSize: 'clamp(18px, 5vw, 64px)', transform: 'rotate(-0.3deg)' }}>
+              className="font-bold text-white leading-[1.05] tracking-tight mb-5"
+              style={{ fontSize: 'clamp(32px, 5.5vw, 64px)', transform: 'rotate(-0.3deg)' }}>
               Your AI journey, <CyclingWord />
             </motion.h1>
 
@@ -1030,154 +1030,236 @@ function ExportGuide() {
 /* ─── Pricing ───────────────────────────────────────────────────────────── */
 const PLANS = [
   {
-    name: 'Demo',
-    price: 'Free',
-    period: 'forever',
-    highlight: false,
-    badge: null,
-    note: null,
-    features: [
-      'Sample data dashboard — no real data',
-      'Full UI preview across all features',
-      'No sign-up required',
-    ],
+    name: 'Demo',       price: 'Free', period: 'forever',
+    highlight: false,   badge: null,   note: null,
+    checkout: null,     ctaHref: '/demo',
     cta: 'Visit demo',
-    ctaHref: '/demo',
+    features: ['Sample data dashboard — no real data', 'Full UI preview across all features', 'No sign-up required'],
   },
   {
-    name: 'Free',
-    price: 'Free',
-    period: 'own API key',
-    highlight: false,
-    badge: 'Privacy-first',
+    name: 'Free',       price: 'Free', period: 'own API key',
+    highlight: false,   badge: 'Privacy-first',
     note: 'We never receive or store your API key — it lives only in your browser.',
-    features: [
-      'Use your own Claude API key',
-      'Unlimited conversations',
-      'Full analysis & idea extraction',
-      'API key stays in your browser only',
-    ],
+    checkout: null,     ctaHref: '/login',
     cta: 'Get started',
-    ctaHref: '/login',
+    features: ['Use your own Claude API key', 'Unlimited conversations', 'Full analysis & idea extraction', 'API key stays in your browser only'],
   },
   {
-    name: 'One-time',
-    price: '$3',
-    period: 'one-time',
-    highlight: true,
-    badge: 'Best value',
-    note: null,
-    features: [
-      'Analyse up to 150 conversations',
-      'Full idea intelligence & grading',
-      'Analytics & productivity score',
-      'Signals engine & insights',
-      'Export your data anytime',
-    ],
+    name: 'One-time',   price: '$3',   period: 'one-time',
+    highlight: true,    badge: 'Best value', note: null,
+    checkout: 'one-time', ctaHref: null,
     cta: 'Get full access',
-    ctaHref: '/login',
+    features: ['Analyse up to 150 conversations', 'Full idea intelligence & grading', 'Analytics & productivity score', 'Signals engine & insights', 'Export your data anytime'],
   },
   {
-    name: 'Monthly',
-    price: '$10',
-    period: '/month',
-    highlight: false,
-    badge: null,
-    note: null,
-    features: [
-      'Everything in One-time',
-      '4 syncs per month (weekly)',
-      'Incremental — new convos only',
-      'Unlimited total conversations',
-      'Priority support',
-    ],
+    name: 'Monthly',    price: '$10',  period: '/month',
+    highlight: false,   badge: null,   note: null,
+    checkout: 'monthly', ctaHref: null,
     cta: 'Subscribe',
-    ctaHref: '/login',
+    features: ['Everything in One-time', '4 syncs per month (weekly)', 'Incremental — new convos only', 'Unlimited total conversations', 'Priority support'],
   },
   {
-    name: 'Enterprise',
-    price: 'Custom',
-    period: 'contact us',
-    highlight: false,
-    badge: null,
-    note: null,
-    features: [
-      'Team conversation analytics',
-      'Per-member insights & breakdowns',
-      'Bring your own API key',
-      'SSO & admin controls',
-      'Dedicated support',
-    ],
+    name: 'Enterprise', price: 'Custom', period: 'contact us',
+    highlight: false,   badge: null,   note: null,
+    checkout: null,     ctaHref: '#contact',
     cta: 'Contact us',
-    ctaHref: '#contact',
+    features: ['Team conversation analytics', 'Per-member insights & breakdowns', 'Bring your own API key', 'SSO & admin controls', 'Dedicated support'],
   },
 ];
 
-function Pricing() {
+function CheckoutModal({ plan, onClose }: { plan: { name: string; price: string; checkout: string }; onClose: () => void }) {
+  const [gateway, setGateway] = useState<'paystack' | 'lemonsqueezy'>('paystack');
+  const [email, setEmail] = useState('');
+  const [stage, setStage] = useState<'idle' | 'loading' | 'sent' | 'error'>('idle');
+  const [errorMsg, setErrorMsg] = useState('');
+  const [isAuthed, setIsAuthed] = useState(false);
+
+  useEffect(() => {
+    import('@/lib/supabase').then(({ getSupabase }) => {
+      getSupabase().auth.getSession().then(({ data }) => {
+        if (data.session) setIsAuthed(true);
+      });
+    });
+  }, []);
+
+  const handleSubmit = async () => {
+    setStage('loading');
+    setErrorMsg('');
+
+    if (isAuthed) {
+      // Signed in — call payment API directly and redirect
+      try {
+        const res = await fetch(`/api/payment/${gateway}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ plan: plan.checkout }),
+        });
+        const data = await res.json();
+        const url = data.authorization_url || data.url;
+        if (url) { window.location.href = url; return; }
+        setErrorMsg(data.error || 'Could not start checkout.');
+        setStage('error');
+      } catch {
+        setErrorMsg('Network error. Please try again.');
+        setStage('error');
+      }
+      return;
+    }
+
+    // Not signed in — send magic link with checkout redirect baked in
+    if (!email.trim()) { setStage('idle'); return; }
+    try {
+      const { getSupabase } = await import('@/lib/supabase');
+      const next = `/app/checkout?plan=${plan.checkout}&gateway=${gateway}`;
+      const origin = window.location.origin;
+      const { error } = await getSupabase().auth.signInWithOtp({
+        email: email.trim(),
+        options: { emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}` },
+      });
+      if (error) { setErrorMsg(error.message); setStage('error'); return; }
+      setStage('sent');
+    } catch {
+      setErrorMsg('Failed to send magic link. Try again.');
+      setStage('error');
+    }
+  };
+
   return (
-    <section id="pricing" className="px-6 py-24 bg-[#0D0D14]">
-      <div className="max-w-6xl mx-auto">
-        <InView className="text-center mb-14">
-          <p className="text-[10px] font-mono text-[#F7C948] uppercase tracking-widest mb-3">Simple pricing</p>
-          <h2 className="text-[34px] sm:text-[44px] font-bold text-white mb-3">Try free, pay only if it&apos;s useful</h2>
-          <p className="text-[14px] text-white/35">Start with the demo or your own API key. Pay $3 for full access. Scale from there.</p>
-        </InView>
-
-        <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
-          {PLANS.map((p, i) => (
-            <InView key={p.name} delay={i * 0.07}
-              className={`rounded-2xl border p-6 flex flex-col relative ${
-                i === PLANS.length - 1 && PLANS.length % 3 !== 0
-                  ? 'sm:col-span-2 sm:mx-auto sm:max-w-[calc(50%-8px)] sm:w-full lg:col-span-1 lg:max-w-none lg:w-auto xl:col-span-1'
-                  : ''
-              } ${
-                p.highlight
-                  ? 'border-[#F7C948]/40 bg-[#F7C948]/5'
-                  : 'border-[#1E1E2E] bg-[#111118]'
-              }`}>
-              {p.badge && (
-                <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-mono whitespace-nowrap ${
-                  p.highlight ? 'bg-[#F7C948] text-[#0A0A0F]' : 'bg-[#1E1E2E] text-white/50'
-                }`}>
-                  {p.badge}
-                </div>
-              )}
-              <div className="mb-5">
-                <p className="text-[11px] font-mono text-white/40 mb-2">{p.name}</p>
-                <div className="flex items-baseline gap-1">
-                  <span className="text-[30px] font-bold text-white leading-none">{p.price}</span>
-                  <span className="text-[11px] text-white/30">{p.period}</span>
-                </div>
-              </div>
-
-              <ul className="space-y-2 flex-1 mb-4">
-                {p.features.map((f) => (
-                  <li key={f} className="flex gap-2 text-[12px] text-white/55">
-                    <span className={`mt-0.5 shrink-0 text-[10px] ${p.highlight ? 'text-[#F7C948]' : 'text-white/25'}`}>✓</span>
-                    <span>{f}</span>
-                  </li>
-                ))}
-              </ul>
-
-              {p.note && (
-                <p className="text-[10px] text-white/30 font-mono leading-relaxed mb-4 italic">{p.note}</p>
-              )}
-
-              <a
-                href={p.ctaHref}
-                className={`w-full h-10 rounded-xl text-[12px] font-semibold transition-colors flex items-center justify-center ${
-                  p.highlight
-                    ? 'bg-[#F7C948] text-[#0A0A0F] hover:bg-[#E6B830]'
-                    : 'border border-[#1E1E2E] text-white/60 hover:border-[#2A2A3A] hover:text-white/80'
-                }`}
-              >
-                {p.cta}
-              </a>
-            </InView>
-          ))}
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/60 backdrop-blur-sm" onClick={onClose}>
+      <div className="w-full max-w-sm bg-[#111118] border border-[#1E1E2E] rounded-2xl p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-start justify-between mb-5">
+          <div>
+            <p className="text-[11px] font-mono text-[#F7C948] uppercase tracking-widest mb-1">{plan.name} plan</p>
+            <p className="text-[26px] font-bold text-white leading-none">{plan.price}</p>
+          </div>
+          <button onClick={onClose} className="text-white/30 hover:text-white/70 transition-colors mt-1">
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
+          </button>
         </div>
+
+        {stage === 'sent' ? (
+          <div className="text-center py-4">
+            <p className="text-[#4ADE80] font-medium mb-2">Check your email!</p>
+            <p className="text-[13px] text-white/50">We sent a magic link. After signing in, you'll be taken straight to payment.</p>
+          </div>
+        ) : (
+          <>
+            {/* Gateway tabs */}
+            <div className="flex gap-2 mb-4">
+              {(['paystack', 'lemonsqueezy'] as const).map((g) => (
+                <button key={g} onClick={() => setGateway(g)}
+                  className={`flex-1 py-2 rounded-lg text-[12px] font-medium transition-colors border ${
+                    gateway === g ? 'bg-[#F7C948]/10 border-[#F7C948]/40 text-[#F7C948]' : 'border-[#1E1E2E] text-white/40 hover:text-white/60'
+                  }`}>
+                  {g === 'paystack' ? 'Paystack' : 'Lemon Squeezy'}
+                </button>
+              ))}
+            </div>
+            <p className="text-[10px] text-white/25 font-mono mb-4">
+              {gateway === 'paystack' ? 'Supports cards, bank transfer, USSD — great for Nigeria & Africa' : 'Supports cards worldwide, PayPal'}
+            </p>
+
+            {!isAuthed && (
+              <div className="mb-4">
+                <label className="block text-[11px] font-mono text-white/40 uppercase tracking-widest mb-1.5">Your email</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit(); }}
+                  placeholder="you@example.com"
+                  className="w-full bg-[#0A0A0F] border border-[#2A2A3A] rounded-lg px-3 py-2.5 text-sm text-[#F0F0F5] placeholder-[#3A3A55] focus:outline-none focus:border-[#F7C948]/40 transition-colors"
+                  autoFocus
+                />
+              </div>
+            )}
+
+            {errorMsg && <p className="text-[11px] text-[#F87171] mb-3">{errorMsg}</p>}
+
+            <button
+              onClick={handleSubmit}
+              disabled={stage === 'loading' || (!isAuthed && !email.trim())}
+              className="w-full h-11 rounded-xl bg-[#F7C948] text-[#0A0A0F] text-[13px] font-bold hover:bg-[#E6B830] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+            >
+              {stage === 'loading' ? (
+                <><div className="w-4 h-4 border-2 border-[#0A0A0F]/30 border-t-[#0A0A0F] rounded-full animate-spin" /> Processing…</>
+              ) : isAuthed ? (
+                `Pay ${plan.price}`
+              ) : (
+                'Send magic link & continue to payment'
+              )}
+            </button>
+            {!isAuthed && <p className="text-[10px] text-white/25 text-center mt-3">You'll get a sign-in link first, then straight to checkout.</p>}
+          </>
+        )}
       </div>
-    </section>
+    </div>
+  );
+}
+
+function Pricing() {
+  const [checkoutPlan, setCheckoutPlan] = useState<{ name: string; price: string; checkout: string } | null>(null);
+
+  return (
+    <>
+      <section id="pricing" className="px-6 py-24 bg-[#0D0D14]">
+        <div className="max-w-6xl mx-auto">
+          <InView className="text-center mb-14">
+            <p className="text-[10px] font-mono text-[#F7C948] uppercase tracking-widest mb-3">Simple pricing</p>
+            <h2 className="text-[34px] sm:text-[44px] font-bold text-white mb-3">Try free, pay only if it&apos;s useful</h2>
+            <p className="text-[14px] text-white/35">Start with the demo or your own API key. Pay $3 for full access. Scale from there.</p>
+          </InView>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4">
+            {PLANS.map((p, i) => (
+              <InView key={p.name} delay={i * 0.07}
+                className={`rounded-2xl border p-6 flex flex-col relative ${
+                  i === PLANS.length - 1 && PLANS.length % 3 !== 0
+                    ? 'sm:col-span-2 sm:mx-auto sm:max-w-[calc(50%-8px)] sm:w-full lg:col-span-1 lg:max-w-none lg:w-auto xl:col-span-1'
+                    : ''
+                } ${p.highlight ? 'border-[#F7C948]/40 bg-[#F7C948]/5' : 'border-[#1E1E2E] bg-[#111118]'}`}>
+                {p.badge && (
+                  <div className={`absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-mono whitespace-nowrap ${
+                    p.highlight ? 'bg-[#F7C948] text-[#0A0A0F]' : 'bg-[#1E1E2E] text-white/50'
+                  }`}>{p.badge}</div>
+                )}
+                <div className="mb-5">
+                  <p className="text-[11px] font-mono text-white/40 mb-2">{p.name}</p>
+                  <div className="flex items-baseline gap-1">
+                    <span className="text-[30px] font-bold text-white leading-none">{p.price}</span>
+                    <span className="text-[11px] text-white/30">{p.period}</span>
+                  </div>
+                </div>
+                <ul className="space-y-2 flex-1 mb-4">
+                  {p.features.map((f) => (
+                    <li key={f} className="flex gap-2 text-[12px] text-white/55">
+                      <span className={`mt-0.5 shrink-0 text-[10px] ${p.highlight ? 'text-[#F7C948]' : 'text-white/25'}`}>✓</span>
+                      <span>{f}</span>
+                    </li>
+                  ))}
+                </ul>
+                {p.note && <p className="text-[10px] text-white/30 font-mono leading-relaxed mb-4 italic">{p.note}</p>}
+
+                {p.checkout ? (
+                  <button
+                    onClick={() => setCheckoutPlan({ name: p.name, price: p.price, checkout: p.checkout! })}
+                    className={`w-full h-10 rounded-xl text-[12px] font-semibold transition-colors flex items-center justify-center cursor-pointer ${
+                      p.highlight ? 'bg-[#F7C948] text-[#0A0A0F] hover:bg-[#E6B830]' : 'border border-[#1E1E2E] text-white/60 hover:border-[#2A2A3A] hover:text-white/80'
+                    }`}>{p.cta}</button>
+                ) : (
+                  <a href={p.ctaHref ?? '#'}
+                    className={`w-full h-10 rounded-xl text-[12px] font-semibold transition-colors flex items-center justify-center ${
+                      p.highlight ? 'bg-[#F7C948] text-[#0A0A0F] hover:bg-[#E6B830]' : 'border border-[#1E1E2E] text-white/60 hover:border-[#2A2A3A] hover:text-white/80'
+                    }`}>{p.cta}</a>
+                )}
+              </InView>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {checkoutPlan && <CheckoutModal plan={checkoutPlan} onClose={() => setCheckoutPlan(null)} />}
+    </>
   );
 }
 
