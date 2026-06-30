@@ -1,13 +1,21 @@
 'use client';
 
-import { useState, useRef, useCallback } from 'react';
+import { useState, useRef, useCallback, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { toast } from 'sonner';
 import { SyncResult } from '@/lib/types';
 
+const LS_KEY = 'ideaos_api_key';
+
+function maskKey(k: string) {
+  if (k.length < 12) return '••••••••';
+  return k.slice(0, 7) + '••••' + k.slice(-4);
+}
+
 interface SyncUploaderProps {
   onComplete?: (result: SyncResult) => void;
+  userPlan?: string | null;
 }
 
 type FileStatus = 'pending' | 'processing' | 'done' | 'error';
@@ -105,11 +113,41 @@ function parseConversationsClient(content: string): ClientConversation[] {
 
 const BATCH_SIZE = 8;
 
-export function SyncUploader({ onComplete }: SyncUploaderProps) {
+const PAID_PLANS = new Set(['one-time', 'monthly', 'enterprise']);
+
+export function SyncUploader({ onComplete, userPlan }: SyncUploaderProps) {
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [dragging, setDragging] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // API key state (stored only in localStorage)
+  const [storedKey, setStoredKey] = useState<string>('');
+  const [editingKey, setEditingKey] = useState(false);
+  const [keyDraft, setKeyDraft] = useState('');
+
+  useEffect(() => {
+    const k = localStorage.getItem(LS_KEY) || '';
+    setStoredKey(k);
+    if (!k && !PAID_PLANS.has(userPlan ?? '')) setEditingKey(true);
+  }, [userPlan]);
+
+  const saveKey = () => {
+    const trimmed = keyDraft.trim();
+    localStorage.setItem(LS_KEY, trimmed);
+    setStoredKey(trimmed);
+    setEditingKey(false);
+    setKeyDraft('');
+  };
+
+  const removeKey = () => {
+    localStorage.removeItem(LS_KEY);
+    setStoredKey('');
+    setEditingKey(true);
+    setKeyDraft('');
+  };
+
+  const isPaid = PAID_PLANS.has(userPlan ?? '');
 
   const readFiles = useCallback((rawFiles: File[]) => {
     const jsonFiles = rawFiles.filter((f) => f.name.endsWith('.json'));
@@ -160,6 +198,14 @@ export function SyncUploader({ onComplete }: SyncUploaderProps) {
     const pending = files.filter((f) => f.status === 'pending' && f.content);
     if (pending.length === 0) return;
 
+    if (!isPaid && !storedKey) {
+      setEditingKey(true);
+      toast.error('Enter your Claude API key first, or upgrade to a paid plan.');
+      return;
+    }
+
+    const apiKeyHeader = !isPaid ? storedKey : undefined;
+
     setSyncing(true);
     let totalAdded = 0, totalUpdated = 0, totalSkipped = 0, totalAlreadySynced = 0;
 
@@ -175,7 +221,7 @@ export function SyncUploader({ onComplete }: SyncUploaderProps) {
           const res = await fetch('/api/sync', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ conversationJson: file.content }),
+            body: JSON.stringify({ conversationJson: file.content, ...(apiKeyHeader ? { apiKey: apiKeyHeader } : {}) }),
           });
           const result = await res.json();
           if (!res.ok) throw new Error(result.error || 'Sync failed');
@@ -229,7 +275,7 @@ export function SyncUploader({ onComplete }: SyncUploaderProps) {
           const res = await fetch('/api/sync', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ conversationBatch: batches[i] }),
+            body: JSON.stringify({ conversationBatch: batches[i], ...(apiKeyHeader ? { apiKey: apiKeyHeader } : {}) }),
           });
 
           const result = await res.json();
@@ -305,6 +351,62 @@ export function SyncUploader({ onComplete }: SyncUploaderProps) {
 
   return (
     <div className="space-y-4">
+      {/* API key panel — shown for free / unpaid users */}
+      {!isPaid && (
+        <div className="rounded-xl border border-[#1E1E2E] bg-[#0A0A0F] p-4 space-y-3">
+          <div className="flex items-start justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold text-[#F0F0F5]">Your Claude API key</p>
+              <p className="text-[11px] text-[#4A4A60] mt-0.5">
+                Used only in your browser — never sent to our servers. Your data stays private.
+              </p>
+            </div>
+            {storedKey && !editingKey && (
+              <button
+                onClick={() => { setKeyDraft(storedKey); setEditingKey(true); }}
+                className="shrink-0 text-[10px] text-[#4A4A60] hover:text-[#8888A0] transition-colors"
+              >
+                change
+              </button>
+            )}
+          </div>
+
+          {editingKey ? (
+            <div className="flex gap-2">
+              <input
+                type="password"
+                placeholder="sk-ant-api03-..."
+                value={keyDraft}
+                onChange={(e) => setKeyDraft(e.target.value)}
+                onKeyDown={(e) => { if (e.key === 'Enter' && keyDraft.trim()) saveKey(); }}
+                className="flex-1 bg-[#111118] border border-[#2A2A3A] rounded-lg px-3 py-2 text-xs text-[#F0F0F5] placeholder-[#3A3A55] focus:outline-none focus:border-[#F7C948]/40"
+                autoFocus
+              />
+              <Button size="sm" onClick={saveKey} disabled={!keyDraft.trim()}>Save</Button>
+              {storedKey && (
+                <Button size="sm" variant="ghost" onClick={() => { setEditingKey(false); setKeyDraft(''); }}>Cancel</Button>
+              )}
+            </div>
+          ) : storedKey ? (
+            <div className="flex items-center gap-2">
+              <span className="font-mono text-xs text-[#8888A0] bg-[#111118] border border-[#1E1E2E] rounded px-2 py-1">
+                {maskKey(storedKey)}
+              </span>
+              <span className="text-[10px] text-[#4ADE80]">✓ key saved locally</span>
+              <button onClick={removeKey} className="ml-auto text-[10px] text-[#4A4A60] hover:text-[#F87171] transition-colors">remove</button>
+            </div>
+          ) : null}
+
+          <p className="text-[10px] text-[#3A3A55]">
+            Don&apos;t have a key?{' '}
+            <a href="/pricing" className="text-[#F7C948]/70 hover:text-[#F7C948] underline transition-colors">
+              Upgrade to a paid plan
+            </a>{' '}
+            and we&apos;ll handle it for you.
+          </p>
+        </div>
+      )}
+
       {/* Drop zone */}
       <div
         onDragOver={(e) => { e.preventDefault(); setDragging(true); }}

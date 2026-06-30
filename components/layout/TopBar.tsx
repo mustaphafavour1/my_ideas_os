@@ -15,9 +15,10 @@ interface TopBarProps {
   title: string;
   subtitle?: React.ReactNode;
   lastSynced?: string | null;
+  userPlan?: string | null;
 }
 
-export function TopBar({ title, subtitle, lastSynced }: TopBarProps) {
+export function TopBar({ title, subtitle, lastSynced, userPlan }: TopBarProps) {
   const [showSync, setShowSync] = useState(false);
 
   const formatLastSynced = (ts: string | null | undefined) => {
@@ -74,7 +75,7 @@ export function TopBar({ title, subtitle, lastSynced }: TopBarProps) {
         title="Sync Ideas from Claude"
         width="lg"
       >
-        <SyncUploader onComplete={() => setShowSync(false)} />
+        <SyncUploader onComplete={() => setShowSync(false)} userPlan={userPlan} />
       </Modal>
     </>
   );

@@ -1,8 +1,8 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { Idea } from './types';
 
-function getClient() {
-  return new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+function getClient(apiKey?: string | null) {
+  return new Anthropic({ apiKey: apiKey || process.env.ANTHROPIC_API_KEY });
 }
 
 const EXTRACTION_SYSTEM_PROMPT = `You are an idea extraction engine. You will receive raw Claude conversation transcripts. Your job is to identify any distinct ideas, projects, explorations, or concepts the user was working on or thinking through.
@@ -41,9 +41,10 @@ export interface ExtractionResult {
 }
 
 export async function extractIdeasFromConversations(
-  conversationTexts: string[]
+  conversationTexts: string[],
+  apiKey?: string | null
 ): Promise<ExtractionResult> {
-  const client = getClient();
+  const client = getClient(apiKey);
   const truncated = conversationTexts.map((t) =>
     t.length > MAX_CONV_CHARS ? t.slice(0, MAX_CONV_CHARS) + '\n[…truncated]' : t
   );

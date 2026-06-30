@@ -8,6 +8,8 @@ import { getUserFromRequest } from '@/lib/auth';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 300;
 
+const PAID_PLANS = new Set(['one-time', 'monthly', 'enterprise']);
+
 export async function POST(req: NextRequest) {
   const user = await getUserFromRequest(req);
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -18,6 +20,48 @@ export async function POST(req: NextRequest) {
 
     const rawJson: string | null = body.conversationJson || null;
     const conversationBatch: ParsedConversation[] | null = body.conversationBatch || null;
+    const userApiKey: string | null = body.apiKey || null;
+
+    // --- Access check ---
+    // Try to fetch the user's plan. Table may not exist yet (first deploy), so catch errors.
+    let userPlan: string | null = null;
+    try {
+      const { data: userRow } = await supabase
+        .from('users')
+        .select('plan, analysis_credits, subscription_end')
+        .eq('id', user.id)
+        .single();
+      userPlan = userRow?.plan ?? null;
+
+      if (PAID_PLANS.has(userPlan ?? '')) {
+        // Validate one-time credits / subscription expiry
+        if (userPlan === 'one-time' && (userRow?.analysis_credits ?? 0) < 1) {
+          return NextResponse.json(
+            { error: 'payment_required', message: 'Your one-time analysis credit has been used. Upgrade for more.' },
+            { status: 402 }
+          );
+        }
+        if (userPlan === 'monthly' && userRow?.subscription_end && new Date(userRow.subscription_end) < new Date()) {
+          return NextResponse.json(
+            { error: 'payment_required', message: 'Your monthly subscription has expired. Renew to continue.' },
+            { status: 402 }
+          );
+        }
+      } else if (!userApiKey) {
+        return NextResponse.json(
+          { error: 'payment_required', message: 'Enter your Claude API key or upgrade to a paid plan to run analysis.' },
+          { status: 402 }
+        );
+      }
+    } catch {
+      // users table may not exist yet — allow if apiKey provided
+      if (!userApiKey) {
+        return NextResponse.json(
+          { error: 'payment_required', message: 'Enter your Claude API key or upgrade to a paid plan to run analysis.' },
+          { status: 402 }
+        );
+      }
+    }
 
     if (!rawJson && !conversationBatch) {
       return NextResponse.json(
@@ -77,7 +121,7 @@ export async function POST(req: NextRequest) {
       const texts = batch.map(
         (c) => `=== Conversation: ${c.name} (${c.created_at}) ===\n${c.fullText}`
       );
-      const { ideas: extracted, usage } = await extractIdeasFromConversations(texts);
+      const { ideas: extracted, usage } = await extractIdeasFromConversations(texts, userApiKey);
       allExtracted = allExtracted.concat(extracted);
       totalInputTokens += usage.input_tokens;
       totalOutputTokens += usage.output_tokens;
@@ -244,8 +288,15 @@ export async function POST(req: NextRequest) {
       ideas_found: allExtracted.length,
       ideas_added: added,
       ideas_updated: updated,
-      notes: `${newConversations.length} new conversation(s), ${alreadySyncedCount} skipped (already synced). ${batches.length} batch(es) sent to Claude. Tokens: ${totalInputTokens} in / ${totalOutputTokens} out. Est. cost: $${estimatedCostUsd.toFixed(4)}.`,
+      notes: `${newConversations.length} new conversation(s), ${alreadySyncedCount} skipped (already synced). ${batches.length} batch(es) sent to Claude. Tokens: ${totalInputTokens} in / ${totalOutputTokens} out. Est. cost: $${estimatedCostUsd.toFixed(4)}. Key: ${userApiKey ? 'user-owned' : 'server'}.`,
     });
+
+    // Decrement one-time analysis credit
+    if (userPlan === 'one-time') {
+      try {
+        await supabase.rpc('decrement_analysis_credit', { uid: user.id });
+      } catch { /* non-fatal */ }
+    }
 
     return NextResponse.json({
       added,
