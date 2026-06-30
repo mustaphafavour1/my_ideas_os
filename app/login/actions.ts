@@ -19,7 +19,11 @@ export async function sendMagicLink(formData: FormData) {
   });
 
   if (error) {
-    redirect(`/login?error=${encodeURIComponent(error.message)}`);
+    const message =
+      (typeof error.message === 'string' && error.message.trim() && error.message !== '{}')
+        ? error.message
+        : 'Could not send link. Please try again or check your email address.';
+    redirect(`/login?error=${encodeURIComponent(message)}`);
   }
 
   redirect('/login?sent=1');
