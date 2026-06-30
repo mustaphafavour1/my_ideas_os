@@ -184,9 +184,10 @@ function getPaginationPages(current: number, total: number): (number | '...')[] 
 
 interface IdeaTableProps {
   ideas: Idea[];
+  baseUrl?: string;
 }
 
-export function IdeaTable({ ideas: initialIdeas }: IdeaTableProps) {
+export function IdeaTable({ ideas: initialIdeas, baseUrl = '/ideas' }: IdeaTableProps) {
   const router = useRouter();
   const [ideas, setIdeas] = useState<Idea[]>(initialIdeas);
   const [search, setSearch] = useState('');
@@ -358,7 +359,7 @@ export function IdeaTable({ ideas: initialIdeas }: IdeaTableProps) {
                 <tr
                   key={idea.id}
                   className="border-b border-[#1E1E2E]/50 hover:bg-[#0F0F18] cursor-pointer transition-colors"
-                  onClick={() => router.push(`/ideas/${idea.id}`)}
+                  onClick={() => router.push(`${baseUrl}/${idea.id}`)}
                 >
                   <td className="px-5 py-4 text-[10px] font-mono text-[#3A3A55] tabular-nums">{(page - 1) * perPage + idx + 1}</td>
                   <td className="px-5 py-4">

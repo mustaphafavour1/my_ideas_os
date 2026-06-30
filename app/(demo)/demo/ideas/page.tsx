@@ -9,7 +9,7 @@ export default function DemoIdeasPage() {
   return (
     <div className="flex flex-col flex-1">
       <TopBar title="Ideas" subtitle={`${DEMO_IDEAS.length} ideas · demo data`} />
-      <IdeaTable ideas={DEMO_IDEAS as unknown as Idea[]} />
+      <IdeaTable ideas={DEMO_IDEAS as unknown as Idea[]} baseUrl="/demo/ideas" />
     </div>
   );
 }
