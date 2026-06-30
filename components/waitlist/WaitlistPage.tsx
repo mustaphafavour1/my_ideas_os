@@ -697,8 +697,12 @@ const DESKTOP_SHOTS = [
   { file: 'desktop-profile.png',   label: 'Profile' },
 ];
 
-// Add mobile screenshots here when ready (same keys, different files)
-const MOBILE_SHOTS: { file: string; label: string }[] = [];
+const MOBILE_SHOTS = [
+  { file: 'mobile-dashboard.png',  label: 'Dashboard' },
+  { file: 'mobile-ideas.png',      label: 'Ideas' },
+  { file: 'mobile-analytics.png',  label: 'Analytics' },
+  { file: 'mobile-profile.png',    label: 'Profile' },
+];
 
 function ScreenshotCard({ file, label, onClick, mobile = false }: {
   file: string; label: string; onClick: () => void; mobile?: boolean;
