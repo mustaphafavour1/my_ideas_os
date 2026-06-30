@@ -1,9 +1,9 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 
-export default function CheckoutPage() {
+function CheckoutInner() {
   const params = useSearchParams();
   const plan    = params.get('plan') || '';
   const gateway = params.get('gateway') || 'paystack';
@@ -20,11 +20,8 @@ export default function CheckoutPage() {
       .then((r) => r.json())
       .then((data) => {
         const url = data.authorization_url || data.url;
-        if (url) {
-          window.location.href = url;
-        } else {
-          setError(data.error || 'Could not create checkout. Please try again.');
-        }
+        if (url) { window.location.href = url; return; }
+        setError(data.error || 'Could not create checkout. Please try again.');
       })
       .catch(() => setError('Network error. Please try again.'));
   }, [plan, gateway]);
@@ -48,5 +45,17 @@ export default function CheckoutPage() {
         <p className="text-[#4A4A60] text-xs mt-1">You'll be redirected to the payment page shortly.</p>
       </div>
     </div>
+  );
+}
+
+export default function CheckoutPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#0A0A0F] flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-[#F7C948]/30 border-t-[#F7C948] rounded-full animate-spin" />
+      </div>
+    }>
+      <CheckoutInner />
+    </Suspense>
   );
 }
