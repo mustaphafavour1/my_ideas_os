@@ -186,9 +186,12 @@ function AnimatedGraph() {
   const fillPath = `${linePath} L${w},${h} L0,${h} Z`;
 
   const chips = [
-    { label: '↑ Productivity score', x: '60%', y: '8%', delay: 0.6 },
+    { label: '↑ Productivity score', x: '60%', y: '8%',  delay: 0.6 },
     { label: '47 ideas captured',    x: '18%', y: '48%', delay: 0.9 },
     { label: '🔁 Recurring pattern', x: '70%', y: '62%', delay: 1.2 },
+    { label: '🔥 14-day streak',      x: '2%',  y: '72%', delay: 1.5 },
+    { label: '✦ 3 signals saved',    x: '42%', y: '26%', delay: 1.8 },
+    { label: '↗ +32% this month',    x: '76%', y: '18%', delay: 2.1 },
   ];
 
   return (
@@ -242,12 +245,11 @@ function Hero() {
              style={{ background: 'radial-gradient(ellipse, #F7C948, transparent 70%)' }} />
       </div>
 
-      <motion.div style={{ y }} className="relative z-10 w-full px-8 lg:px-20">
-        <div className="max-w-4xl">
-          <motion.div variants={stagger} initial="hidden" animate="visible">
+      <motion.div style={{ y }} className="relative z-10 max-w-6xl mx-auto px-6">
+        <motion.div variants={stagger} initial="hidden" animate="visible">
             <motion.h1 variants={fadeUp} custom={0}
-              className="text-[42px] sm:text-[56px] lg:text-[68px] font-bold text-white leading-[1.05] tracking-tight mb-5"
-              style={{ transform: 'rotate(-0.3deg)' }}>
+              className="font-bold text-white leading-[1.05] tracking-tight mb-5 whitespace-nowrap"
+              style={{ fontSize: 'clamp(18px, 5vw, 64px)', transform: 'rotate(-0.3deg)' }}>
               Your AI journey, <CyclingWord />
             </motion.h1>
 
@@ -275,7 +277,6 @@ function Hero() {
               Free to try · No credit card · Works with Claude, ChatGPT, Gemini &amp; more
             </motion.p>
           </motion.div>
-        </div>
       </motion.div>
 
       {/* Full-width graph */}
@@ -640,7 +641,7 @@ function Screenshots() {
 
     let animId: number;
     let lastTime = 0;
-    const speed = 0.6; // px per ms at 60fps
+    const speed = 0.08; // px per ms — very gentle drift
 
     function step(ts: number) {
       if (!pausedRef.current && el) {
