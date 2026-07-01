@@ -84,7 +84,6 @@ export function Sidebar({ prefix = '' }: { prefix?: string }) {
             </div>
             <div>
               <span className="text-[#F0F0F5] font-semibold text-sm tracking-tight">Idea OS</span>
-              <p className="text-[#4A4A60] text-[10px] font-mono">favour</p>
             </div>
           </div>
         </div>
