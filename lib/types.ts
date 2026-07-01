@@ -100,6 +100,7 @@ export interface ConversationLog {
   title: string | null;
   created_at: string;
   processed_at: string;
+  source: string;
   human_messages: number;
   assistant_messages: number;
   total_words: number;
@@ -117,6 +118,8 @@ export interface UserStats {
   total_assistant_words: number;
   total_code_blocks: number;
   total_code_lines: number;
+  // Per-agent breakdown of total_assistant_words, e.g. { claude: 12000, chatgpt: 4500 }
+  assistant_words_by_source?: Record<string, number> | null;
   first_conversation_at: string | null;
   last_conversation_at: string | null;
   updated_at: string;

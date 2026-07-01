@@ -34,6 +34,14 @@ Return only valid JSON array, no markdown, no explanation.`;
 // Cap each conversation at ~1 250 tokens to keep costs low.
 // Idea-relevant content is almost always in the first few exchanges.
 const MAX_CONV_CHARS = 5000;
+// Tighter cap for bulk syncs (many batches in one run) — same reasoning, just
+// more aggressive since the per-batch cost adds up fast across many batches.
+const MAX_CONV_CHARS_BULK = 3000;
+
+const STANDARD_MODEL = 'claude-sonnet-4-6';
+// Cheaper, faster model used automatically for large bulk syncs — see the
+// `lowCost` param below.
+const BULK_MODEL = 'claude-haiku-4-5-20251001';
 
 export interface ExtractionResult {
   ideas: Partial<Idea>[];
@@ -42,18 +50,23 @@ export interface ExtractionResult {
 
 export async function extractIdeasFromConversations(
   conversationTexts: string[],
-  apiKey?: string | null
+  apiKey?: string | null,
+  lowCost = false
 ): Promise<ExtractionResult> {
   const client = getClient(apiKey);
+  const cap = lowCost ? MAX_CONV_CHARS_BULK : MAX_CONV_CHARS;
   const truncated = conversationTexts.map((t) =>
-    t.length > MAX_CONV_CHARS ? t.slice(0, MAX_CONV_CHARS) + '\n[…truncated]' : t
+    t.length > cap ? t.slice(0, cap) + '\n[…truncated]' : t
   );
   const batched = truncated.join('\n\n---NEXT CONVERSATION---\n\n');
 
   const message = await client.messages.create({
-    model: 'claude-sonnet-4-6',
+    model: lowCost ? BULK_MODEL : STANDARD_MODEL,
     max_tokens: 8192,
-    system: EXTRACTION_SYSTEM_PROMPT,
+    // Cached across batches within the same sync run (and across a session's
+    // requests generally) — the system prompt is identical every call, so
+    // repeat calls only pay the ~10% cache-read rate on it instead of full price.
+    system: [{ type: 'text', text: EXTRACTION_SYSTEM_PROMPT, cache_control: { type: 'ephemeral' } }],
     messages: [{ role: 'user', content: batched }],
   });
 

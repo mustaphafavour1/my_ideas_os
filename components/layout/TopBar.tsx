@@ -73,12 +73,9 @@ export function TopBar({ title, subtitle, lastSynced, userPlan }: TopBarProps) {
             {!isPaid && (
               <button
                 onClick={() => setShowUpgrade(true)}
-                className="flex items-center gap-1.5 text-[12px] font-bold text-[#F7C948] border-2 border-[#F7C948] hover:bg-[#F7C948]/10 rounded-lg px-3.5 py-2 transition-colors cursor-pointer"
+                className="text-[11px] font-semibold text-[#F7C948] hover:text-[#F7C948]/80 border border-[#F7C948]/30 hover:border-[#F7C948]/50 rounded-lg px-2.5 py-1.5 transition-colors cursor-pointer"
               >
-                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 10l7-7m0 0l7 7m-7-7v18" />
-                </svg>
-                Upgrade to Pro
+                Upgrade
               </button>
             )}
 

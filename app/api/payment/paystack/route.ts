@@ -1,13 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getUserFromRequest } from '@/lib/auth';
 import { getUsdToNgnRate, usdToNgn } from '@/lib/fx';
+import { PLAN_AMOUNTS_USD } from '@/lib/planPricing';
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY!;
-
-const PLAN_AMOUNTS_USD: Record<string, number> = {
-  'one-time': 3,
-  'monthly':  10,
-};
 
 export async function POST(req: NextRequest) {
   const { plan, email: guestEmail } = await req.json();

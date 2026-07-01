@@ -45,6 +45,7 @@ function parseOldConversation(conv: OldConversation): ParsedConversation | null 
     name: conv.name || 'Unnamed Conversation',
     created_at: conv.created_at || new Date().toISOString(),
     fullText,
+    source: 'claude',
   };
 }
 
@@ -125,6 +126,7 @@ function parseNewConversation(conv: NewConversation): ParsedConversation | null 
     name,
     created_at: conv.created_at || new Date().toISOString(),
     fullText,
+    source: 'claude',
   };
 }
 
@@ -157,6 +159,26 @@ function extractChatGPTMessageText(m: ChatGPTMessage): string {
     .trim();
 }
 
+// ChatGPT exports conversations with generic placeholder titles ("Chat", "New
+// chat") when auto-titling never ran. Fall back to a snippet of the first
+// user message so nothing shows up as a bare, indistinguishable "Chat".
+const GENERIC_CHATGPT_TITLES = new Set(['chat', 'new chat', 'new conversation', 'untitled', '']);
+
+function deriveChatGPTTitle(
+  rawTitle: string | undefined,
+  nodes: (ChatGPTNode & { message: ChatGPTMessage })[]
+): string {
+  const trimmed = (rawTitle || '').trim();
+  if (trimmed && !GENERIC_CHATGPT_TITLES.has(trimmed.toLowerCase())) return trimmed;
+
+  const firstUserMsg = nodes.find((n) => n.message.author?.role === 'user');
+  const snippet = firstUserMsg ? extractChatGPTMessageText(firstUserMsg.message).slice(0, 60).trim() : '';
+  if (!snippet) return trimmed || 'Unnamed Conversation';
+
+  const ellipsis = snippet.length >= 60 ? '…' : '';
+  return `Chat (${snippet}${ellipsis})`;
+}
+
 function parseChatGPTConversation(conv: ChatGPTConversation): ParsedConversation | null {
   if (!conv.mapping || typeof conv.mapping !== 'object') return null;
 
@@ -182,19 +204,23 @@ function parseChatGPTConversation(conv: ChatGPTConversation): ParsedConversation
 
   return {
     uuid: conv.conversation_id || conv.id || `unknown-${Date.now()}`,
-    name: conv.title || 'Unnamed Conversation',
+    name: deriveChatGPTTitle(conv.title, nodes),
     created_at,
     fullText,
+    source: 'chatgpt',
   };
 }
 
 // ─── Public API ───────────────────────────────────────────────────────────────
+
+export type ConversationSource = 'claude' | 'chatgpt';
 
 export interface ParsedConversation {
   uuid: string;
   name: string;
   created_at: string;
   fullText: string;
+  source: ConversationSource;
 }
 
 function parseSingleItem(item: unknown): ParsedConversation | null {

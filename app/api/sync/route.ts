@@ -21,6 +21,11 @@ export async function POST(req: NextRequest) {
     const rawJson: string | null = body.conversationJson || null;
     const conversationBatch: ParsedConversation[] | null = body.conversationBatch || null;
     const userApiKey: string | null = body.apiKey || null;
+    // Client-computed total batch count for this file (each conversationBatch
+    // request is one batch of a larger file) — used to decide whether this
+    // sync run is "bulk" and should use the cheaper model. Falls back to the
+    // server-computed batch count for the raw-JSON single-shot path.
+    const clientTotalBatches: number | null = typeof body.totalBatches === 'number' ? body.totalBatches : null;
 
     // --- Access check ---
     // Try to fetch the user's plan. Table may not exist yet (first deploy), so catch errors.
@@ -113,6 +118,12 @@ export async function POST(req: NextRequest) {
       ? [newConversations]
       : batchConversations(newConversations);
 
+    // Large bulk syncs (many batches for one file) switch to a cheaper model
+    // and a tighter per-conversation content cap to keep costs down.
+    const BULK_BATCH_THRESHOLD = 3;
+    const totalBatchesForFile = clientTotalBatches ?? batches.length;
+    const lowCost = totalBatchesForFile > BULK_BATCH_THRESHOLD;
+
     let allExtracted: Partial<Idea>[] = [];
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
@@ -121,14 +132,16 @@ export async function POST(req: NextRequest) {
       const texts = batch.map(
         (c) => `=== Conversation: ${c.name} (${c.created_at}) ===\n${c.fullText}`
       );
-      const { ideas: extracted, usage } = await extractIdeasFromConversations(texts, userApiKey);
+      const { ideas: extracted, usage } = await extractIdeasFromConversations(texts, userApiKey, lowCost);
       allExtracted = allExtracted.concat(extracted);
       totalInputTokens += usage.input_tokens;
       totalOutputTokens += usage.output_tokens;
     }
 
-    // Sonnet 4.6 pricing: $3/M input, $15/M output
-    const estimatedCostUsd = (totalInputTokens * 3 + totalOutputTokens * 15) / 1_000_000;
+    // Sonnet 4.6 pricing: $3/M input, $15/M output. Haiku 4.5: $1/M in, $5/M out.
+    const estimatedCostUsd = lowCost
+      ? (totalInputTokens * 1 + totalOutputTokens * 5) / 1_000_000
+      : (totalInputTokens * 3 + totalOutputTokens * 15) / 1_000_000;
 
     // Load existing ideas for fuzzy duplicate matching
     const { data: existingIdeas } = await supabase
@@ -146,6 +159,11 @@ export async function POST(req: NextRequest) {
       if (!idea.title?.trim()) { skipped++; continue; }
 
       const match = existing.find((e) => fuzzyMatchTitle(e.title, idea.title!));
+
+      // "Last updated" should reflect when the idea was actually last discussed
+      // (chat_date), not when the row happened to be synced into the DB.
+      const chatDateMs = idea.chat_date ? Date.parse(idea.chat_date) : NaN;
+      const chatUpdatedAt = Number.isNaN(chatDateMs) ? null : new Date(chatDateMs).toISOString();
 
       const payload = {
         user_id: user.id,
@@ -173,17 +191,21 @@ export async function POST(req: NextRequest) {
       };
 
       if (match) {
-        const { error } = await supabase.from('ideas').update({ ...payload, updated_at: match.updated_at }).eq('id', match.id);
+        // Bump updated_at only if this conversation's chat_date is more recent
+        // than what's already on the idea — otherwise keep the existing value.
+        const nextUpdatedAt = chatUpdatedAt && chatUpdatedAt > match.updated_at ? chatUpdatedAt : match.updated_at;
+        const { error } = await supabase.from('ideas').update({ ...payload, updated_at: nextUpdatedAt }).eq('id', match.id);
         if (!error) {
           updated++;
           insertedTitleToId.set(idea.title!.trim().toLowerCase(), match.id);
         } else { console.error('Update error:', error); skipped++; }
       } else {
-        const { data: inserted, error } = await supabase.from('ideas').insert(payload).select('id').single();
+        const insertUpdatedAt = chatUpdatedAt || new Date().toISOString();
+        const { data: inserted, error } = await supabase.from('ideas').insert({ ...payload, updated_at: insertUpdatedAt }).select('id').single();
         if (!error && inserted) {
           added++;
           insertedTitleToId.set(idea.title!.trim().toLowerCase(), inserted.id);
-          existing.push({ id: inserted.id, title: idea.title!, updated_at: new Date().toISOString() });
+          existing.push({ id: inserted.id, title: idea.title!, updated_at: insertUpdatedAt });
         } else { console.error('Insert error:', error); skipped++; }
       }
     }
@@ -225,6 +247,7 @@ export async function POST(req: NextRequest) {
           user_id: user.id,
           title: conv.name,
           created_at: conv.created_at,
+          source: conv.source,
           human_messages: stats.human_messages,
           assistant_messages: stats.assistant_messages,
           total_words: stats.total_words,
@@ -240,15 +263,19 @@ export async function POST(req: NextRequest) {
         .upsert(conversationLogRows, { onConflict: 'user_id,conversation_uuid' });
 
       const totalsNew = conversationLogRows.reduce(
-        (acc, r) => ({
-          total_conversations: acc.total_conversations + 1,
-          total_words: acc.total_words + r.total_words,
-          total_human_words: acc.total_human_words + r.human_words,
-          total_assistant_words: acc.total_assistant_words + r.assistant_words,
-          total_code_blocks: acc.total_code_blocks + r.code_blocks,
-          total_code_lines: acc.total_code_lines + r.code_lines,
-        }),
-        { total_conversations: 0, total_words: 0, total_human_words: 0, total_assistant_words: 0, total_code_blocks: 0, total_code_lines: 0 }
+        (acc, r) => {
+          acc.assistant_words_by_source[r.source] = (acc.assistant_words_by_source[r.source] || 0) + r.assistant_words;
+          return {
+            total_conversations: acc.total_conversations + 1,
+            total_words: acc.total_words + r.total_words,
+            total_human_words: acc.total_human_words + r.human_words,
+            total_assistant_words: acc.total_assistant_words + r.assistant_words,
+            total_code_blocks: acc.total_code_blocks + r.code_blocks,
+            total_code_lines: acc.total_code_lines + r.code_lines,
+            assistant_words_by_source: acc.assistant_words_by_source,
+          };
+        },
+        { total_conversations: 0, total_words: 0, total_human_words: 0, total_assistant_words: 0, total_code_blocks: 0, total_code_lines: 0, assistant_words_by_source: {} as Record<string, number> }
       );
 
       const { data: existingStats } = await supabase
@@ -261,6 +288,11 @@ export async function POST(req: NextRequest) {
       const earliest = sortedDates[0];
       const latest = sortedDates[sortedDates.length - 1];
 
+      const mergedBySource: Record<string, number> = { ...(existingStats?.assistant_words_by_source || {}) };
+      for (const [src, words] of Object.entries(totalsNew.assistant_words_by_source)) {
+        mergedBySource[src] = (mergedBySource[src] || 0) + words;
+      }
+
       await supabase.from('user_stats').upsert({
         user_id: user.id,
         total_conversations: (existingStats?.total_conversations || 0) + totalsNew.total_conversations,
@@ -269,6 +301,7 @@ export async function POST(req: NextRequest) {
         total_assistant_words: (existingStats?.total_assistant_words || 0) + totalsNew.total_assistant_words,
         total_code_blocks: (existingStats?.total_code_blocks || 0) + totalsNew.total_code_blocks,
         total_code_lines: (existingStats?.total_code_lines || 0) + totalsNew.total_code_lines,
+        assistant_words_by_source: mergedBySource,
         first_conversation_at: existingStats?.first_conversation_at
           ? (earliest < existingStats.first_conversation_at ? earliest : existingStats.first_conversation_at)
           : earliest,

@@ -128,9 +128,11 @@ export function SyncUploader({ onComplete, userPlan, onUpgradeClick }: SyncUploa
       }
 
       if (conversations.length === 0) {
-        // Valid JSON but no recognisable Claude/ChatGPT conversations — let server decide
+        // Valid JSON but no recognisable Claude/ChatGPT conversations — let server decide.
+        // This is a single request with no incremental progress to report, and can take
+        // a while on large files — the label makes that explicit rather than looking frozen.
         setFiles((prev) =>
-          prev.map((f) => f.name === file.name ? { ...f, status: 'processing', progress: 0, progressLabel: 'Validating…' } : f)
+          prev.map((f) => f.name === file.name ? { ...f, status: 'processing', progress: 15, progressLabel: 'Validating… this can take a while for large files' } : f)
         );
 
         const controller = new AbortController();
@@ -171,11 +173,12 @@ export function SyncUploader({ onComplete, userPlan, onUpgradeClick }: SyncUploa
         batches.push(conversations.slice(i, i + BATCH_SIZE));
       }
       const totalBatches = batches.length;
+      const bulkSuffix = totalBatches > 3 ? ' · cost-optimised' : '';
 
       setFiles((prev) =>
         prev.map((f) =>
           f.name === file.name
-            ? { ...f, status: 'processing', progress: 0, progressLabel: `Batch 1/${totalBatches} · 0%` }
+            ? { ...f, status: 'processing', progress: 0, progressLabel: `Batch 1/${totalBatches}${bulkSuffix} · 0%` }
             : f
         )
       );
@@ -197,7 +200,7 @@ export function SyncUploader({ onComplete, userPlan, onUpgradeClick }: SyncUploa
         setFiles((prev) =>
           prev.map((f) =>
             f.name === file.name
-              ? { ...f, progress: prePct, progressLabel: `Batch ${i + 1}/${totalBatches} · Analysing conversations…` }
+              ? { ...f, progress: prePct, progressLabel: `Batch ${i + 1}/${totalBatches}${bulkSuffix} · Analysing conversations…` }
               : f
           )
         );
@@ -209,7 +212,7 @@ export function SyncUploader({ onComplete, userPlan, onUpgradeClick }: SyncUploa
           const res = await fetch('/api/sync', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ conversationBatch: batches[i], ...(apiKeyHeader ? { apiKey: apiKeyHeader } : {}) }),
+            body: JSON.stringify({ conversationBatch: batches[i], totalBatches, ...(apiKeyHeader ? { apiKey: apiKeyHeader } : {}) }),
             signal: controller.signal,
           });
 
@@ -230,7 +233,7 @@ export function SyncUploader({ onComplete, userPlan, onUpgradeClick }: SyncUploa
                     ...f,
                     progress: pct,
                     progressLabel: done < totalBatches
-                      ? `Batch ${done}/${totalBatches} · ${pct}%`
+                      ? `Batch ${done}/${totalBatches}${bulkSuffix} · ${pct}%`
                       : `Finalising · ${pct}%`,
                   }
                 : f
@@ -306,22 +309,24 @@ export function SyncUploader({ onComplete, userPlan, onUpgradeClick }: SyncUploa
             className="w-full bg-[#111118] border border-[#2A2A3A] rounded-lg px-3 py-2 text-xs text-[#F0F0F5] placeholder-[#3A3A55] focus:outline-none focus:border-[#F7C948]/40 transition-colors"
           />
           <p className="text-[10px] text-[#3A3A55]">
-            Don&apos;t have a key?{' '}
-            {onUpgradeClick ? (
-              <button
-                type="button"
-                onClick={onUpgradeClick}
-                className="text-[#F7C948]/70 hover:text-[#F7C948] underline transition-colors cursor-pointer"
-              >
-                Upgrade to a paid plan
-              </button>
-            ) : (
-              <a href="/#pricing" target="_blank" rel="noopener" className="text-[#F7C948]/70 hover:text-[#F7C948] underline transition-colors">
-                Upgrade to a paid plan
-              </a>
-            )}{' '}
-            and we&apos;ll handle the API for you.
+            Don&apos;t have a key? Upgrade and we&apos;ll handle the API for you.
           </p>
+          {onUpgradeClick ? (
+            <button
+              type="button"
+              onClick={onUpgradeClick}
+              className="inline-flex items-center text-[10px] font-semibold text-[#F7C948] border border-[#F7C948]/30 hover:border-[#F7C948]/50 hover:bg-[#F7C948]/5 rounded-md px-2.5 py-1 transition-colors cursor-pointer"
+            >
+              Upgrade to a paid plan
+            </button>
+          ) : (
+            <a
+              href="/#pricing" target="_blank" rel="noopener"
+              className="inline-flex items-center text-[10px] font-semibold text-[#F7C948] border border-[#F7C948]/30 hover:border-[#F7C948]/50 hover:bg-[#F7C948]/5 rounded-md px-2.5 py-1 transition-colors"
+            >
+              Upgrade to a paid plan
+            </a>
+          )}
         </div>
       )}
 

@@ -2,6 +2,8 @@
 
 import { useState } from 'react';
 import { Modal } from '@/components/ui/Modal';
+import { PLAN_AMOUNTS_USD } from '@/lib/planPricing';
+import { useUsdToNgn } from '@/lib/useUsdToNgn';
 
 interface UpgradeModalProps {
   open: boolean;
@@ -38,9 +40,10 @@ const PLANS = [
 ] as const;
 
 export function UpgradeModal({ open, onClose }: UpgradeModalProps) {
-  const [gateway, setGateway] = useState<'paystack' | 'lemonsqueezy'>('paystack');
+  const [gateway, setGateway] = useState<'lemonsqueezy' | 'paystack'>('lemonsqueezy');
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [error, setError] = useState('');
+  const { formatNgn } = useUsdToNgn();
 
   const handleUpgrade = async (planId: string) => {
     setLoadingPlan(planId);
@@ -57,6 +60,7 @@ export function UpgradeModal({ open, onClose }: UpgradeModalProps) {
         window.location.assign(url);
         return;
       }
+      if (data.details) console.error(`[Idea OS] ${gateway} checkout error:`, data.details);
       setError(data.error || 'Could not start checkout.');
       setLoadingPlan(null);
     } catch {
@@ -69,12 +73,12 @@ export function UpgradeModal({ open, onClose }: UpgradeModalProps) {
     <Modal open={open} onClose={onClose} title="Upgrade to full access" width="lg">
       {/* Gateway tabs */}
       <div className="flex gap-2 mb-4">
-        {(['paystack', 'lemonsqueezy'] as const).map((g) => (
+        {(['lemonsqueezy', 'paystack'] as const).map((g) => (
           <button key={g} onClick={() => setGateway(g)}
             className={`flex-1 py-2 rounded-lg text-[12px] font-medium transition-colors border cursor-pointer ${
               gateway === g ? 'bg-[#F7C948]/10 border-[#F7C948]/40 text-[#F7C948]' : 'border-[#1E1E2E] text-white/40 hover:text-white/60'
             }`}>
-            {g === 'paystack' ? 'Paystack' : 'Lemon Squeezy'}
+            {g === 'lemonsqueezy' ? 'Pay in USD' : 'Pay in Naira'}
           </button>
         ))}
       </div>
@@ -85,12 +89,15 @@ export function UpgradeModal({ open, onClose }: UpgradeModalProps) {
       {error && <p className="text-[11px] text-[#F87171] mb-3">{error}</p>}
 
       <div className="grid sm:grid-cols-2 gap-3">
-        {PLANS.map((p) => (
+        {PLANS.map((p) => {
+          const usdAmount = PLAN_AMOUNTS_USD[p.id];
+          const displayPrice = gateway === 'paystack' && usdAmount ? formatNgn(usdAmount) : p.price;
+          return (
           <div key={p.id} className={`rounded-xl border p-5 flex flex-col ${
             p.id === 'one-time' ? 'border-[#F7C948]/40 bg-[#F7C948]/5' : 'border-[#1E1E2E] bg-[#0A0A0F]'
           }`}>
             <p className={`text-[10px] font-mono uppercase tracking-widest mb-1 ${p.id === 'one-time' ? 'text-[#F7C948]' : 'text-white/40'}`}>{p.label}</p>
-            <p className="text-[26px] font-bold text-white leading-none mb-1">{p.price}</p>
+            <p className="text-[26px] font-bold text-white leading-none mb-1">{displayPrice}</p>
             <p className="text-[11px] text-white/40 mb-4">{p.period}</p>
             <ul className="text-[12px] text-white/60 space-y-1.5 mb-5 flex-1">
               {p.features.map((f) => <li key={f}>{f}</li>)}
@@ -112,7 +119,8 @@ export function UpgradeModal({ open, onClose }: UpgradeModalProps) {
               )}
             </button>
           </div>
-        ))}
+          );
+        })}
       </div>
     </Modal>
   );

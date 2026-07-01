@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion';
+import { PLAN_AMOUNTS_USD } from '@/lib/planPricing';
+import { useUsdToNgn } from '@/lib/useUsdToNgn';
 
 /* ─── Contact config ─────────────────────────────────────────────────────── */
 const CONTACT_LINKEDIN = 'https://linkedin.com/in/favourmustapha1';
@@ -1068,11 +1070,12 @@ const PLANS = [
 ];
 
 function CheckoutModal({ plan, onClose }: { plan: { name: string; price: string; checkout: string }; onClose: () => void }) {
-  const [gateway, setGateway] = useState<'paystack' | 'lemonsqueezy'>('paystack');
+  const [gateway, setGateway] = useState<'lemonsqueezy' | 'paystack'>('lemonsqueezy');
   const [email, setEmail] = useState('');
   const [stage, setStage] = useState<'idle' | 'loading' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [isAuthed, setIsAuthed] = useState(false);
+  const { formatNgn } = useUsdToNgn();
 
   useEffect(() => {
     import('@/lib/supabase').then(({ getSupabase }) => {
@@ -1081,6 +1084,9 @@ function CheckoutModal({ plan, onClose }: { plan: { name: string; price: string;
       });
     });
   }, []);
+
+  const usdAmount = PLAN_AMOUNTS_USD[plan.checkout];
+  const displayPrice = gateway === 'paystack' && usdAmount ? formatNgn(usdAmount) : plan.price;
 
   const handleSubmit = async () => {
     if (!isAuthed && !email.trim()) return;
@@ -1096,6 +1102,7 @@ function CheckoutModal({ plan, onClose }: { plan: { name: string; price: string;
       const data = await res.json();
       const url = data.authorization_url || data.url;
       if (url) { window.location.href = url; return; }
+      if (data.details) console.error(`[Idea OS] ${gateway} checkout error:`, data.details);
       setErrorMsg(data.error || 'Could not start checkout.');
       setStage('error');
     } catch {
@@ -1110,7 +1117,7 @@ function CheckoutModal({ plan, onClose }: { plan: { name: string; price: string;
         <div className="flex items-start justify-between mb-5">
           <div>
             <p className="text-[11px] font-mono text-[#F7C948] uppercase tracking-widest mb-1">{plan.name} plan</p>
-            <p className="text-[26px] font-bold text-white leading-none">{plan.price}</p>
+            <p className="text-[26px] font-bold text-white leading-none">{displayPrice}</p>
           </div>
           <button onClick={onClose} className="text-white/30 hover:text-white/70 transition-colors mt-1">
             <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
@@ -1119,12 +1126,12 @@ function CheckoutModal({ plan, onClose }: { plan: { name: string; price: string;
 
         {/* Gateway tabs */}
         <div className="flex gap-2 mb-1.5">
-          {(['paystack', 'lemonsqueezy'] as const).map((g) => (
+          {(['lemonsqueezy', 'paystack'] as const).map((g) => (
             <button key={g} onClick={() => setGateway(g)}
               className={`flex-1 py-2 rounded-lg text-[12px] font-medium transition-colors border ${
                 gateway === g ? 'bg-[#F7C948]/10 border-[#F7C948]/40 text-[#F7C948]' : 'border-[#1E1E2E] text-white/40 hover:text-white/60'
               }`}>
-              {g === 'paystack' ? 'Paystack' : 'Lemon Squeezy'}
+              {g === 'lemonsqueezy' ? 'Pay in USD' : 'Pay in Naira'}
             </button>
           ))}
         </div>
@@ -1157,7 +1164,7 @@ function CheckoutModal({ plan, onClose }: { plan: { name: string; price: string;
           {stage === 'loading' ? (
             <><div className="w-4 h-4 border-2 border-[#0A0A0F]/30 border-t-[#0A0A0F] rounded-full animate-spin" /> Redirecting to payment…</>
           ) : (
-            `Pay ${plan.price}`
+            `Pay ${displayPrice}`
           )}
         </button>
         {!isAuthed && (
