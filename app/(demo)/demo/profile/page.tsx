@@ -38,6 +38,7 @@ export default function DemoProfilePage() {
         completionPct={completionPct}
         monthsExp={monthsExp}
         topSectors={topSectors}
+        initialUsername="demo_builder"
       />
     </div>
   );

@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { Camera, PencilSimple, Check, X, DownloadSimple } from '@phosphor-icons/react';
 import Link from 'next/link';
+import { toast } from 'sonner';
 import { Idea, UserStats } from '@/lib/types';
 import {
   computeProductivityScore, scoreLabel,
@@ -61,22 +62,22 @@ interface Props {
   completionPct: number;
   monthsExp: number | null;
   topSectors: { label: string; count: number }[];
+  initialUsername: string;
 }
 
-export function ProfileContent({ ideas, stats, completed, inProgress, completionPct, monthsExp, topSectors }: Props) {
+export function ProfileContent({ ideas, stats, completed, inProgress, completionPct, monthsExp, topSectors, initialUsername }: Props) {
   const [avatar, setAvatar] = useState<string | null>(null);
-  const [username, setUsername] = useState('favour');
+  const [username, setUsername] = useState(initialUsername);
   const [editingName, setEditingName] = useState(false);
-  const [tempName, setTempName] = useState('favour');
+  const [tempName, setTempName] = useState(initialUsername);
+  const [savingName, setSavingName] = useState(false);
   const [downloading, setDownloading] = useState(false);
   const cardRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     const savedAvatar = localStorage.getItem('ideas-os-avatar');
-    const savedUsername = localStorage.getItem('ideas-os-username');
     if (savedAvatar) setAvatar(savedAvatar);
-    if (savedUsername) { setUsername(savedUsername); setTempName(savedUsername); }
   }, []);
 
   const handleFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -108,13 +109,29 @@ export function ProfileContent({ ideas, stats, completed, inProgress, completion
     reader.readAsDataURL(file);
   }, []);
 
-  const saveName = useCallback(() => {
-    const name = tempName.trim() || 'favour';
-    setUsername(name);
-    setTempName(name);
-    setEditingName(false);
-    localStorage.setItem('ideas-os-username', name);
-  }, [tempName]);
+  const saveName = useCallback(async () => {
+    const name = tempName.trim();
+    if (!name || savingName) return;
+
+    setSavingName(true);
+    try {
+      const res = await fetch('/api/account/username', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ display_username: name }),
+      });
+      const data = await res.json();
+      if (!res.ok) { toast.error(data.error || 'Could not save name.'); return; }
+
+      setUsername(name);
+      setTempName(name);
+      setEditingName(false);
+    } catch {
+      toast.error('Network error. Please try again.');
+    } finally {
+      setSavingName(false);
+    }
+  }, [tempName, savingName]);
 
   const downloadCard = useCallback(async () => {
     if (!cardRef.current || downloading) return;
@@ -211,13 +228,14 @@ export function ProfileContent({ ideas, stats, completed, inProgress, completion
                       <div className="flex items-center gap-1.5">
                         <input
                           autoFocus
+                          disabled={savingName}
                           value={tempName}
                           onChange={(e) => setTempName(e.target.value)}
                           onKeyDown={(e) => { if (e.key === 'Enter') saveName(); if (e.key === 'Escape') { setEditingName(false); setTempName(username); } }}
-                          className="bg-[#1A1A28] border border-[#F7C948]/30 rounded px-2 py-0.5 text-[16px] font-semibold text-[#F0F0F5] w-36 focus:outline-none"
+                          className="bg-[#1A1A28] border border-[#F7C948]/30 rounded px-2 py-0.5 text-[16px] font-semibold text-[#F0F0F5] w-36 focus:outline-none disabled:opacity-50"
                         />
-                        <button onClick={saveName} className="text-[#4CAF82]"><Check size={14} /></button>
-                        <button onClick={() => { setEditingName(false); setTempName(username); }} className="text-[#C06830]"><X size={14} /></button>
+                        <button onClick={saveName} disabled={savingName} className="text-[#4CAF82] disabled:opacity-50"><Check size={14} /></button>
+                        <button onClick={() => { setEditingName(false); setTempName(username); }} disabled={savingName} className="text-[#C06830] disabled:opacity-50"><X size={14} /></button>
                       </div>
                     ) : (
                       <>
