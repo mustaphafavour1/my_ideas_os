@@ -45,24 +45,23 @@ function InView({ children, className = '', delay = 0, style }: {
 /* ─── Contact form modal ─────────────────────────────────────────────────── */
 // Submits natively (no fetch/CORS) to Google's formResponse endpoint via a
 // hidden-iframe-target form post — the standard headless-submission pattern.
-// NOTE: field->entry mapping below is inferred from entry ID order in the
-// prefill link you provided and has NOT been confirmed against the live
-// form. Verify it (see chat) before treating submissions as reliable.
+// Field->entry mapping confirmed against a prefill link with distinct
+// per-field test values.
 const GOOGLE_FORM_ACTION = 'https://docs.google.com/forms/d/e/1FAIpQLSctPvWvt8XcO0UYIyw57ik240a9fsBEZKnMpC35O3vBrUEKtA/formResponse';
 const GOOGLE_FORM_FIELDS = {
   name: 'entry.181480148',
   email: 'entry.463801258',
-  company: 'entry.1926220507',
-  teamSize: 'entry.1619198101',
-  message: 'entry.19317049',
+  idea: 'entry.1926220507',
+  message: 'entry.1619198101',
+  heardFrom: 'entry.19317049',
 };
 
 function ContactFormModal({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [company, setCompany] = useState('');
-  const [teamSize, setTeamSize] = useState('');
+  const [idea, setIdea] = useState('');
   const [message, setMessage] = useState('');
+  const [heardFrom, setHeardFrom] = useState('');
   const [submitted, setSubmitted] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -119,22 +118,20 @@ function ContactFormModal({ onClose }: { onClose: () => void }) {
               <input name={GOOGLE_FORM_FIELDS.name} value={name} onChange={(e) => setName(e.target.value)} required placeholder="Your name" className={inputClass} />
             </div>
             <div>
-              <label className={labelClass}>Work email</label>
+              <label className={labelClass}>Email</label>
               <input type="email" name={GOOGLE_FORM_FIELDS.email} value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="you@company.com" className={inputClass} />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className={labelClass}>Company</label>
-                <input name={GOOGLE_FORM_FIELDS.company} value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Company" className={inputClass} />
-              </div>
-              <div>
-                <label className={labelClass}>Team size</label>
-                <input name={GOOGLE_FORM_FIELDS.teamSize} value={teamSize} onChange={(e) => setTeamSize(e.target.value)} placeholder="e.g. 25" className={inputClass} />
-              </div>
+            <div>
+              <label className={labelClass}>What&apos;s your idea?</label>
+              <input name={GOOGLE_FORM_FIELDS.idea} value={idea} onChange={(e) => setIdea(e.target.value)} placeholder="e.g. Team rollout for a 30-person studio" className={inputClass} />
             </div>
             <div>
               <label className={labelClass}>Message</label>
               <textarea name={GOOGLE_FORM_FIELDS.message} value={message} onChange={(e) => setMessage(e.target.value)} required rows={4} placeholder="What are you looking for?" className={`${inputClass} resize-none`} />
+            </div>
+            <div>
+              <label className={labelClass}>How did you hear about us?</label>
+              <input name={GOOGLE_FORM_FIELDS.heardFrom} value={heardFrom} onChange={(e) => setHeardFrom(e.target.value)} placeholder="e.g. Twitter, a friend, LinkedIn" className={inputClass} />
             </div>
             <button
               type="submit"

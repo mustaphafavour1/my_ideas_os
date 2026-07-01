@@ -1,4 +1,4 @@
-import { avatarColor, avatarInitial } from '@/lib/avatar';
+import { dicebearUrl } from '@/lib/avatar';
 
 interface AvatarProps {
   seed: string;
@@ -9,11 +9,14 @@ interface AvatarProps {
 
 export function Avatar({ seed, label, size = 28, className = '' }: AvatarProps) {
   return (
-    <div
-      className={`rounded-full flex items-center justify-center shrink-0 font-semibold text-white ${className}`}
-      style={{ width: size, height: size, backgroundColor: avatarColor(seed), fontSize: size * 0.42 }}
-    >
-      {avatarInitial(label)}
-    </div>
+    // eslint-disable-next-line @next/next/no-img-element
+    <img
+      src={dicebearUrl(seed)}
+      alt={label}
+      width={size}
+      height={size}
+      className={`rounded-full shrink-0 bg-[#1E1E2E] ${className}`}
+      style={{ width: size, height: size }}
+    />
   );
 }
