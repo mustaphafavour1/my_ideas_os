@@ -116,15 +116,15 @@ function fmt(n: number): string {
 export default async function AnalyticsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string; from?: string; to?: string }>;
+  searchParams: Promise<{ range?: string; from?: string; to?: string; offset?: string }>;
 }) {
   const user = await getUser();
   if (!user) redirect('/login');
 
-  const { range = 'all', from, to } = await searchParams;
+  const { range = 'all', from, to, offset } = await searchParams;
   const { ideas: allIdeas, syncCount, logs: allLogs, userStats } = await getData(user.id);
 
-  const cutoff = getRangeCutoff(range, from, to);
+  const cutoff = getRangeCutoff(range, from, to, offset);
   const ideas = filterIdeasByRange(allIdeas, cutoff);
   const logs = filterLogsByRange(allLogs, cutoff);
 
@@ -162,6 +162,7 @@ export default async function AnalyticsPage({
       range={range}
       from={from}
       to={to}
+      offset={offset}
       ideas={ideas}
       allIdeasCount={allIdeas.length}
       logs={logs}

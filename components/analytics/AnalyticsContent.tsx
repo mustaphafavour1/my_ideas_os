@@ -42,6 +42,7 @@ interface Props {
   range: string;
   from?: string;
   to?: string;
+  offset?: string;
   ideas: Idea[];
   allIdeasCount: number;
   logs: ConversationLog[];
@@ -54,7 +55,7 @@ interface Props {
 }
 
 export function AnalyticsContent({
-  range, from, to, ideas, allIdeasCount, logs, allLogs,
+  range, from, to, offset, ideas, allIdeasCount, logs, allLogs,
   inProgress, completed, insights, metricCards, convMetricCards,
 }: Props) {
   const [isPending, setIsPending] = useState(false);
@@ -66,7 +67,7 @@ export function AnalyticsContent({
       <main className="flex-1 px-4 lg:px-8 pt-12 pb-10 max-w-6xl mx-auto w-full">
         {/* Time range filter */}
         <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
-          <TimeRangeFilter currentRange={range} currentFrom={from} currentTo={to} onPendingChange={setIsPending} />
+          <TimeRangeFilter currentRange={range} currentFrom={from} currentTo={to} currentOffset={offset} onPendingChange={setIsPending} />
           {range !== 'all' && !isPending && (
             <p className="text-[10px] font-mono text-[#3A3A55]">
               {ideas.length} of {allIdeasCount} ideas

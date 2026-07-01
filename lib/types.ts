@@ -137,3 +137,43 @@ export interface Signal {
   signal_type: SignalType;
   created_at: string;
 }
+
+// ── Community ────────────────────────────────────────────────────────────────
+
+export interface ChatRoom {
+  id: string;
+  slug: string;
+  name: string;
+  description: string | null;
+  icon: string | null;
+  sort_order: number;
+  created_at: string;
+  joined: boolean;
+  member_count: number;
+}
+
+export interface ChatMessageSender {
+  display_username: string | null;
+  full_name: string | null;
+  avatar_url: string | null;
+}
+
+export interface ChatMessage {
+  id: string;
+  room_id: string;
+  user_id: string;
+  content: string;
+  created_at: string;
+  users?: ChatMessageSender | null;
+}
+
+export interface LeaderboardEntry {
+  id: string;
+  username: string;
+  avatar_url: string | null;
+  conversations: number;
+  ideas: number;
+  code_lines: number;
+  months_experience: number;
+  is_me: boolean;
+}

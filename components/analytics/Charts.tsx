@@ -154,8 +154,7 @@ function niceAxisStep(max: number): number {
   if (max <= 10) return 1;
   if (max <= 20) return 2;
   if (max <= 50) return 5;
-  if (max <= 100) return 10;
-  if (max <= 200) return 20;
+  if (max <= 120) return 20;
   if (max <= 500) return 50;
   if (max <= 1000) return 100;
   const magnitude = Math.pow(10, Math.floor(Math.log10(max)));

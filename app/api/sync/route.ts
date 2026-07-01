@@ -134,19 +134,29 @@ export async function POST(req: NextRequest) {
       );
       const { ideas: extracted, usage } = await extractIdeasFromConversations(texts, userApiKey, lowCost);
 
-      // The model doesn't always return a valid chat_date — fall back to the
-      // latest conversation date in this batch rather than leaving it unset
-      // (which would otherwise default to "now" downstream).
-      const batchLatestDate = batch.reduce(
-        (max, c) => (c.created_at > max ? c.created_at : max),
-        batch[0]?.created_at ?? ''
-      );
-      const patched = extracted.map((idea) => ({
-        ...idea,
-        chat_date: idea.chat_date && !Number.isNaN(Date.parse(idea.chat_date))
-          ? idea.chat_date
-          : batchLatestDate || idea.chat_date,
-      }));
+      // The model doesn't reliably return chat_date from the conversation's
+      // real date — it sometimes returns today's date instead, which is a
+      // syntactically valid ISO string that a simple "is this parseable"
+      // check can't catch. Only trust it if it actually falls within (or
+      // very near) this batch's real conversation dates — c.created_at is
+      // hard data from the export file, never model-inferred, so it's the
+      // source of truth to validate against.
+      const batchDatesMs = batch
+        .map((c) => Date.parse(c.created_at))
+        .filter((ms) => !Number.isNaN(ms));
+      const batchEarliestMs = batchDatesMs.length ? Math.min(...batchDatesMs) : NaN;
+      const batchLatestMs = batchDatesMs.length ? Math.max(...batchDatesMs) : NaN;
+      const TOLERANCE_MS = 2 * 24 * 60 * 60 * 1000; // conversations can span a couple of days
+
+      const patched = extracted.map((idea) => {
+        const parsedMs = idea.chat_date ? Date.parse(idea.chat_date) : NaN;
+        const plausible = !Number.isNaN(parsedMs) && !Number.isNaN(batchLatestMs) &&
+          parsedMs >= batchEarliestMs - TOLERANCE_MS && parsedMs <= batchLatestMs + TOLERANCE_MS;
+        return {
+          ...idea,
+          chat_date: plausible ? idea.chat_date : (Number.isNaN(batchLatestMs) ? idea.chat_date : new Date(batchLatestMs).toISOString()),
+        };
+      });
 
       allExtracted = allExtracted.concat(patched);
       totalInputTokens += usage.input_tokens;

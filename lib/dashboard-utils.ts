@@ -9,15 +9,56 @@ export function ideaDate(idea: Idea): string {
   return idea.chat_date || idea.updated_at || idea.created_at;
 }
 
-export function getRangeCutoff(range: string, from?: string, to?: string): { from: Date | null; to: Date | null } {
+// Granularity + offset model: offset 0 = current period, 1 = previous period,
+// 2 = two periods back, etc. — same shape for every granularity so "daily"
+// (today/yesterday/2 days ago) and "yearly" (this year/last year/2 years ago)
+// behave identically, just at different scales.
+export function getRangeCutoff(
+  range: string,
+  from?: string,
+  to?: string,
+  offset?: string | number
+): { from: Date | null; to: Date | null } {
   const now = new Date();
+  const off = Math.max(0, typeof offset === 'number' ? offset : parseInt(offset || '0', 10) || 0);
+
   switch (range) {
+    case 'daily': {
+      const s = new Date(now); s.setHours(0, 0, 0, 0); s.setDate(s.getDate() - off);
+      const e = new Date(s); e.setDate(e.getDate() + 1);
+      return { from: s, to: e };
+    }
+    case 'weekly': {
+      const dayOfWeek = (now.getDay() + 6) % 7; // 0 = Monday
+      const s = new Date(now); s.setHours(0, 0, 0, 0); s.setDate(s.getDate() - dayOfWeek - off * 7);
+      const e = new Date(s); e.setDate(e.getDate() + 7);
+      return { from: s, to: e };
+    }
+    case 'monthly': {
+      const s = new Date(now.getFullYear(), now.getMonth() - off, 1);
+      const e = new Date(now.getFullYear(), now.getMonth() - off + 1, 1);
+      return { from: s, to: e };
+    }
+    case 'quarterly': {
+      const q = Math.floor(now.getMonth() / 3);
+      const s = new Date(now.getFullYear(), (q - off) * 3, 1);
+      const e = new Date(now.getFullYear(), (q - off + 1) * 3, 1);
+      return { from: s, to: e };
+    }
+    case 'yearly': {
+      const s = new Date(now.getFullYear() - off, 0, 1);
+      const e = new Date(now.getFullYear() - off + 1, 0, 1);
+      return { from: s, to: e };
+    }
+    case 'custom':
+      return { from: from ? new Date(from) : null, to: to ? new Date(to) : null };
+    // Legacy values — kept so any old bookmarked/shared URL still filters
+    // sensibly instead of erroring.
     case 'today': { const s = new Date(now); s.setHours(0, 0, 0, 0); return { from: s, to: null }; }
     case 'week': return { from: new Date(now.getTime() - 7 * 86400000), to: null };
     case 'month': return { from: new Date(now.getFullYear(), now.getMonth(), 1), to: null };
     case 'quarter': { const q = Math.floor(now.getMonth() / 3); return { from: new Date(now.getFullYear(), q * 3, 1), to: null }; }
     case 'year': return { from: new Date(now.getFullYear(), 0, 1), to: null };
-    case 'custom': return { from: from ? new Date(from) : null, to: to ? new Date(to) : null };
     default: return { from: null, to: null };
   }
 }
@@ -30,10 +71,11 @@ export function computeDashboardProps(
   range: string,
   rangeFrom?: string,
   rangeTo?: string,
+  rangeOffset?: string,
 ) {
   const productivityScore = computeProductivityScore(allIdeas, userStats);
   const productivityLabel = scoreLabel(productivityScore);
-  const cutoff = getRangeCutoff(range, rangeFrom, rangeTo);
+  const cutoff = getRangeCutoff(range, rangeFrom, rangeTo, rangeOffset);
 
   const filteredIdeas = cutoff.from || cutoff.to
     ? allIdeas.filter((i) => {
@@ -119,5 +161,6 @@ export function computeDashboardProps(
     range,
     rangeFrom,
     rangeTo,
+    rangeOffset,
   };
 }

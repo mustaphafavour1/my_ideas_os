@@ -54,6 +54,7 @@ export interface DashboardContentProps {
   range?: string;
   rangeFrom?: string;
   rangeTo?: string;
+  rangeOffset?: string;
 }
 
 function MiniRing({ value, max, displayLabel, color = '#F7C948' }: {
@@ -99,7 +100,7 @@ export function DashboardContent({
   withBlockers, paused, topSector, topSectorCount, topType, topTypeCount, completionPct,
   mostPausedSector, mostPausedCount, mostCompletedType, mostCompletedCount, mostBlockersType, mostBlockersCount,
   productivityScore, productivityLabel,
-  range = 'all', rangeFrom, rangeTo,
+  range = 'all', rangeFrom, rangeTo, rangeOffset,
 }: DashboardContentProps) {
   const [vis, setVis] = useState<SectionVisibility>(DEFAULT_VIS);
   const [filterPending, setFilterPending] = useState(false);
@@ -149,7 +150,7 @@ export function DashboardContent({
         <section key="stats">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-[10px] font-mono text-[#4A4A60] uppercase tracking-widest">Overview</h2>
-            <TimeRangeFilter currentRange={range} currentFrom={rangeFrom} currentTo={rangeTo} onPendingChange={setFilterPending} />
+            <TimeRangeFilter currentRange={range} currentFrom={rangeFrom} currentTo={rangeTo} currentOffset={rangeOffset} onPendingChange={setFilterPending} />
           </div>
 
           {filterPending ? (

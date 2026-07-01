@@ -8,7 +8,7 @@ import { getUser } from '@/lib/auth';
 import { Idea, UserStats } from '@/lib/types';
 import { computeDashboardProps } from '@/lib/dashboard-utils';
 
-async function getDashboardData(userId: string, range: string, rangeFrom?: string, rangeTo?: string) {
+async function getDashboardData(userId: string, range: string, rangeFrom?: string, rangeTo?: string, rangeOffset?: string) {
   const supabase = createServiceClient();
 
   const [{ data: ideas }, { data: syncLog }, { data: inboxItems }, { data: userStats }, { data: userRow }] =
@@ -30,6 +30,7 @@ async function getDashboardData(userId: string, range: string, rangeFrom?: strin
       range,
       rangeFrom,
       rangeTo,
+      rangeOffset,
     ),
   };
 }
@@ -37,13 +38,13 @@ async function getDashboardData(userId: string, range: string, rangeFrom?: strin
 export default async function DashboardPage({
   searchParams,
 }: {
-  searchParams: Promise<{ range?: string; from?: string; to?: string }>;
+  searchParams: Promise<{ range?: string; from?: string; to?: string; offset?: string }>;
 }) {
   const user = await getUser();
   if (!user) redirect('/login');
 
-  const { range = 'all', from, to } = await searchParams;
-  const { lastSynced, userPlan, ...contentProps } = await getDashboardData(user.id, range, from, to);
+  const { range = 'all', from, to, offset } = await searchParams;
+  const { lastSynced, userPlan, ...contentProps } = await getDashboardData(user.id, range, from, to, offset);
 
   return (
     <div className="flex flex-col flex-1">
