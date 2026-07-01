@@ -1047,8 +1047,8 @@ const PLANS = [
   {
     name: 'One-time',   price: '$3',   period: 'one-time',
     highlight: true,    badge: 'Best value', note: null,
-    checkout: null,     ctaHref: null,    comingSoon: true,
-    cta: 'Notify me',
+    checkout: 'one-time', ctaHref: null,
+    cta: 'Get full access',
     features: ['Analyse up to 150 conversations', 'Full idea intelligence & grading', 'Analytics & productivity score', 'Signals engine & insights', 'Export your data anytime'],
   },
   {

@@ -1,4 +1,4 @@
-import { sendMagicLink } from './actions';
+import { LoginForm } from './LoginForm';
 
 export const metadata = {
   title: 'Sign in — Idea OS',
@@ -7,9 +7,9 @@ export const metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sent?: string; error?: string; next?: string }>;
+  searchParams: Promise<{ sent?: string; next?: string }>;
 }) {
-  const { sent, error, next } = await searchParams;
+  const { sent, next } = await searchParams;
 
   return (
     <div className="min-h-screen bg-[#0A0A0F] flex items-center justify-center px-4">
@@ -27,47 +27,7 @@ export default async function LoginPage({
             </p>
           </div>
         ) : (
-          <form
-            action={sendMagicLink}
-            className="rounded-xl border border-[#2A2A3A] bg-[#111118] p-6 flex flex-col gap-4"
-          >
-            {next && <input type="hidden" name="next" value={next} />}
-
-            <div className="flex flex-col gap-1.5">
-              <label htmlFor="email" className="text-xs font-medium text-[#9090A8] uppercase tracking-wider">
-                Email
-              </label>
-              <input
-                id="email"
-                name="email"
-                type="email"
-                required
-                autoFocus
-                placeholder="you@example.com"
-                className="w-full rounded-lg bg-[#0A0A0F] border border-[#2A2A3A] px-3 py-2.5 text-sm text-[#F0F0F5] placeholder-[#4A4A5A] focus:outline-none focus:border-[#F7C948]/50 transition-colors"
-              />
-            </div>
-
-            {error && (
-              <p className="text-xs text-red-400 bg-red-950/30 border border-red-900/40 rounded-lg px-3 py-2">
-                {decodeURIComponent(error)}
-              </p>
-            )}
-
-            <button
-              type="submit"
-              className="w-full rounded-lg bg-[#F7C948] text-[#0A0A0F] text-sm font-semibold py-2.5 hover:bg-[#F7C948]/90 transition-colors"
-            >
-              Send magic link
-            </button>
-
-            <p className="text-center text-xs text-[#4A4A5A]">
-              No account yet?{' '}
-              <a href="/" className="text-[#9090A8] hover:text-[#F0F0F5] transition-colors">
-                Join the waitlist
-              </a>
-            </p>
-          </form>
+          <LoginForm next={next} />
         )}
 
         <p className="mt-4 text-center text-xs text-[#4A4A5A]">
