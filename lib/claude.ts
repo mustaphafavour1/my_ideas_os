@@ -172,3 +172,64 @@ export async function processInboxItems(items: string[]): Promise<Partial<Idea>[
     return [];
   }
 }
+
+export interface GeneralInsightsSummary {
+  totalIdeas: number;
+  monthsExperience: number;
+  totalConversations: number;
+  totalWords: number;
+  totalCodeLines: number;
+  assistantWordsBySource: Record<string, number> | null;
+  statusBreakdown: Record<string, number>;
+  sectorBreakdown: { sector: string; count: number; avgGrade: number | null; completedCount: number }[];
+  typeBreakdown: { idea_type: string; count: number; avgGrade: number | null; completedCount: number }[];
+  avgGrades: {
+    novelty: number | null;
+    feasibility: number | null;
+    personal_fit: number | null;
+    market_potential: number | null;
+    urgency: number | null;
+    overall: number | null;
+  };
+}
+
+const GENERAL_INSIGHTS_SYSTEM_PROMPT = `You are a sharp, no-fluff strategic analyst for a solo builder who tracks every idea and every AI-assisted conversation they have in one dashboard. You'll receive a JSON summary of their WHOLE portfolio — sector/type distribution, status breakdown, grades, experience level, and usage totals. You do not see individual ideas.
+
+Write 3-5 general insights about their OVERALL patterns — never about a single idea. Each insight must:
+- Be grounded in specific numbers from the JSON you were given. Never invent a stat you weren't given.
+- Connect at least two dimensions (e.g. a category's idea count vs. its completion rate; experience level vs. average grades; a status pattern that cuts across categories).
+- Read like a sharp, honest friend, not a generic productivity tip.
+- Where it fits, end with one concrete, specific action — grounded in what's actually in the data, not boilerplate advice.
+
+Style examples (match this voice — do not copy these verbatim):
+- "You've put more ideas into 'content' than anything else (9 of 31), but none have reached validated or completed — worth asking whether that's the format or the follow-through."
+- "At 4 months in with an average feasibility grade of 2.6, you're better served chasing ideas that need little to no capital to test than ones requiring upfront spend — like a domain name — before you've validated demand."
+
+Rules:
+- You were NOT given time-spent or money-spent data. Never claim "you spent X hours/dollars on Y" — use idea count / share of the portfolio as the attention signal instead, and phrase it that way (counts, not time or money).
+- Skip any category with fewer than 2 ideas — not enough signal to say anything real.
+- No generic advice that could apply to any builder ("stay consistent", "believe in yourself", "diversify your portfolio").
+- Return ONLY a JSON array of strings, no markdown, no explanation. Each string is one complete, standalone insight (1-2 sentences).`;
+
+export async function generateGeneralInsights(summary: GeneralInsightsSummary): Promise<string[]> {
+  const client = getClient();
+
+  const message = await client.messages.create({
+    model: 'claude-haiku-4-5-20251001',
+    max_tokens: 1024,
+    system: GENERAL_INSIGHTS_SYSTEM_PROMPT,
+    messages: [{ role: 'user', content: JSON.stringify(summary) }],
+  });
+
+  const raw = message.content[0].type === 'text' ? message.content[0].text : '[]';
+  try {
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    const match = raw.match(/\[[\s\S]*\]/);
+    if (match) {
+      try { return JSON.parse(match[0]); } catch { /* fall through */ }
+    }
+    return [];
+  }
+}

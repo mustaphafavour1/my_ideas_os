@@ -7,6 +7,7 @@ import { Badge } from '@/components/ui/Badge';
 import { StatusChip } from '@/components/ui/StatusChip';
 import { Button } from '@/components/ui/Button';
 import { CardSkeleton } from '@/components/ui/Skeleton';
+import { GeneralInsights } from '@/components/insights/GeneralInsights';
 import { Idea, IdeaStatus } from '@/lib/types';
 import Link from 'next/link';
 import { toast } from 'sonner';
@@ -180,6 +181,8 @@ export default function InsightsPage() {
       <TopBar title="Insights" subtitle="AI suggestions & connected ideas" />
 
       <main className="flex-1 px-4 lg:px-8 py-8 max-w-4xl mx-auto w-full space-y-8">
+
+        <GeneralInsights />
 
         {/* Connected Ideas section */}
         {!loading && connectedPairs.length > 0 && (
