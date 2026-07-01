@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { toast } from 'sonner';
 import { LeaderboardEntry } from '@/lib/types';
+import { Avatar } from '@/components/ui/Avatar';
 import { MeProfile } from './CommunityContent';
 
 type SortKey = 'conversations' | 'ideas' | 'code_lines' | 'months_experience';
@@ -138,11 +139,7 @@ export function Leaderboard({ me }: { me: MeProfile }) {
                 <span className={`text-[12px] font-mono w-6 shrink-0 ${i < 3 ? 'text-[#F7C948]' : 'text-white/30'}`}>
                   {i + 1}
                 </span>
-                <div className="w-7 h-7 rounded-full bg-[#1E1E2E] flex items-center justify-center shrink-0 overflow-hidden">
-                  {entry.avatar_url
-                    ? <img src={entry.avatar_url} alt="" className="w-full h-full object-cover" />
-                    : <span className="text-[10px] text-white/40">{entry.username.slice(0, 1).toUpperCase()}</span>}
-                </div>
+                <Avatar seed={entry.id} label={entry.username} size={28} />
                 <span className="text-[12px] font-medium text-[#E8E8F0] flex-1 truncate">
                   {entry.username}{entry.is_me && <span className="text-white/30 ml-1.5">(you)</span>}
                 </span>

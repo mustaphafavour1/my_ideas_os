@@ -8,7 +8,6 @@ import { useUsdToNgn } from '@/lib/useUsdToNgn';
 /* ─── Contact config ─────────────────────────────────────────────────────── */
 const CONTACT_LINKEDIN = 'https://linkedin.com/in/favourmustapha1';
 const CONTACT_X        = 'https://x.com/headfavour';
-const CONTACT_FORM_EMBED = 'https://docs.google.com/forms/d/e/1FAIpQLSctPvWvt8XcO0UYIyw57ik240a9fsBEZKnMpC35O3vBrUEKtA/viewform?embedded=true&entry.181480148=fave&entry.463801258=fave&entry.1926220507=Question&entry.1619198101=favvv&entry.19317049=well';
 
 /* ─── Animation helpers ─────────────────────────────────────────────────── */
 const ease = [0.22, 1, 0.36, 1] as const;
@@ -44,7 +43,39 @@ function InView({ children, className = '', delay = 0, style }: {
 }
 
 /* ─── Contact form modal ─────────────────────────────────────────────────── */
+// Submits natively (no fetch/CORS) to Google's formResponse endpoint via a
+// hidden-iframe-target form post — the standard headless-submission pattern.
+// NOTE: field->entry mapping below is inferred from entry ID order in the
+// prefill link you provided and has NOT been confirmed against the live
+// form. Verify it (see chat) before treating submissions as reliable.
+const GOOGLE_FORM_ACTION = 'https://docs.google.com/forms/d/e/1FAIpQLSctPvWvt8XcO0UYIyw57ik240a9fsBEZKnMpC35O3vBrUEKtA/formResponse';
+const GOOGLE_FORM_FIELDS = {
+  name: 'entry.181480148',
+  email: 'entry.463801258',
+  company: 'entry.1926220507',
+  teamSize: 'entry.1619198101',
+  message: 'entry.19317049',
+};
+
 function ContactFormModal({ onClose }: { onClose: () => void }) {
+  const [name, setName] = useState('');
+  const [email, setEmail] = useState('');
+  const [company, setCompany] = useState('');
+  const [teamSize, setTeamSize] = useState('');
+  const [message, setMessage] = useState('');
+  const [submitted, setSubmitted] = useState(false);
+  const formRef = useRef<HTMLFormElement>(null);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim() || !email.trim() || !message.trim()) return;
+    formRef.current?.submit();
+    setSubmitted(true);
+  };
+
+  const inputClass = 'w-full bg-[#0A0A0F] border border-[#2A2A3A] rounded-lg px-3 py-2.5 text-[13px] text-[#F0F0F5] placeholder-[#3A3A55] focus:outline-none focus:border-[#F7C948]/40 transition-colors';
+  const labelClass = 'block text-[11px] font-mono text-white/40 uppercase tracking-widest mb-1.5';
+
   return (
     <motion.div
       className="fixed inset-0 z-[200] bg-black/80 flex items-center justify-center p-6"
@@ -70,12 +101,51 @@ function ContactFormModal({ onClose }: { onClose: () => void }) {
             ✕
           </button>
         </div>
-        <iframe
-          src={CONTACT_FORM_EMBED}
-          className="w-full"
-          style={{ height: 520, border: 'none' }}
-          title="Contact form"
-        />
+
+        {submitted ? (
+          <div className="p-10 text-center">
+            <div className="w-12 h-12 rounded-full bg-[#4ADE80]/10 border border-[#4ADE80]/30 flex items-center justify-center mx-auto mb-4">
+              <svg className="w-6 h-6 text-[#4ADE80]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <p className="text-[14px] font-semibold text-white mb-1">Message sent</p>
+            <p className="text-[12px] text-white/50">We&apos;ll get back to you shortly.</p>
+          </div>
+        ) : (
+          <form ref={formRef} action={GOOGLE_FORM_ACTION} method="POST" target="hidden_contact_iframe" onSubmit={handleSubmit} className="p-5 space-y-3.5">
+            <div>
+              <label className={labelClass}>Name</label>
+              <input name={GOOGLE_FORM_FIELDS.name} value={name} onChange={(e) => setName(e.target.value)} required placeholder="Your name" className={inputClass} />
+            </div>
+            <div>
+              <label className={labelClass}>Work email</label>
+              <input type="email" name={GOOGLE_FORM_FIELDS.email} value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="you@company.com" className={inputClass} />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className={labelClass}>Company</label>
+                <input name={GOOGLE_FORM_FIELDS.company} value={company} onChange={(e) => setCompany(e.target.value)} placeholder="Company" className={inputClass} />
+              </div>
+              <div>
+                <label className={labelClass}>Team size</label>
+                <input name={GOOGLE_FORM_FIELDS.teamSize} value={teamSize} onChange={(e) => setTeamSize(e.target.value)} placeholder="e.g. 25" className={inputClass} />
+              </div>
+            </div>
+            <div>
+              <label className={labelClass}>Message</label>
+              <textarea name={GOOGLE_FORM_FIELDS.message} value={message} onChange={(e) => setMessage(e.target.value)} required rows={4} placeholder="What are you looking for?" className={`${inputClass} resize-none`} />
+            </div>
+            <button
+              type="submit"
+              className="w-full h-11 rounded-xl bg-[#F7C948] text-[#0A0A0F] text-[13px] font-bold hover:bg-[#E6B830] transition-colors"
+            >
+              Send message
+            </button>
+          </form>
+        )}
+
+        <iframe name="hidden_contact_iframe" style={{ display: 'none' }} title="" />
       </motion.div>
     </motion.div>
   );
@@ -204,7 +274,7 @@ function AnimatedGraph() {
   ];
 
   return (
-    <div className="relative w-full h-[240px] overflow-hidden">
+    <div className="relative w-full h-[50vh] sm:h-[60vh] overflow-hidden">
       {/* Top fade */}
       <div className="absolute inset-x-0 top-0 h-16 z-10 pointer-events-none"
            style={{ background: 'linear-gradient(to bottom, #0A0A0F, transparent)' }} />
@@ -278,7 +348,7 @@ function Hero() {
     <section className="relative min-h-screen flex flex-col justify-center pt-36 pb-10 overflow-hidden">
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         <div className="absolute top-[22%] left-[25%] w-[700px] h-[400px] opacity-[0.06]"
-             style={{ background: 'radial-gradient(ellipse, #F7C948, transparent 70%)' }} />
+             style={{ background: 'radial-gradient(ellipse, #F7C948, transparent 70%)', filter: 'blur(120px)' }} />
       </div>
 
       <motion.div style={{ y }} className="relative z-10 w-full px-6">
@@ -291,7 +361,7 @@ function Hero() {
 
             <motion.p variants={fadeUp} custom={1}
               className="text-[15px] sm:text-[16px] text-white/45 max-w-md mb-10 leading-relaxed">
-              Turn your Claude conversations into a personal intelligence dashboard — ideas, patterns, and insights, all in one place.
+              Turn your AI conversations into a personal intelligence dashboard — ideas, patterns, and insights, all in one place.
             </motion.p>
 
             <motion.div variants={fadeUp} custom={2} className="flex items-center gap-3 flex-wrap mb-6">
@@ -545,7 +615,7 @@ function TheJourney() {
           {JOURNEY_PARAS.map((para, i) => (
             <InView key={i} delay={i * 0.1} style={{ marginTop: i % 2 !== 0 ? 32 : 0 }}>
               <p
-                className="text-[19px] sm:text-[21px] leading-relaxed"
+                className="text-[13px] sm:text-[16px] leading-relaxed"
                 style={{
                   fontFamily: 'var(--font-edu-sa)',
                   color: '#5B9BD5',
@@ -1063,7 +1133,7 @@ const PLANS = [
   {
     name: 'Enterprise', price: 'Custom', period: 'contact us',
     highlight: false,   badge: null,   note: null,
-    checkout: null,     ctaHref: '#contact',
+    checkout: null,     ctaHref: null,    contactForm: true,
     cta: 'Contact us',
     features: ['Team conversation analytics', 'Per-member insights & breakdowns', 'Bring your own API key', 'SSO & admin controls', 'Dedicated support'],
   },
@@ -1179,6 +1249,7 @@ function CheckoutModal({ plan, onClose }: { plan: { name: string; price: string;
 
 function Pricing() {
   const [checkoutPlan, setCheckoutPlan] = useState<{ name: string; price: string; checkout: string } | null>(null);
+  const [showContact, setShowContact] = useState(false);
 
   return (
     <>
@@ -1186,7 +1257,7 @@ function Pricing() {
         <div className="max-w-6xl mx-auto">
           <InView className="text-center mb-14">
             <p className="text-[10px] font-mono text-[#F7C948] uppercase tracking-widest mb-3">Simple pricing</p>
-            <h2 className="text-[34px] sm:text-[44px] font-bold text-white mb-3">Try free, pay only if it&apos;s useful</h2>
+            <h2 className="text-[34px] sm:text-[44px] font-bold text-white mb-3">Try Free First and Pay for More Access</h2>
             <p className="text-[14px] text-white/35">Start with the demo or your own API key. Pay $3 for full access. Scale from there.</p>
           </InView>
 
@@ -1224,6 +1295,11 @@ function Pricing() {
                   <span className="w-full h-10 rounded-xl text-[12px] font-semibold flex items-center justify-center border border-[#1E1E2E] text-white/25 cursor-not-allowed select-none">
                     Coming soon
                   </span>
+                ) : (p as { contactForm?: boolean }).contactForm ? (
+                  <button
+                    onClick={() => setShowContact(true)}
+                    className="w-full h-10 rounded-xl text-[12px] font-semibold transition-colors flex items-center justify-center cursor-pointer border border-[#1E1E2E] text-white/60 hover:border-[#2A2A3A] hover:text-white/80"
+                  >{p.cta}</button>
                 ) : p.checkout ? (
                   <button
                     onClick={() => setCheckoutPlan({ name: p.name, price: p.price, checkout: p.checkout! })}
@@ -1243,6 +1319,9 @@ function Pricing() {
       </section>
 
       {checkoutPlan && <CheckoutModal plan={checkoutPlan} onClose={() => setCheckoutPlan(null)} />}
+      <AnimatePresence>
+        {showContact && <ContactFormModal onClose={() => setShowContact(false)} />}
+      </AnimatePresence>
     </>
   );
 }
@@ -1266,13 +1345,13 @@ function FutureOfAI() {
         </InView>
 
         <motion.div
-          className="grid sm:grid-cols-3 gap-4"
+          className="grid sm:grid-cols-3 gap-y-4 gap-x-4 sm:gap-x-10"
           initial="hidden" whileInView="visible" viewport={{ once: true, margin: '-50px' }}
           variants={stagger}
         >
           {BIGGER_CARDS.map((card, i) => (
             <motion.div key={card.title} variants={fadeUp} custom={i}
-              className="relative rounded-2xl aspect-square flex flex-col justify-center p-8"
+              className="relative rounded-2xl aspect-[4/3] flex flex-col justify-center p-8"
             >
               {/* Prominent corner brackets — 3× size */}
               <div className="absolute top-0 left-0 w-9 h-9 pointer-events-none">
