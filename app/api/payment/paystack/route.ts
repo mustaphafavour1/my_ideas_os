@@ -5,6 +5,12 @@ import { PLAN_AMOUNTS_USD } from '@/lib/planPricing';
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY!;
 
+// TEMPORARY — for a real end-to-end payment test with a token charge instead
+// of the full price. Doesn't touch what's displayed anywhere (PLAN_AMOUNTS_USD
+// / the NGN preview), only the amount actually sent to Paystack. Remove once
+// the test payment is confirmed to go through and grant the plan correctly.
+const TEST_NGN_OVERRIDE: Record<string, number> = { 'one-time': 100 };
+
 export async function POST(req: NextRequest) {
   const { plan, email: guestEmail } = await req.json();
 
@@ -23,7 +29,7 @@ export async function POST(req: NextRequest) {
 
   // Paystack merchant accounts are typically NGN-only — convert and charge in Naira.
   const rate = await getUsdToNgnRate();
-  const ngnAmount = usdToNgn(usdAmount, rate);
+  const ngnAmount = TEST_NGN_OVERRIDE[plan] ?? usdToNgn(usdAmount, rate);
   metadata.ngn_rate = rate;
 
   const res = await fetch('https://api.paystack.co/transaction/initialize', {
