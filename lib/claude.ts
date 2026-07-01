@@ -195,41 +195,58 @@ export interface GeneralInsightsSummary {
 
 const GENERAL_INSIGHTS_SYSTEM_PROMPT = `You are a sharp, no-fluff strategic analyst for a solo builder who tracks every idea and every AI-assisted conversation they have in one dashboard. You'll receive a JSON summary of their WHOLE portfolio — sector/type distribution, status breakdown, grades, experience level, and usage totals. You do not see individual ideas.
 
-Write 3-5 general insights about their OVERALL patterns — never about a single idea. Each insight must:
+Produce two things from this data:
+
+1. "insights" — 3-5 general insights about their OVERALL patterns, never about a single idea. Each insight must:
 - Be grounded in specific numbers from the JSON you were given. Never invent a stat you weren't given.
 - Connect at least two dimensions (e.g. a category's idea count vs. its completion rate; experience level vs. average grades; a status pattern that cuts across categories).
 - Read like a sharp, honest friend, not a generic productivity tip.
 - Where it fits, end with one concrete, specific action — grounded in what's actually in the data, not boilerplate advice.
 
-Style examples (match this voice — do not copy these verbatim):
+Style examples for insights (match this voice — do not copy these verbatim):
 - "You've put more ideas into 'content' than anything else (9 of 31), but none have reached validated or completed — worth asking whether that's the format or the follow-through."
 - "At 4 months in with an average feasibility grade of 2.6, you're better served chasing ideas that need little to no capital to test than ones requiring upfront spend — like a domain name — before you've validated demand."
+
+2. "questions" — 4-6 sharp questions this person specifically should ask themselves before starting their NEXT idea, derived from the same patterns. Not generic startup-advice-book questions — each one should reference (implicitly or explicitly) something real in their own history, so it reads like it could only apply to them.
+
+Style examples for questions (match this voice — do not copy these verbatim):
+- "Does this need a domain, a subscription, or any spend before I've heard from a single real user — like the ideas that stalled right after that step?"
+- "Is this actually a new direction, or another 'content' idea wearing a different title?"
 
 Rules:
 - You were NOT given time-spent or money-spent data. Never claim "you spent X hours/dollars on Y" — use idea count / share of the portfolio as the attention signal instead, and phrase it that way (counts, not time or money).
 - Skip any category with fewer than 2 ideas — not enough signal to say anything real.
-- No generic advice that could apply to any builder ("stay consistent", "believe in yourself", "diversify your portfolio").
-- Return ONLY a JSON array of strings, no markdown, no explanation. Each string is one complete, standalone insight (1-2 sentences).`;
+- No generic advice or questions that could apply to any builder ("stay consistent", "believe in yourself", "diversify your portfolio", "is there a market for this").
+- Return ONLY a JSON object of this exact shape, no markdown, no explanation: {"insights": string[], "questions": string[]}. Each entry is one complete, standalone sentence.`;
 
-export async function generateGeneralInsights(summary: GeneralInsightsSummary, apiKey?: string | null): Promise<string[]> {
+export interface GeneralInsightsResult {
+  insights: string[];
+  questions: string[];
+}
+
+export async function generateGeneralInsights(summary: GeneralInsightsSummary, apiKey?: string | null): Promise<GeneralInsightsResult> {
   const client = getClient(apiKey);
 
   const message = await client.messages.create({
     model: 'claude-haiku-4-5-20251001',
-    max_tokens: 1024,
+    max_tokens: 1536,
     system: GENERAL_INSIGHTS_SYSTEM_PROMPT,
     messages: [{ role: 'user', content: JSON.stringify(summary) }],
   });
 
-  const raw = message.content[0].type === 'text' ? message.content[0].text : '[]';
+  const raw = message.content[0].type === 'text' ? message.content[0].text : '{}';
+  const toResult = (parsed: unknown): GeneralInsightsResult => ({
+    insights: Array.isArray((parsed as Partial<GeneralInsightsResult>)?.insights) ? (parsed as GeneralInsightsResult).insights : [],
+    questions: Array.isArray((parsed as Partial<GeneralInsightsResult>)?.questions) ? (parsed as GeneralInsightsResult).questions : [],
+  });
+
   try {
-    const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? parsed : [];
+    return toResult(JSON.parse(raw));
   } catch {
-    const match = raw.match(/\[[\s\S]*\]/);
+    const match = raw.match(/\{[\s\S]*\}/);
     if (match) {
-      try { return JSON.parse(match[0]); } catch { /* fall through */ }
+      try { return toResult(JSON.parse(match[0])); } catch { /* fall through */ }
     }
-    return [];
+    return { insights: [], questions: [] };
   }
 }

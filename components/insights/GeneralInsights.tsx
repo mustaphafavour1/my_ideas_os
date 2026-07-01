@@ -7,6 +7,7 @@ import { toast } from 'sonner';
 
 interface GeneralInsightsData {
   insights: string[] | null;
+  questions: string[] | null;
   generated_at: string | null;
   eligible: boolean;
   ideas_count: number;
@@ -52,7 +53,7 @@ export function GeneralInsights() {
       });
       const result = await res.json();
       if (!res.ok) throw new Error(result.message || result.error || 'Could not generate insights');
-      setData((prev) => (prev ? { ...prev, insights: result.insights, generated_at: result.generated_at } : prev));
+      setData((prev) => (prev ? { ...prev, insights: result.insights, questions: result.questions, generated_at: result.generated_at } : prev));
       toast.success('Insights refreshed');
     } catch (err) {
       toast.error((err as Error).message);
@@ -77,6 +78,7 @@ export function GeneralInsights() {
   if (!data) return null;
 
   const hasInsights = !!(data.insights && data.insights.length > 0);
+  const hasQuestions = !!(data.questions && data.questions.length > 0);
 
   return (
     <section>
@@ -161,6 +163,27 @@ export function GeneralInsights() {
                 </motion.div>
               ))}
             </div>
+          )}
+
+          {hasQuestions && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: (data.insights?.length || 0) * 0.05 }}
+              className="bg-gradient-to-br from-[#7A7AF0]/[0.06] to-transparent border border-[#7A7AF0]/15 rounded-2xl px-5 py-4"
+            >
+              <p className="text-[11px] font-semibold text-[#9A9AF5] mb-3">
+                The right questions to ask before working on your next idea
+              </p>
+              <ul className="space-y-2.5">
+                {data.questions!.map((question, i) => (
+                  <li key={i} className="flex gap-2.5 items-start">
+                    <span className="text-[#7A7AF0] shrink-0 text-[11px] mt-0.5">?</span>
+                    <p className="text-[13px] text-[#D0D0DA] leading-relaxed">{question}</p>
+                  </li>
+                ))}
+              </ul>
+            </motion.div>
           )}
         </div>
       )}

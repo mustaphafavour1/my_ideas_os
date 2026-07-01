@@ -81,12 +81,13 @@ export async function GET(req: NextRequest) {
   const supabase = createServiceClient();
   const [{ count: ideaCount }, { data: statsRow }, { data: userRow }] = await Promise.all([
     supabase.from('ideas').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
-    supabase.from('user_stats').select('general_insights, general_insights_generated_at').eq('user_id', user.id).maybeSingle(),
+    supabase.from('user_stats').select('general_insights, next_idea_questions, general_insights_generated_at').eq('user_id', user.id).maybeSingle(),
     supabase.from('users').select('plan').eq('id', user.id).maybeSingle(),
   ]);
 
   return NextResponse.json({
     insights: statsRow?.general_insights || null,
+    questions: statsRow?.next_idea_questions || null,
     generated_at: statsRow?.general_insights_generated_at || null,
     eligible: (ideaCount || 0) >= MIN_IDEAS_FOR_INSIGHTS,
     ideas_count: ideaCount || 0,
@@ -128,14 +129,17 @@ export async function POST(req: NextRequest) {
     }
 
     const summary = buildSummary(ideaRows, userStats as UserStats | null);
-    const insights = await generateGeneralInsights(summary, userApiKey);
+    const { insights, questions } = await generateGeneralInsights(summary, userApiKey);
     const generatedAt = new Date().toISOString();
 
     await supabase
       .from('user_stats')
-      .upsert({ user_id: user.id, general_insights: insights, general_insights_generated_at: generatedAt }, { onConflict: 'user_id' });
+      .upsert(
+        { user_id: user.id, general_insights: insights, next_idea_questions: questions, general_insights_generated_at: generatedAt },
+        { onConflict: 'user_id' }
+      );
 
-    return NextResponse.json({ insights, generated_at: generatedAt });
+    return NextResponse.json({ insights, questions, generated_at: generatedAt });
   } catch (err) {
     return NextResponse.json({ error: (err as Error).message || 'Failed to generate insights' }, { status: 500 });
   }
