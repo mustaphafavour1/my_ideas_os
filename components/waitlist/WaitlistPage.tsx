@@ -51,15 +51,19 @@ const GOOGLE_FORM_ACTION = 'https://docs.google.com/forms/d/e/1FAIpQLSctPvWvt8Xc
 const GOOGLE_FORM_FIELDS = {
   name: 'entry.181480148',
   email: 'entry.463801258',
-  idea: 'entry.1926220507',
+  type: 'entry.1926220507',
   message: 'entry.1619198101',
   heardFrom: 'entry.19317049',
 };
 
+// Exact strings the Google Form's multiple-choice field expects — must match
+// its option text verbatim or the submission is rejected.
+const MESSAGE_TYPES = ['Question', 'Feedback', 'Idea', 'Bug report', 'Other'];
+
 function ContactFormModal({ onClose }: { onClose: () => void }) {
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
-  const [idea, setIdea] = useState('');
+  const [type, setType] = useState(MESSAGE_TYPES[0]);
   const [message, setMessage] = useState('');
   const [heardFrom, setHeardFrom] = useState('');
   const [submitted, setSubmitted] = useState(false);
@@ -122,8 +126,10 @@ function ContactFormModal({ onClose }: { onClose: () => void }) {
               <input type="email" name={GOOGLE_FORM_FIELDS.email} value={email} onChange={(e) => setEmail(e.target.value)} required placeholder="you@company.com" className={inputClass} />
             </div>
             <div>
-              <label className={labelClass}>What&apos;s your idea?</label>
-              <input name={GOOGLE_FORM_FIELDS.idea} value={idea} onChange={(e) => setIdea(e.target.value)} placeholder="e.g. Team rollout for a 30-person studio" className={inputClass} />
+              <label className={labelClass}>What&apos;s this about?</label>
+              <select name={GOOGLE_FORM_FIELDS.type} value={type} onChange={(e) => setType(e.target.value)} className={`${inputClass} cursor-pointer`}>
+                {MESSAGE_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
             </div>
             <div>
               <label className={labelClass}>Message</label>
