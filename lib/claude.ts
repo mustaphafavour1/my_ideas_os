@@ -211,8 +211,8 @@ Rules:
 - No generic advice that could apply to any builder ("stay consistent", "believe in yourself", "diversify your portfolio").
 - Return ONLY a JSON array of strings, no markdown, no explanation. Each string is one complete, standalone insight (1-2 sentences).`;
 
-export async function generateGeneralInsights(summary: GeneralInsightsSummary): Promise<string[]> {
-  const client = getClient();
+export async function generateGeneralInsights(summary: GeneralInsightsSummary, apiKey?: string | null): Promise<string[]> {
+  const client = getClient(apiKey);
 
   const message = await client.messages.create({
     model: 'claude-haiku-4-5-20251001',

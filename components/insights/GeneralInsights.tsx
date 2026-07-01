@@ -10,6 +10,7 @@ interface GeneralInsightsData {
   generated_at: string | null;
   eligible: boolean;
   ideas_count: number;
+  is_paid: boolean;
 }
 
 const MIN_IDEAS = 3;
@@ -28,6 +29,7 @@ export function GeneralInsights() {
   const [data, setData] = useState<GeneralInsightsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [generating, setGenerating] = useState(false);
+  const [apiKey, setApiKey] = useState('');
 
   const fetchData = useCallback(async () => {
     try {
@@ -40,12 +42,16 @@ export function GeneralInsights() {
 
   useEffect(() => { fetchData(); }, [fetchData]);
 
-  const handleGenerate = async () => {
+  const generate = async () => {
     setGenerating(true);
     try {
-      const res = await fetch('/api/insights/general', { method: 'POST' });
+      const res = await fetch('/api/insights/general', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(apiKey.trim() ? { apiKey: apiKey.trim() } : {}),
+      });
       const result = await res.json();
-      if (!res.ok) throw new Error(result.error || 'Could not generate insights');
+      if (!res.ok) throw new Error(result.message || result.error || 'Could not generate insights');
       setData((prev) => (prev ? { ...prev, insights: result.insights, generated_at: result.generated_at } : prev));
       toast.success('Insights refreshed');
     } catch (err) {
@@ -70,13 +76,15 @@ export function GeneralInsights() {
 
   if (!data) return null;
 
+  const hasInsights = !!(data.insights && data.insights.length > 0);
+
   return (
     <section>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-[10px] font-mono text-[#4A4A60] uppercase tracking-widest">General Insights</h2>
-        {data.eligible && data.insights && data.insights.length > 0 && (
+        {data.eligible && data.is_paid && hasInsights && (
           <button
-            onClick={handleGenerate}
+            onClick={generate}
             disabled={generating}
             className="flex items-center gap-1.5 text-[10px] font-mono text-[#3A3A55] hover:text-[#6A6A80] transition-colors disabled:opacity-50 cursor-pointer"
           >
@@ -95,29 +103,65 @@ export function GeneralInsights() {
             Sync or add a few more ideas to unlock portfolio-wide insights — {data.ideas_count}/{MIN_IDEAS} so far.
           </p>
         </div>
-      ) : !data.insights || data.insights.length === 0 ? (
-        <div className="bg-[#111118] border border-[#1E1E2E] rounded-2xl p-6 flex items-center justify-between gap-4 flex-wrap">
-          <p className="text-[12px] text-white/40">
-            See the big-picture patterns across all {data.ideas_count} of your ideas — where your energy&apos;s going, what&apos;s working, what isn&apos;t.
-          </p>
-          <Button size="sm" loading={generating} onClick={handleGenerate}>
-            Generate insights
-          </Button>
-        </div>
       ) : (
-        <div className="grid gap-3">
-          {data.insights.map((insight, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.05 }}
-              className="flex gap-3 items-start bg-gradient-to-br from-[#F7C948]/[0.06] to-transparent border border-[#F7C948]/15 rounded-2xl px-5 py-4"
-            >
-              <span className="text-[#F7C948] shrink-0 text-[13px] mt-0.5">✦</span>
-              <p className="text-[13px] text-[#D0D0DA] leading-relaxed">{insight}</p>
-            </motion.div>
-          ))}
+        <div className="space-y-3">
+          {/* Free-tier users bring their own key — same as syncing — so this feature carries no API cost for us */}
+          {!data.is_paid && (
+            <div className="rounded-xl border border-[#1E1E2E] bg-[#0A0A0F] p-4 space-y-2.5">
+              <div>
+                <p className="text-xs font-semibold text-[#F0F0F5]">Your Claude API key</p>
+                <p className="text-[11px] text-[#4A4A60] mt-0.5">
+                  Used only to generate insights — never sent to or stored on our servers.
+                </p>
+              </div>
+              <input
+                type="password"
+                placeholder="sk-ant-api03-..."
+                value={apiKey}
+                onChange={(e) => setApiKey(e.target.value)}
+                className="w-full bg-[#111118] border border-[#2A2A3A] rounded-lg px-3 py-2 text-xs text-[#F0F0F5] placeholder-[#3A3A55] focus:outline-none focus:border-[#F7C948]/40 transition-colors"
+              />
+              <div className="flex items-center gap-2 flex-wrap">
+                <Button size="sm" loading={generating} disabled={!apiKey.trim()} onClick={generate}>
+                  {hasInsights ? 'Refresh insights' : 'Generate insights'}
+                </Button>
+                <a
+                  href="/#pricing" target="_blank" rel="noopener"
+                  className="inline-flex items-center text-[10px] font-semibold text-[#F7C948] border border-[#F7C948]/30 hover:border-[#F7C948]/50 hover:bg-[#F7C948]/5 rounded-md px-2.5 py-1 transition-colors"
+                >
+                  Upgrade to skip this
+                </a>
+              </div>
+            </div>
+          )}
+
+          {!hasInsights && data.is_paid && (
+            <div className="bg-[#111118] border border-[#1E1E2E] rounded-2xl p-6 flex items-center justify-between gap-4 flex-wrap">
+              <p className="text-[12px] text-white/40">
+                See the big-picture patterns across all {data.ideas_count} of your ideas — where your energy&apos;s going, what&apos;s working, what isn&apos;t.
+              </p>
+              <Button size="sm" loading={generating} onClick={generate}>
+                Generate insights
+              </Button>
+            </div>
+          )}
+
+          {hasInsights && (
+            <div className="grid gap-3">
+              {data.insights!.map((insight, i) => (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 6 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                  className="flex gap-3 items-start bg-gradient-to-br from-[#F7C948]/[0.06] to-transparent border border-[#F7C948]/15 rounded-2xl px-5 py-4"
+                >
+                  <span className="text-[#F7C948] shrink-0 text-[13px] mt-0.5">✦</span>
+                  <p className="text-[13px] text-[#D0D0DA] leading-relaxed">{insight}</p>
+                </motion.div>
+              ))}
+            </div>
+          )}
         </div>
       )}
     </section>

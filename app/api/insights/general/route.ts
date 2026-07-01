@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 120;
 
 const MIN_IDEAS_FOR_INSIGHTS = 3;
+const PAID_PLANS = new Set(['one-time', 'monthly', 'enterprise']);
 
 function avg(nums: (number | null | undefined)[]): number | null {
   const valid = nums.filter((n): n is number => typeof n === 'number');
@@ -78,9 +79,10 @@ export async function GET(req: NextRequest) {
   if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const supabase = createServiceClient();
-  const [{ count: ideaCount }, { data: statsRow }] = await Promise.all([
+  const [{ count: ideaCount }, { data: statsRow }, { data: userRow }] = await Promise.all([
     supabase.from('ideas').select('id', { count: 'exact', head: true }).eq('user_id', user.id),
     supabase.from('user_stats').select('general_insights, general_insights_generated_at').eq('user_id', user.id).maybeSingle(),
+    supabase.from('users').select('plan').eq('id', user.id).maybeSingle(),
   ]);
 
   return NextResponse.json({
@@ -88,6 +90,7 @@ export async function GET(req: NextRequest) {
     generated_at: statsRow?.general_insights_generated_at || null,
     eligible: (ideaCount || 0) >= MIN_IDEAS_FOR_INSIGHTS,
     ideas_count: ideaCount || 0,
+    is_paid: PAID_PLANS.has(userRow?.plan ?? ''),
   });
 }
 
@@ -97,9 +100,13 @@ export async function POST(req: NextRequest) {
 
   try {
     const supabase = createServiceClient();
-    const [{ data: ideas }, { data: userStats }] = await Promise.all([
+    const body = await req.json().catch(() => ({}));
+    const userApiKey: string | null = body.apiKey || null;
+
+    const [{ data: ideas }, { data: userStats }, { data: userRow }] = await Promise.all([
       supabase.from('ideas').select('*').eq('user_id', user.id),
       supabase.from('user_stats').select('*').eq('user_id', user.id).maybeSingle(),
+      supabase.from('users').select('plan').eq('id', user.id).maybeSingle(),
     ]);
 
     const ideaRows = (ideas || []) as Idea[];
@@ -110,8 +117,18 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // Same plan gate as /api/sync: paid plans run on our key, everyone else
+    // brings their own — so this feature carries no API cost for free users.
+    const isPaid = PAID_PLANS.has(userRow?.plan ?? '');
+    if (!isPaid && !userApiKey) {
+      return NextResponse.json(
+        { error: 'payment_required', message: 'Enter your Claude API key to generate insights, or upgrade to a paid plan.' },
+        { status: 402 }
+      );
+    }
+
     const summary = buildSummary(ideaRows, userStats as UserStats | null);
-    const insights = await generateGeneralInsights(summary);
+    const insights = await generateGeneralInsights(summary, userApiKey);
     const generatedAt = new Date().toISOString();
 
     await supabase
