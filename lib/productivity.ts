@@ -52,6 +52,10 @@ export interface PersonalityResult {
 }
 
 export function computePersonality(ideas: Idea[], stats: UserStats | null): PersonalityResult {
+  if (ideas.length === 0) {
+    return { type: 'Unknown', description: 'Sync your conversations to reveal your AI personality' };
+  }
+
   const typeCounts: Record<string, number> = {};
   ideas.forEach((i) => { if (i.idea_type) typeCounts[i.idea_type] = (typeCounts[i.idea_type] || 0) + 1; });
 
@@ -121,6 +125,16 @@ const TEMPERAMENTS: Record<string, Omit<TemperamentResult, 'key'>> = {
 };
 
 export function computeTemperament(ideas: Idea[], stats: UserStats | null): TemperamentResult {
+  if (ideas.length === 0) {
+    return {
+      key: 'unknown',
+      name: 'Unknown',
+      subtitle: 'Not enough data',
+      description: 'Sync your conversations to reveal your AI temperament.',
+      color: '#4A4A60',
+    };
+  }
+
   const s = { strategos: 0, kairos: 0, poietes: 0, sophron: 0 };
 
   ideas.forEach((idea) => {
