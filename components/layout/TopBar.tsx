@@ -5,6 +5,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { SyncUploader } from '@/components/sync/SyncUploader';
+import { UpgradeModal } from '@/components/dashboard/UpgradeModal';
+
+const PAID_PLANS = new Set(['one-time', 'monthly', 'enterprise']);
 
 export interface BreadcrumbItem {
   label: string;
@@ -20,6 +23,8 @@ interface TopBarProps {
 
 export function TopBar({ title, subtitle, lastSynced, userPlan }: TopBarProps) {
   const [showSync, setShowSync] = useState(false);
+  const [showUpgrade, setShowUpgrade] = useState(false);
+  const isPaid = PAID_PLANS.has(userPlan ?? '');
 
   const formatLastSynced = (ts: string | null | undefined) => {
     if (!ts) return null;
@@ -58,6 +63,15 @@ export function TopBar({ title, subtitle, lastSynced, userPlan }: TopBarProps) {
               )}
             </AnimatePresence>
 
+            {!isPaid && (
+              <button
+                onClick={() => setShowUpgrade(true)}
+                className="text-[11px] font-semibold text-[#F7C948] hover:text-[#F7C948]/80 border border-[#F7C948]/30 hover:border-[#F7C948]/50 rounded-lg px-2.5 py-1.5 transition-colors cursor-pointer"
+              >
+                Upgrade
+              </button>
+            )}
+
             <Button size="sm" onClick={() => setShowSync(true)}>
               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -75,8 +89,14 @@ export function TopBar({ title, subtitle, lastSynced, userPlan }: TopBarProps) {
         title="Sync Ideas from Claude"
         width="lg"
       >
-        <SyncUploader onComplete={() => setShowSync(false)} userPlan={userPlan} />
+        <SyncUploader
+          onComplete={() => setShowSync(false)}
+          userPlan={userPlan}
+          onUpgradeClick={() => { setShowSync(false); setShowUpgrade(true); }}
+        />
       </Modal>
+
+      <UpgradeModal open={showUpgrade} onClose={() => setShowUpgrade(false)} />
     </>
   );
 }

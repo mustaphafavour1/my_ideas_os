@@ -1068,9 +1068,8 @@ const PLANS = [
 ];
 
 function CheckoutModal({ plan, onClose }: { plan: { name: string; price: string; checkout: string }; onClose: () => void }) {
-  const [gateway, setGateway] = useState<'paystack' | 'lemonsqueezy'>('paystack');
   const [email, setEmail] = useState('');
-  const [stage, setStage] = useState<'idle' | 'loading' | 'sent' | 'error'>('idle');
+  const [stage, setStage] = useState<'idle' | 'loading' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [isAuthed, setIsAuthed] = useState(false);
 
@@ -1083,43 +1082,23 @@ function CheckoutModal({ plan, onClose }: { plan: { name: string; price: string;
   }, []);
 
   const handleSubmit = async () => {
+    if (!isAuthed && !email.trim()) return;
     setStage('loading');
     setErrorMsg('');
 
-    if (isAuthed) {
-      // Signed in — call payment API directly and redirect
-      try {
-        const res = await fetch(`/api/payment/${gateway}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ plan: plan.checkout }),
-        });
-        const data = await res.json();
-        const url = data.authorization_url || data.url;
-        if (url) { window.location.href = url; return; }
-        setErrorMsg(data.error || 'Could not start checkout.');
-        setStage('error');
-      } catch {
-        setErrorMsg('Network error. Please try again.');
-        setStage('error');
-      }
-      return;
-    }
-
-    // Not signed in — send magic link with checkout redirect baked in
-    if (!email.trim()) { setStage('idle'); return; }
     try {
-      const { getSupabase } = await import('@/lib/supabase');
-      const next = `/app/checkout?plan=${plan.checkout}&gateway=${gateway}`;
-      const origin = window.location.origin;
-      const { error } = await getSupabase().auth.signInWithOtp({
-        email: email.trim(),
-        options: { emailRedirectTo: `${origin}/auth/callback?next=${encodeURIComponent(next)}` },
+      const res = await fetch('/api/payment/paystack', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ plan: plan.checkout, ...(isAuthed ? {} : { email: email.trim() }) }),
       });
-      if (error) { setErrorMsg(error.message); setStage('error'); return; }
-      setStage('sent');
+      const data = await res.json();
+      const url = data.authorization_url || data.url;
+      if (url) { window.location.href = url; return; }
+      setErrorMsg(data.error || 'Could not start checkout.');
+      setStage('error');
     } catch {
-      setErrorMsg('Failed to send magic link. Try again.');
+      setErrorMsg('Network error. Please try again.');
       setStage('error');
     }
   };
@@ -1137,60 +1116,51 @@ function CheckoutModal({ plan, onClose }: { plan: { name: string; price: string;
           </button>
         </div>
 
-        {stage === 'sent' ? (
-          <div className="text-center py-4">
-            <p className="text-[#4ADE80] font-medium mb-2">Check your email!</p>
-            <p className="text-[13px] text-white/50">We sent a magic link. After signing in, you'll be taken straight to payment.</p>
+        {/* Gateway indicator — only Paystack is live for now */}
+        <div className="flex gap-2 mb-1.5">
+          <div className="flex-1 py-2 rounded-lg text-[12px] font-medium border bg-[#F7C948]/10 border-[#F7C948]/40 text-[#F7C948] text-center">
+            Paystack
           </div>
-        ) : (
-          <>
-            {/* Gateway tabs */}
-            <div className="flex gap-2 mb-4">
-              {(['paystack', 'lemonsqueezy'] as const).map((g) => (
-                <button key={g} onClick={() => setGateway(g)}
-                  className={`flex-1 py-2 rounded-lg text-[12px] font-medium transition-colors border ${
-                    gateway === g ? 'bg-[#F7C948]/10 border-[#F7C948]/40 text-[#F7C948]' : 'border-[#1E1E2E] text-white/40 hover:text-white/60'
-                  }`}>
-                  {g === 'paystack' ? 'Paystack' : 'Lemon Squeezy'}
-                </button>
-              ))}
-            </div>
-            <p className="text-[10px] text-white/25 font-mono mb-4">
-              {gateway === 'paystack' ? 'Supports cards, bank transfer, USSD — great for Nigeria & Africa' : 'Supports cards worldwide, PayPal'}
-            </p>
+          <div className="flex-1 py-2 rounded-lg text-[12px] font-medium border border-[#1E1E2E] text-white/25 text-center cursor-not-allowed select-none">
+            Lemon Squeezy — soon
+          </div>
+        </div>
+        <p className="text-[10px] text-white/25 font-mono mb-4">
+          Supports cards, bank transfer, USSD — great for Nigeria &amp; Africa
+        </p>
 
-            {!isAuthed && (
-              <div className="mb-4">
-                <label className="block text-[11px] font-mono text-white/40 uppercase tracking-widest mb-1.5">Your email</label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit(); }}
-                  placeholder="you@example.com"
-                  className="w-full bg-[#0A0A0F] border border-[#2A2A3A] rounded-lg px-3 py-2.5 text-sm text-[#F0F0F5] placeholder-[#3A3A55] focus:outline-none focus:border-[#F7C948]/40 transition-colors"
-                  autoFocus
-                />
-              </div>
-            )}
+        {!isAuthed && (
+          <div className="mb-4">
+            <label className="block text-[11px] font-mono text-white/40 uppercase tracking-widest mb-1.5">Your email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              onKeyDown={(e) => { if (e.key === 'Enter') handleSubmit(); }}
+              placeholder="you@example.com"
+              className="w-full bg-[#0A0A0F] border border-[#2A2A3A] rounded-lg px-3 py-2.5 text-sm text-[#F0F0F5] placeholder-[#3A3A55] focus:outline-none focus:border-[#F7C948]/40 transition-colors"
+              autoFocus
+            />
+          </div>
+        )}
 
-            {errorMsg && <p className="text-[11px] text-[#F87171] mb-3">{errorMsg}</p>}
+        {errorMsg && <p className="text-[11px] text-[#F87171] mb-3">{errorMsg}</p>}
 
-            <button
-              onClick={handleSubmit}
-              disabled={stage === 'loading' || (!isAuthed && !email.trim())}
-              className="w-full h-11 rounded-xl bg-[#F7C948] text-[#0A0A0F] text-[13px] font-bold hover:bg-[#E6B830] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-            >
-              {stage === 'loading' ? (
-                <><div className="w-4 h-4 border-2 border-[#0A0A0F]/30 border-t-[#0A0A0F] rounded-full animate-spin" /> Processing…</>
-              ) : isAuthed ? (
-                `Pay ${plan.price}`
-              ) : (
-                'Send magic link & continue to payment'
-              )}
-            </button>
-            {!isAuthed && <p className="text-[10px] text-white/25 text-center mt-3">You'll get a sign-in link first, then straight to checkout.</p>}
-          </>
+        <button
+          onClick={handleSubmit}
+          disabled={stage === 'loading' || (!isAuthed && !email.trim())}
+          className="w-full h-11 rounded-xl bg-[#F7C948] text-[#0A0A0F] text-[13px] font-bold hover:bg-[#E6B830] transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+        >
+          {stage === 'loading' ? (
+            <><div className="w-4 h-4 border-2 border-[#0A0A0F]/30 border-t-[#0A0A0F] rounded-full animate-spin" /> Redirecting to payment…</>
+          ) : (
+            `Pay ${plan.price}`
+          )}
+        </button>
+        {!isAuthed && (
+          <p className="text-[10px] text-white/25 text-center mt-3">
+            After payment, we&apos;ll email you a sign-in link to access your dashboard.
+          </p>
         )}
       </div>
     </div>

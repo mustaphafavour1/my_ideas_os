@@ -9,6 +9,7 @@ import { SyncResult } from '@/lib/types';
 interface SyncUploaderProps {
   onComplete?: (result: SyncResult) => void;
   userPlan?: string | null;
+  onUpgradeClick?: () => void;
 }
 
 type FileStatus = 'pending' | 'processing' | 'done' | 'error';
@@ -108,7 +109,7 @@ const BATCH_SIZE = 8;
 
 const PAID_PLANS = new Set(['one-time', 'monthly', 'enterprise']);
 
-export function SyncUploader({ onComplete, userPlan }: SyncUploaderProps) {
+export function SyncUploader({ onComplete, userPlan, onUpgradeClick }: SyncUploaderProps) {
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [dragging, setDragging] = useState(false);
   const [syncing, setSyncing] = useState(false);
@@ -337,9 +338,19 @@ export function SyncUploader({ onComplete, userPlan }: SyncUploaderProps) {
           />
           <p className="text-[10px] text-[#3A3A55]">
             Don&apos;t have a key?{' '}
-            <a href="/#pricing" target="_blank" rel="noopener" className="text-[#F7C948]/70 hover:text-[#F7C948] underline transition-colors">
-              Upgrade to a paid plan
-            </a>{' '}
+            {onUpgradeClick ? (
+              <button
+                type="button"
+                onClick={onUpgradeClick}
+                className="text-[#F7C948]/70 hover:text-[#F7C948] underline transition-colors cursor-pointer"
+              >
+                Upgrade to a paid plan
+              </button>
+            ) : (
+              <a href="/#pricing" target="_blank" rel="noopener" className="text-[#F7C948]/70 hover:text-[#F7C948] underline transition-colors">
+                Upgrade to a paid plan
+              </a>
+            )}{' '}
             and we&apos;ll handle the API for you.
           </p>
         </div>

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createServiceClient } from '@/lib/supabase';
+import { planUpdates } from '@/lib/grantPlan';
 
 const LS_WEBHOOK_SECRET = process.env.LEMONSQUEEZY_WEBHOOK_SECRET!;
 
@@ -31,18 +32,7 @@ export async function POST(req: NextRequest) {
   }
 
   const supabase = createServiceClient();
-
-  const updates: Record<string, unknown> = { plan, plan_updated_at: new Date().toISOString() };
-
-  if (plan === 'one-time') {
-    updates.analysis_credits = 1;
-    updates.max_conversations = 150;
-  } else if (plan === 'monthly') {
-    updates.monthly_syncs_remaining = 4;
-    updates.subscription_end = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
-  }
-
-  await supabase.from('users').update(updates).eq('id', userId);
+  await supabase.from('users').update(planUpdates(plan)).eq('id', userId);
 
   try {
     await supabase.from('transactions').insert({

@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createServiceClient } from '@/lib/supabase';
+import { planUpdates, resolveUserIdByEmail, sendLoginLink } from '@/lib/grantPlan';
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY!;
 
@@ -24,42 +25,50 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ received: true });
   }
 
-  const { amount, metadata, customer } = event.data;
-  const userId = metadata?.user_id;
+  const { amount, metadata, customer, reference, currency } = event.data;
   const plan = metadata?.plan || PLAN_BY_AMOUNT[amount];
-
-  if (!userId || !plan) {
-    return NextResponse.json({ error: 'Missing metadata' }, { status: 400 });
-  }
+  if (!plan) return NextResponse.json({ error: 'Missing plan metadata' }, { status: 400 });
 
   const supabase = createServiceClient();
 
-  // Grant access based on plan
-  const updates: Record<string, unknown> = { plan, plan_updated_at: new Date().toISOString() };
+  // Deduplicate: the browser callback route may have already processed this
+  // reference (it fires independently of this webhook).
+  const { data: existing } = await supabase
+    .from('transactions')
+    .select('id')
+    .eq('reference', reference)
+    .maybeSingle();
+  if (existing) return NextResponse.json({ received: true });
 
-  if (plan === 'one-time') {
-    updates.analysis_credits = 1;
-    updates.max_conversations = 150;
-  } else if (plan === 'monthly') {
-    updates.monthly_syncs_remaining = 4;
-    updates.subscription_end = new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString();
+  let userId: string | null = metadata?.user_id || null;
+  const isGuestCheckout = !userId;
+
+  if (isGuestCheckout) {
+    const email = metadata?.email || customer?.email;
+    if (!email) return NextResponse.json({ error: 'Missing user_id or email metadata' }, { status: 400 });
+    userId = await resolveUserIdByEmail(supabase, email);
   }
+  if (!userId) return NextResponse.json({ error: 'Could not resolve user' }, { status: 500 });
 
-  await supabase.from('users').update(updates).eq('id', userId);
+  await supabase.from('users').update(planUpdates(plan)).eq('id', userId);
 
-  // Record the transaction
   try {
     await supabase.from('transactions').insert({
       user_id: userId,
       provider: 'paystack',
       amount_cents: amount,
-      currency: event.data.currency,
+      currency,
       plan,
-      email: customer.email,
-      reference: event.data.reference,
+      email: customer?.email || '',
+      reference,
       status: 'succeeded',
     });
   } catch { /* non-fatal if transactions table doesn't exist yet */ }
+
+  // Guest checkout: the user has no session yet — send them their sign-in link now.
+  if (isGuestCheckout && customer?.email) {
+    await sendLoginLink(supabase, customer.email);
+  }
 
   return NextResponse.json({ received: true });
 }

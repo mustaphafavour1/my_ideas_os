@@ -9,13 +9,20 @@ const PLAN_AMOUNTS: Record<string, number> = {
 };
 
 export async function POST(req: NextRequest) {
-  const user = await getUserFromRequest(req);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const { plan, currency = 'USD' } = await req.json();
+  const { plan, email: guestEmail, currency = 'USD' } = await req.json();
 
   const amount = PLAN_AMOUNTS[plan];
   if (!amount) return NextResponse.json({ error: 'Invalid plan' }, { status: 400 });
+
+  // Authenticated purchase (in-dashboard upgrade, or already-signed-in website visitor)
+  // falls back to guest checkout by email (anonymous website visitor pays first, signs in after).
+  const user = await getUserFromRequest(req);
+  const email = user?.email || (typeof guestEmail === 'string' ? guestEmail.trim() : '');
+  if (!email) return NextResponse.json({ error: 'Email is required' }, { status: 400 });
+
+  const metadata: Record<string, unknown> = { plan };
+  if (user) metadata.user_id = user.id;
+  else metadata.email = email;
 
   const res = await fetch('https://api.paystack.co/transaction/initialize', {
     method: 'POST',
@@ -24,14 +31,10 @@ export async function POST(req: NextRequest) {
       'Content-Type': 'application/json',
     },
     body: JSON.stringify({
-      email: user.email,
+      email,
       amount: amount * 100, // Paystack uses smallest currency unit (kobo/cents × 100)
       currency,
-      metadata: {
-        user_id: user.id,
-        plan,
-        cancel_action: `${process.env.NEXT_PUBLIC_APP_URL}/pricing`,
-      },
+      metadata,
       callback_url: `${process.env.NEXT_PUBLIC_APP_URL}/api/payment/paystack/callback`,
     }),
   });

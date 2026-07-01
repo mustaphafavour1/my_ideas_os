@@ -1,6 +1,6 @@
 'use client';
 
-import { useActionState, useEffect } from 'react';
+import { useActionState, useEffect, useState } from 'react';
 import { useFormStatus } from 'react-dom';
 import { sendMagicLink, type MagicLinkState } from './actions';
 
@@ -24,14 +24,29 @@ function SubmitButton() {
   );
 }
 
-export function LoginForm({ next }: { next?: string }) {
+export function LoginForm({ next, initialError }: { next?: string; initialError?: string }) {
   const [state, action] = useActionState<MagicLinkState, FormData>(sendMagicLink, null);
+  const [linkError, setLinkError] = useState(() =>
+    initialError ? decodeURIComponent(initialError) : ''
+  );
 
   useEffect(() => {
     if (state?.debug) {
       console.error('[Idea OS] Magic link error:', state.debug);
     }
   }, [state]);
+
+  // Scrub ?error=... and any stray #access_token=... from the URL once,
+  // right after reading it, so a refresh never re-shows the same error.
+  useEffect(() => {
+    if (initialError || window.location.hash) {
+      const cleanSearch = next ? `?next=${encodeURIComponent(next)}` : '';
+      window.history.replaceState(null, '', window.location.pathname + cleanSearch);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const displayError = state?.error || linkError;
 
   return (
     <form action={action} className="rounded-xl border border-[#2A2A3A] bg-[#111118] p-6 flex flex-col gap-4">
@@ -48,13 +63,14 @@ export function LoginForm({ next }: { next?: string }) {
           required
           autoFocus
           placeholder="you@example.com"
+          onChange={() => linkError && setLinkError('')}
           className="w-full rounded-lg bg-[#0A0A0F] border border-[#2A2A3A] px-3 py-2.5 text-sm text-[#F0F0F5] placeholder-[#4A4A5A] focus:outline-none focus:border-[#F7C948]/50 transition-colors"
         />
       </div>
 
-      {state?.error && (
+      {displayError && (
         <p className="text-xs text-red-400 bg-red-950/30 border border-red-900/40 rounded-lg px-3 py-2">
-          {state.error}
+          {displayError}
         </p>
       )}
 

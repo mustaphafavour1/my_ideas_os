@@ -7,9 +7,9 @@ export const metadata = {
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ sent?: string; next?: string }>;
+  searchParams: Promise<{ sent?: string; next?: string; error?: string }>;
 }) {
-  const { sent, next } = await searchParams;
+  const { sent, next, error } = await searchParams;
 
   return (
     <div className="min-h-screen bg-[#0A0A0F] flex items-center justify-center px-4">
@@ -27,7 +27,7 @@ export default async function LoginPage({
             </p>
           </div>
         ) : (
-          <LoginForm next={next} />
+          <LoginForm next={next} initialError={error} />
         )}
 
         <p className="mt-4 text-center text-xs text-[#4A4A5A]">

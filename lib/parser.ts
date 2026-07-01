@@ -128,6 +128,66 @@ function parseNewConversation(conv: NewConversation): ParsedConversation | null 
   };
 }
 
+// ─── ChatGPT export format (mapping tree) ──────────────────────────────────────
+
+interface ChatGPTMessage {
+  author?: { role?: string };
+  content?: { parts?: unknown[] };
+  create_time?: number | null;
+}
+
+interface ChatGPTNode {
+  message?: ChatGPTMessage | null;
+}
+
+interface ChatGPTConversation {
+  conversation_id?: string;
+  id?: string;
+  title?: string;
+  create_time?: number;
+  mapping: Record<string, ChatGPTNode>;
+}
+
+function extractChatGPTMessageText(m: ChatGPTMessage): string {
+  const parts = m.content?.parts;
+  if (!Array.isArray(parts)) return '';
+  return parts
+    .filter((p): p is string => typeof p === 'string' && p.trim().length > 0)
+    .join('\n')
+    .trim();
+}
+
+function parseChatGPTConversation(conv: ChatGPTConversation): ParsedConversation | null {
+  if (!conv.mapping || typeof conv.mapping !== 'object') return null;
+
+  const nodes = Object.values(conv.mapping)
+    .filter((n): n is ChatGPTNode & { message: ChatGPTMessage } =>
+      !!n.message && n.message.author?.role !== 'system' && !!n.message.create_time
+    )
+    .sort((a, b) => (a.message.create_time ?? 0) - (b.message.create_time ?? 0));
+
+  const fullText = nodes
+    .map((n) => {
+      const text = extractChatGPTMessageText(n.message);
+      return text ? `[${n.message.author?.role || 'unknown'}]: ${text}` : null;
+    })
+    .filter(Boolean)
+    .join('\n\n') as string;
+
+  if (fullText.trim().length <= 50) return null;
+
+  const created_at = conv.create_time
+    ? new Date(conv.create_time * 1000).toISOString()
+    : new Date().toISOString();
+
+  return {
+    uuid: conv.conversation_id || conv.id || `unknown-${Date.now()}`,
+    name: conv.title || 'Unnamed Conversation',
+    created_at,
+    fullText,
+  };
+}
+
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 export interface ParsedConversation {
@@ -146,6 +206,9 @@ function parseSingleItem(item: unknown): ParsedConversation | null {
   }
   if (Array.isArray(obj.messages)) {
     return parseNewConversation(obj as unknown as NewConversation);
+  }
+  if (obj.mapping && typeof obj.mapping === 'object') {
+    return parseChatGPTConversation(obj as unknown as ChatGPTConversation);
   }
   return null;
 }
