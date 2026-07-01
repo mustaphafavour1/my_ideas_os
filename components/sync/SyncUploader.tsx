@@ -173,12 +173,11 @@ export function SyncUploader({ onComplete, userPlan, onUpgradeClick }: SyncUploa
         batches.push(conversations.slice(i, i + BATCH_SIZE));
       }
       const totalBatches = batches.length;
-      const bulkSuffix = totalBatches > 3 ? ' · cost-optimised' : '';
 
       setFiles((prev) =>
         prev.map((f) =>
           f.name === file.name
-            ? { ...f, status: 'processing', progress: 0, progressLabel: `Batch 1/${totalBatches}${bulkSuffix} · 0%` }
+            ? { ...f, status: 'processing', progress: 0, progressLabel: `Batch 1/${totalBatches} · 0%` }
             : f
         )
       );
@@ -200,7 +199,7 @@ export function SyncUploader({ onComplete, userPlan, onUpgradeClick }: SyncUploa
         setFiles((prev) =>
           prev.map((f) =>
             f.name === file.name
-              ? { ...f, progress: prePct, progressLabel: `Batch ${i + 1}/${totalBatches}${bulkSuffix} · Analysing conversations…` }
+              ? { ...f, progress: prePct, progressLabel: `Batch ${i + 1}/${totalBatches} · Analysing conversations…` }
               : f
           )
         );
@@ -233,7 +232,7 @@ export function SyncUploader({ onComplete, userPlan, onUpgradeClick }: SyncUploa
                     ...f,
                     progress: pct,
                     progressLabel: done < totalBatches
-                      ? `Batch ${done}/${totalBatches}${bulkSuffix} · ${pct}%`
+                      ? `Batch ${done}/${totalBatches} · ${pct}%`
                       : `Finalising · ${pct}%`,
                   }
                 : f

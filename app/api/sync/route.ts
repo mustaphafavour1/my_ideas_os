@@ -133,7 +133,22 @@ export async function POST(req: NextRequest) {
         (c) => `=== Conversation: ${c.name} (${c.created_at}) ===\n${c.fullText}`
       );
       const { ideas: extracted, usage } = await extractIdeasFromConversations(texts, userApiKey, lowCost);
-      allExtracted = allExtracted.concat(extracted);
+
+      // The model doesn't always return a valid chat_date — fall back to the
+      // latest conversation date in this batch rather than leaving it unset
+      // (which would otherwise default to "now" downstream).
+      const batchLatestDate = batch.reduce(
+        (max, c) => (c.created_at > max ? c.created_at : max),
+        batch[0]?.created_at ?? ''
+      );
+      const patched = extracted.map((idea) => ({
+        ...idea,
+        chat_date: idea.chat_date && !Number.isNaN(Date.parse(idea.chat_date))
+          ? idea.chat_date
+          : batchLatestDate || idea.chat_date,
+      }));
+
+      allExtracted = allExtracted.concat(patched);
       totalInputTokens += usage.input_tokens;
       totalOutputTokens += usage.output_tokens;
     }

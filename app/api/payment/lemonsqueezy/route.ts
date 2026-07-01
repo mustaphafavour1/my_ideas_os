@@ -25,9 +25,10 @@ export async function POST(req: NextRequest) {
   if (user) custom.user_id = user.id;
   else custom.email = email;
 
-  const redirectUrl = user
-    ? `${process.env.NEXT_PUBLIC_APP_URL}/app?payment=success`
-    : `${process.env.NEXT_PUBLIC_APP_URL}/checkout/success`;
+  // Always route through our own callback so it can check whether the session
+  // actually survived the round trip through Lemon Squeezy's checkout domain,
+  // rather than assuming it did just because a session existed at checkout time.
+  const redirectUrl = `${process.env.NEXT_PUBLIC_APP_URL}/api/payment/lemonsqueezy/callback?email=${encodeURIComponent(email)}`;
 
   const res = await fetch('https://api.lemonsqueezy.com/v1/checkouts', {
     method: 'POST',

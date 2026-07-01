@@ -23,7 +23,9 @@ For each idea found, return a JSON array. Each item must have:
 - blockers: string[] (empty array if none)
 - ai_suggestions: string (one concrete recommendation for this idea)
 - source_ref: string (conversation name or date)
-- chat_date: ISO date string
+- chat_date: ISO date string (YYYY-MM-DD) — this MUST be the date shown in that
+  conversation's own "=== Conversation: ... (DATE) ===" header, copied exactly.
+  Never use today's date or the date you are doing this analysis on.
 - related_to: string | null (if this idea is a sub-feature, variant, or closely related to another idea extracted from the SAME batch, put the EXACT title of that parent/related idea here; otherwise null)
 - user_complaints: string[] (max 3 — frustrations or complaints the user expressed about AI responses in this conversation, e.g. "Claude kept ignoring the constraint about X"; empty array if none)
 - rephrasing_suggestions: string[] (max 3 — cases where the user had to rephrase or retry a prompt; empty array if none)

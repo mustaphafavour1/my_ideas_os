@@ -20,6 +20,39 @@ interface ChartsProps {
   ideas: Idea[];
 }
 
+// Buckets by month for spans up to ~14 months (familiar granularity); beyond
+// that, buckets by year instead so an "all-time" view across several years
+// doesn't cram dozens of month ticks onto one chart.
+function bucketTimeline(dates: Date[]): { month: string; count: number }[] {
+  if (dates.length === 0) return [];
+
+  const years = dates.map((d) => d.getFullYear());
+  const spanYears = Math.max(...years) - Math.min(...years);
+
+  if (spanYears >= 2) {
+    const byYear: Record<string, number> = {};
+    dates.forEach((d) => {
+      const key = String(d.getFullYear());
+      byYear[key] = (byYear[key] || 0) + 1;
+    });
+    return Object.entries(byYear)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([year, count]) => ({ month: year, count }));
+  }
+
+  const byMonth: Record<string, number> = {};
+  dates.forEach((d) => {
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    byMonth[key] = (byMonth[key] || 0) + 1;
+  });
+  return Object.entries(byMonth)
+    .sort((a, b) => a[0].localeCompare(b[0]))
+    .map(([month, count]) => ({
+      month: new Date(month + '-01').toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }),
+      count,
+    }));
+}
+
 export function IdeasByTypeChart({ ideas }: ChartsProps) {
   const counts: Record<string, number> = {};
   ideas.forEach((i) => { if (i.idea_type) counts[i.idea_type] = (counts[i.idea_type] || 0) + 1; });
@@ -115,6 +148,20 @@ export function IdeasByStatusChart({ ideas }: ChartsProps) {
   );
 }
 
+// A "nice" round step size for a Y-axis, scaled to the data's magnitude —
+// avoids cramming e.g. 50 tick labels (steps of 2 up to 100) onto one axis.
+function niceAxisStep(max: number): number {
+  if (max <= 10) return 1;
+  if (max <= 20) return 2;
+  if (max <= 50) return 5;
+  if (max <= 100) return 10;
+  if (max <= 200) return 20;
+  if (max <= 500) return 50;
+  if (max <= 1000) return 100;
+  const magnitude = Math.pow(10, Math.floor(Math.log10(max)));
+  return magnitude;
+}
+
 export function GradeDistributionChart({ ideas }: ChartsProps) {
   const buckets = [
     { range: '1.0', min: 1.0, max: 1.5 },
@@ -133,10 +180,12 @@ export function GradeDistributionChart({ ideas }: ChartsProps) {
   }));
 
   const maxBucket = Math.max(...data.map((d) => d.count), 1);
-  const dataMax = Math.max(4, Math.ceil(maxBucket / 2) * 2);
+  const step = niceAxisStep(maxBucket);
+  // +2 steps of headroom above the rounded max, so the chart visibly has room to grow.
+  const dataMax = (Math.ceil(maxBucket / step) + 2) * step;
 
   const ticks: number[] = [];
-  for (let t = 0; t <= dataMax; t += 2) ticks.push(t);
+  for (let t = 0; t <= dataMax; t += step) ticks.push(t);
 
   return (
     <ResponsiveContainer width="100%" height={260}>
@@ -160,21 +209,10 @@ export function GradeDistributionChart({ ideas }: ChartsProps) {
 }
 
 export function IdeasTimelineChart({ ideas }: ChartsProps) {
-  const byMonth: Record<string, number> = {};
-  ideas.forEach((i) => {
-    const dateStr = i.chat_date || i.created_at;
-    const d = new Date(dateStr);
-    if (isNaN(d.getTime())) return;
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    byMonth[key] = (byMonth[key] || 0) + 1;
-  });
-  const data = Object.entries(byMonth)
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .slice(-12)
-    .map(([month, count]) => ({
-      month: new Date(month + '-01').toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }),
-      count,
-    }));
+  const dates = ideas
+    .map((i) => new Date(i.chat_date || i.created_at))
+    .filter((d) => !isNaN(d.getTime()));
+  const data = bucketTimeline(dates);
 
   if (data.length === 0) return <EmptyChart label="No timeline data yet" />;
 
@@ -317,20 +355,10 @@ export function TopSectorsChart({ ideas }: ChartsProps) {
 }
 
 export function ConversationsTimelineChart({ logs }: { logs: ConversationLog[] }) {
-  const byMonth: Record<string, number> = {};
-  logs.forEach((l) => {
-    const d = new Date(l.created_at);
-    if (isNaN(d.getTime())) return;
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-    byMonth[key] = (byMonth[key] || 0) + 1;
-  });
-  const data = Object.entries(byMonth)
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .slice(-12)
-    .map(([month, count]) => ({
-      month: new Date(month + '-01').toLocaleDateString('en-GB', { month: 'short', year: 'numeric' }),
-      count,
-    }));
+  const dates = logs
+    .map((l) => new Date(l.created_at))
+    .filter((d) => !isNaN(d.getTime()));
+  const data = bucketTimeline(dates);
 
   if (data.length < 2) return <EmptyChart label="Not enough conversation data" />;
 

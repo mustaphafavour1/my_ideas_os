@@ -1,7 +1,7 @@
 'use client';
 
 import { useRouter, usePathname } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useTransition, useEffect } from 'react';
 
 const RANGE_OPTIONS = [
   { label: 'All time', value: 'all' },
@@ -17,14 +17,18 @@ interface TimeRangeFilterProps {
   currentRange: string;
   currentFrom?: string;
   currentTo?: string;
+  onPendingChange?: (pending: boolean) => void;
 }
 
-export function TimeRangeFilter({ currentRange, currentFrom = '', currentTo = '' }: TimeRangeFilterProps) {
+export function TimeRangeFilter({ currentRange, currentFrom = '', currentTo = '', onPendingChange }: TimeRangeFilterProps) {
   const router = useRouter();
   const pathname = usePathname();
   const [range, setRange] = useState(currentRange);
   const [from, setFrom] = useState(currentFrom);
   const [to, setTo] = useState(currentTo);
+  const [isPending, startTransition] = useTransition();
+
+  useEffect(() => { onPendingChange?.(isPending); }, [isPending, onPendingChange]);
 
   const push = (r: string, f?: string, t?: string) => {
     const params = new URLSearchParams();
@@ -32,7 +36,9 @@ export function TimeRangeFilter({ currentRange, currentFrom = '', currentTo = ''
     if (r === 'custom' && f) params.set('from', f);
     if (r === 'custom' && t) params.set('to', t);
     const qs = params.toString();
-    router.push(qs ? `${pathname}?${qs}` : pathname);
+    startTransition(() => {
+      router.push(qs ? `${pathname}?${qs}` : pathname);
+    });
   };
 
   const handleRangeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
@@ -43,15 +49,21 @@ export function TimeRangeFilter({ currentRange, currentFrom = '', currentTo = ''
 
   return (
     <div className="flex items-center gap-2 flex-wrap">
-      <select
-        value={range}
-        onChange={handleRangeChange}
-        className="bg-[#111118] border border-[#1E1E2E] rounded-lg px-3 py-1.5 text-[11px] font-mono text-[#8888A0] focus:outline-none focus:border-[#F7C948]/30 transition-colors cursor-pointer"
-      >
-        {RANGE_OPTIONS.map(({ label, value }) => (
-          <option key={value} value={value}>{label}</option>
-        ))}
-      </select>
+      <div className="relative">
+        <select
+          value={range}
+          onChange={handleRangeChange}
+          disabled={isPending}
+          className="bg-[#111118] border border-[#1E1E2E] rounded-lg pl-3 pr-3 py-1.5 text-[11px] font-mono text-[#8888A0] focus:outline-none focus:border-[#F7C948]/30 transition-colors cursor-pointer disabled:opacity-60 disabled:cursor-wait"
+        >
+          {RANGE_OPTIONS.map(({ label, value }) => (
+            <option key={value} value={value}>{label}</option>
+          ))}
+        </select>
+        {isPending && (
+          <span className="absolute -right-4 top-1/2 -translate-y-1/2 w-2.5 h-2.5 border-2 border-[#F7C948]/30 border-t-[#F7C948] rounded-full animate-spin" />
+        )}
+      </div>
 
       {range === 'custom' && (
         <div className="flex items-center gap-2">

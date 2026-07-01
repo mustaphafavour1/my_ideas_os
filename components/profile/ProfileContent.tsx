@@ -318,7 +318,7 @@ export function ProfileContent({ ideas, stats, completed, inProgress, completion
                 </div>
                 <span className="text-[10px] font-mono text-[#4A4A60] tracking-wide">Idea OS</span>
               </div>
-              <p className="text-[9px] font-mono text-white/40 tracking-wide">ideas-os.vercel.app</p>
+              <p className="text-[9px] font-mono text-white/40 tracking-wide">ideas.headfavour.com</p>
             </div>
           </div>
         </div>

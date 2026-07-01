@@ -1,6 +1,14 @@
 import { Idea, DashboardStats, UserStats } from './types';
 import { computeProductivityScore, scoreLabel } from './productivity';
 
+// The date an idea should be filtered/sorted by is when it was actually
+// discussed, not when the row happened to be inserted (sync time) — chat_date
+// falls back to updated_at, then created_at, for older rows synced before
+// chat_date was tracked reliably.
+export function ideaDate(idea: Idea): string {
+  return idea.chat_date || idea.updated_at || idea.created_at;
+}
+
 export function getRangeCutoff(range: string, from?: string, to?: string): { from: Date | null; to: Date | null } {
   const now = new Date();
   switch (range) {
@@ -29,7 +37,7 @@ export function computeDashboardProps(
 
   const filteredIdeas = cutoff.from || cutoff.to
     ? allIdeas.filter((i) => {
-        const d = new Date(i.created_at);
+        const d = new Date(ideaDate(i));
         if (cutoff.from && d < cutoff.from) return false;
         if (cutoff.to && d > cutoff.to) return false;
         return true;

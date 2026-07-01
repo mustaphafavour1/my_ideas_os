@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { createServiceClient } from '@/lib/supabase';
 import { planUpdates, resolveUserIdByEmail, sendLoginLink } from '@/lib/grantPlan';
+import { getUserFromRequest } from '@/lib/auth';
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY!;
 
@@ -29,7 +30,7 @@ export async function GET(req: NextRequest) {
   const txData = data.data;
   const metadata = txData.metadata || {};
   const plan = metadata.plan;
-  const wasAuthedPurchase = Boolean(metadata.user_id);
+  const email = metadata.email || txData.customer?.email;
 
   if (!plan) {
     return NextResponse.redirect(new URL('/app?payment=success', req.url));
@@ -45,10 +46,7 @@ export async function GET(req: NextRequest) {
 
   if (!existing) {
     let userId: string | null = metadata.user_id || null;
-    if (!userId) {
-      const email = metadata.email || txData.customer?.email;
-      if (email) userId = await resolveUserIdByEmail(supabase, email);
-    }
+    if (!userId && email) userId = await resolveUserIdByEmail(supabase, email);
 
     if (userId) {
       await supabase.from('users').update(planUpdates(plan)).eq('id', userId);
@@ -60,23 +58,24 @@ export async function GET(req: NextRequest) {
           amount_cents: txData.amount,
           currency: txData.currency,
           plan,
-          email: txData.customer?.email || '',
+          email: email || '',
           reference,
           status: 'succeeded',
         });
       } catch { /* non-fatal — webhook may have already recorded it */ }
-
-      if (!wasAuthedPurchase && txData.customer?.email) {
-        await sendLoginLink(supabase, txData.customer.email);
-      }
     }
   }
 
-  if (wasAuthedPurchase) {
-    // Sign a short-lived HMAC token so we can show a toast on the redirect page
+  // A third-party redirect (through Paystack's own domain) isn't guaranteed to
+  // preserve the session cookie — don't assume it survived. Check the current
+  // request directly, and fall back to emailing a fresh sign-in link if it didn't,
+  // rather than bouncing an already-paid, already-logged-in user to a bare /login.
+  const currentUser = await getUserFromRequest(req);
+  if (currentUser) {
     const token = crypto.createHmac('sha256', PAYSTACK_SECRET).update(reference).digest('hex').slice(0, 16);
     return NextResponse.redirect(new URL(`/app?payment=success&ref=${token}`, req.url));
   }
 
+  if (email) await sendLoginLink(supabase, email);
   return NextResponse.redirect(new URL('/checkout/success', req.url));
 }

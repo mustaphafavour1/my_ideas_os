@@ -14,19 +14,23 @@ export function computeProductivityScore(ideas: Idea[], stats: UserStats | null)
     ? (withDesc + withGrade + withNextSteps) / (ideas.length * 3)
     : 0;
 
-  // High thresholds — AI's ceiling is far above what most builders currently reach
-  const volumeScore    = (convos       / 150)   * 100;  // 150 conversations = 100%
-  const outputScore    = (codeLines    / 50000) * 100;  // 50 000 code lines  = 100%
-  const ideasScore     = (ideas.length / 250)   * 100;  // 250 ideas          = 100%
-  const executionScore = completionRate          * 100;
-  const depthScore     = depthRate               * 100;
+  // High thresholds — a full multi-platform import (Claude + ChatGPT, and
+  // eventually more) can trivially cross what used to be the ceiling here on
+  // raw volume alone, so these are scaled up an order of magnitude and the
+  // weighting shifts toward execution/depth — actually finishing and
+  // fleshing out ideas — rather than how much raw chat history you imported.
+  const volumeScore    = (convos       / 800)    * 100;  // 800 conversations   = 100%
+  const outputScore    = (codeLines    / 300000) * 100;  // 300 000 code lines  = 100%
+  const ideasScore     = (ideas.length / 800)    * 100;  // 800 ideas          = 100%
+  const executionScore = completionRate           * 100;
+  const depthScore     = depthRate                * 100;
 
   const raw = Math.round(
-    volumeScore    * 0.30 +
-    outputScore    * 0.30 +
-    ideasScore     * 0.20 +
-    executionScore * 0.10 +
-    depthScore     * 0.10,
+    volumeScore    * 0.20 +
+    outputScore    * 0.20 +
+    ideasScore     * 0.15 +
+    executionScore * 0.25 +
+    depthScore     * 0.20,
   );
 
   return Math.min(99, raw); // 99% ceiling — AI can always do more

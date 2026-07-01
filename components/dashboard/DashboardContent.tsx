@@ -102,6 +102,7 @@ export function DashboardContent({
   range = 'all', rangeFrom, rangeTo,
 }: DashboardContentProps) {
   const [vis, setVis] = useState<SectionVisibility>(DEFAULT_VIS);
+  const [filterPending, setFilterPending] = useState(false);
 
   useEffect(() => {
     try {
@@ -148,8 +149,20 @@ export function DashboardContent({
         <section key="stats">
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-[10px] font-mono text-[#4A4A60] uppercase tracking-widest">Overview</h2>
-            <TimeRangeFilter currentRange={range} currentFrom={rangeFrom} currentTo={rangeTo} />
+            <TimeRangeFilter currentRange={range} currentFrom={rangeFrom} currentTo={rangeTo} onPendingChange={setFilterPending} />
           </div>
+
+          {filterPending ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-4 h-[92px] animate-pulse">
+                  <div className="h-2.5 w-2/3 bg-[#1E1E2E] rounded mb-4" />
+                  <div className="h-5 w-1/2 bg-[#1E1E2E] rounded" />
+                </div>
+              ))}
+            </div>
+          ) : (
+          <>
           <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
             {primaryMetrics.map(({ label, value, sub, accent, danger }) => (
               <div
@@ -228,6 +241,8 @@ export function DashboardContent({
                   : <div key={title}>{card}</div>;
               })}
             </div>
+          )}
+          </>
           )}
         </section>
       );

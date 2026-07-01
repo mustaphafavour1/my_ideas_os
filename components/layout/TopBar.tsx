@@ -1,11 +1,13 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
 import { SyncUploader } from '@/components/sync/SyncUploader';
 import { UpgradeModal } from '@/components/dashboard/UpgradeModal';
+import { PlanModal } from '@/components/dashboard/PlanModal';
 
 const PAID_PLANS = new Set(['one-time', 'monthly', 'enterprise']);
 
@@ -22,8 +24,10 @@ interface TopBarProps {
 }
 
 export function TopBar({ title, subtitle, lastSynced, userPlan }: TopBarProps) {
+  const router = useRouter();
   const [showSync, setShowSync] = useState(false);
   const [showUpgrade, setShowUpgrade] = useState(false);
+  const [showPlan, setShowPlan] = useState(false);
   const isPaid = PAID_PLANS.has(userPlan ?? '');
 
   // Computed client-side only (Date.now() would otherwise differ between the
@@ -70,14 +74,12 @@ export function TopBar({ title, subtitle, lastSynced, userPlan }: TopBarProps) {
               )}
             </AnimatePresence>
 
-            {!isPaid && (
-              <button
-                onClick={() => setShowUpgrade(true)}
-                className="text-[11px] font-semibold text-[#F7C948] hover:text-[#F7C948]/80 border border-[#F7C948]/30 hover:border-[#F7C948]/50 rounded-lg px-2.5 py-1.5 transition-colors cursor-pointer"
-              >
-                Upgrade
-              </button>
-            )}
+            <button
+              onClick={() => (isPaid ? setShowPlan(true) : setShowUpgrade(true))}
+              className="text-[11px] font-semibold text-[#F7C948] hover:text-[#F7C948]/80 border border-[#F7C948]/30 hover:border-[#F7C948]/50 rounded-lg px-2.5 py-1.5 transition-colors cursor-pointer"
+            >
+              {isPaid ? 'View Plan' : 'Upgrade'}
+            </button>
 
             <Button size="sm" onClick={() => setShowSync(true)}>
               <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -97,13 +99,18 @@ export function TopBar({ title, subtitle, lastSynced, userPlan }: TopBarProps) {
         width="lg"
       >
         <SyncUploader
-          onComplete={() => setShowSync(false)}
+          onComplete={() => { setShowSync(false); router.refresh(); }}
           userPlan={userPlan}
           onUpgradeClick={() => { setShowSync(false); setShowUpgrade(true); }}
         />
       </Modal>
 
       <UpgradeModal open={showUpgrade} onClose={() => setShowUpgrade(false)} />
+      <PlanModal
+        open={showPlan}
+        onClose={() => setShowPlan(false)}
+        onUpgradeToMonthly={() => { setShowPlan(false); setShowUpgrade(true); }}
+      />
     </>
   );
 }
