@@ -40,7 +40,7 @@ const PLANS = [
 ] as const;
 
 export function UpgradeModal({ open, onClose }: UpgradeModalProps) {
-  const [gateway, setGateway] = useState<'lemonsqueezy' | 'paystack'>('lemonsqueezy');
+  const [gateway, setGateway] = useState<'freemius' | 'paystack'>('freemius');
   const [loadingPlan, setLoadingPlan] = useState<string | null>(null);
   const [error, setError] = useState('');
   const { formatNgn } = useUsdToNgn();
@@ -73,12 +73,12 @@ export function UpgradeModal({ open, onClose }: UpgradeModalProps) {
     <Modal open={open} onClose={onClose} title="Upgrade to full access" width="lg">
       {/* Gateway tabs */}
       <div className="flex gap-2 mb-4">
-        {(['lemonsqueezy', 'paystack'] as const).map((g) => (
+        {(['freemius', 'paystack'] as const).map((g) => (
           <button key={g} onClick={() => setGateway(g)}
             className={`flex-1 py-2 rounded-lg text-[12px] font-medium transition-colors border cursor-pointer ${
               gateway === g ? 'bg-[#F7C948]/10 border-[#F7C948]/40 text-[#F7C948]' : 'border-[#1E1E2E] text-white/40 hover:text-white/60'
             }`}>
-            {g === 'lemonsqueezy' ? 'Pay in USD' : 'Pay in Naira'}
+            {g === 'freemius' ? 'Pay in USD' : 'Pay in Naira'}
           </button>
         ))}
       </div>

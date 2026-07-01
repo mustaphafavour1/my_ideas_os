@@ -1143,7 +1143,7 @@ const PLANS = [
 ];
 
 function CheckoutModal({ plan, onClose }: { plan: { name: string; price: string; checkout: string }; onClose: () => void }) {
-  const [gateway, setGateway] = useState<'lemonsqueezy' | 'paystack'>('lemonsqueezy');
+  const [gateway, setGateway] = useState<'freemius' | 'paystack'>('freemius');
   const [email, setEmail] = useState('');
   const [stage, setStage] = useState<'idle' | 'loading' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
@@ -1199,12 +1199,12 @@ function CheckoutModal({ plan, onClose }: { plan: { name: string; price: string;
 
         {/* Gateway tabs */}
         <div className="flex gap-2 mb-1.5">
-          {(['lemonsqueezy', 'paystack'] as const).map((g) => (
+          {(['freemius', 'paystack'] as const).map((g) => (
             <button key={g} onClick={() => setGateway(g)}
               className={`flex-1 py-2 rounded-lg text-[12px] font-medium transition-colors border ${
                 gateway === g ? 'bg-[#F7C948]/10 border-[#F7C948]/40 text-[#F7C948]' : 'border-[#1E1E2E] text-white/40 hover:text-white/60'
               }`}>
-              {g === 'lemonsqueezy' ? 'Pay in USD' : 'Pay in Naira'}
+              {g === 'freemius' ? 'Pay in USD' : 'Pay in Naira'}
             </button>
           ))}
         </div>

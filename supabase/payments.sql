@@ -68,12 +68,12 @@ $$;
 create table if not exists public.transactions (
   id            uuid        primary key default gen_random_uuid(),
   user_id       uuid        references public.users(id) on delete set null,
-  provider      text        not null,   -- 'paystack' | 'lemonsqueezy'
+  provider      text        not null,   -- 'paystack' | 'freemius' | 'lemonsqueezy'
   amount_cents  int         not null,
   currency      text        not null default 'USD',
   plan          text        not null,
   email         text,
-  reference     text        unique,     -- Paystack reference / LS order id
+  reference     text        unique,     -- Paystack reference / Freemius license id / LS order id
   status        text        not null default 'succeeded',
   created_at    timestamptz not null default now()
 );
