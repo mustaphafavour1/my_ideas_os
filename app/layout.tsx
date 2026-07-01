@@ -22,20 +22,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         {/* Apply theme/color/font before first paint to avoid flash — app pages only */}
         <script dangerouslySetInnerHTML={{ __html: `
-          try {
-            if (window.location.pathname === '/') return;
-            var s = JSON.parse(localStorage.getItem('ideas-os-settings') || '{}');
-            var h = document.documentElement;
-            if (s.theme === 'light') h.setAttribute('data-theme', 'light');
-            if (s.accentColor) {
-              h.style.setProperty('--accent', s.accentColor);
-              var hx = s.accentColor.replace('#','');
-              h.style.setProperty('--accent-rgb',
-                parseInt(hx.slice(0,2),16)+','+parseInt(hx.slice(2,4),16)+','+parseInt(hx.slice(4,6),16));
-            }
-            if (s.font === 'rancho') h.classList.add('font-rancho');
-            else if (s.font === 'jetbrains') h.classList.add('font-jetbrains');
-          } catch(e) {}
+          (function() {
+            try {
+              if (window.location.pathname === '/') return;
+              var s = JSON.parse(localStorage.getItem('ideas-os-settings') || '{}');
+              var h = document.documentElement;
+              if (s.theme === 'light') h.setAttribute('data-theme', 'light');
+              if (s.accentColor) {
+                h.style.setProperty('--accent', s.accentColor);
+                var hx = s.accentColor.replace('#','');
+                h.style.setProperty('--accent-rgb',
+                  parseInt(hx.slice(0,2),16)+','+parseInt(hx.slice(2,4),16)+','+parseInt(hx.slice(4,6),16));
+              }
+              if (s.font === 'rancho') h.classList.add('font-rancho');
+              else if (s.font === 'jetbrains') h.classList.add('font-jetbrains');
+            } catch(e) {}
+          })();
         ` }} />
       </head>
       <body className="h-full bg-[#0A0A0F] text-[#F0F0F5] antialiased">
