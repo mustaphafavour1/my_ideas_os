@@ -5,11 +5,6 @@ import { planUpdates, resolveUserIdByEmail, sendLoginLink } from '@/lib/grantPla
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY!;
 
-const PLAN_BY_AMOUNT: Record<number, string> = {
-  30000:  'one-time', // $3 = 300 cents × 100
-  100000: 'monthly',  // $10 = 1000 cents × 100
-};
-
 export async function POST(req: NextRequest) {
   const body = await req.text();
   const signature = req.headers.get('x-paystack-signature') || '';
@@ -26,7 +21,7 @@ export async function POST(req: NextRequest) {
   }
 
   const { amount, metadata, customer, reference, currency } = event.data;
-  const plan = metadata?.plan || PLAN_BY_AMOUNT[amount];
+  const plan = metadata?.plan;
   if (!plan) return NextResponse.json({ error: 'Missing plan metadata' }, { status: 400 });
 
   const supabase = createServiceClient();

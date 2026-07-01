@@ -5,11 +5,6 @@ import { planUpdates, resolveUserIdByEmail, sendLoginLink } from '@/lib/grantPla
 
 const PAYSTACK_SECRET = process.env.PAYSTACK_SECRET_KEY!;
 
-const PLAN_BY_AMOUNT: Record<number, string> = {
-  30000:  'one-time',
-  100000: 'monthly',
-};
-
 // Paystack callback: user lands here after completing payment on Paystack's hosted page.
 // We re-verify the transaction server-side before granting access. The webhook is the
 // authoritative grant path — this route mirrors it so the UX doesn't depend on the
@@ -33,7 +28,7 @@ export async function GET(req: NextRequest) {
 
   const txData = data.data;
   const metadata = txData.metadata || {};
-  const plan = metadata.plan || PLAN_BY_AMOUNT[txData.amount];
+  const plan = metadata.plan;
   const wasAuthedPurchase = Boolean(metadata.user_id);
 
   if (!plan) {

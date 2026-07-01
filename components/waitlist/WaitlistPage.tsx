@@ -1054,8 +1054,8 @@ const PLANS = [
   {
     name: 'Monthly',    price: '$10',  period: '/month',
     highlight: false,   badge: null,   note: null,
-    checkout: null,     ctaHref: null,    comingSoon: true,
-    cta: 'Notify me',
+    checkout: 'monthly', ctaHref: null,
+    cta: 'Subscribe',
     features: ['Everything in One-time', '4 syncs per month (weekly)', 'Incremental — new convos only', 'Unlimited total conversations', 'Priority support'],
   },
   {
@@ -1068,6 +1068,7 @@ const PLANS = [
 ];
 
 function CheckoutModal({ plan, onClose }: { plan: { name: string; price: string; checkout: string }; onClose: () => void }) {
+  const [gateway, setGateway] = useState<'paystack' | 'lemonsqueezy'>('paystack');
   const [email, setEmail] = useState('');
   const [stage, setStage] = useState<'idle' | 'loading' | 'error'>('idle');
   const [errorMsg, setErrorMsg] = useState('');
@@ -1087,7 +1088,7 @@ function CheckoutModal({ plan, onClose }: { plan: { name: string; price: string;
     setErrorMsg('');
 
     try {
-      const res = await fetch('/api/payment/paystack', {
+      const res = await fetch(`/api/payment/${gateway}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ plan: plan.checkout, ...(isAuthed ? {} : { email: email.trim() }) }),
@@ -1116,17 +1117,19 @@ function CheckoutModal({ plan, onClose }: { plan: { name: string; price: string;
           </button>
         </div>
 
-        {/* Gateway indicator — only Paystack is live for now */}
+        {/* Gateway tabs */}
         <div className="flex gap-2 mb-1.5">
-          <div className="flex-1 py-2 rounded-lg text-[12px] font-medium border bg-[#F7C948]/10 border-[#F7C948]/40 text-[#F7C948] text-center">
-            Paystack
-          </div>
-          <div className="flex-1 py-2 rounded-lg text-[12px] font-medium border border-[#1E1E2E] text-white/25 text-center cursor-not-allowed select-none">
-            Lemon Squeezy — soon
-          </div>
+          {(['paystack', 'lemonsqueezy'] as const).map((g) => (
+            <button key={g} onClick={() => setGateway(g)}
+              className={`flex-1 py-2 rounded-lg text-[12px] font-medium transition-colors border ${
+                gateway === g ? 'bg-[#F7C948]/10 border-[#F7C948]/40 text-[#F7C948]' : 'border-[#1E1E2E] text-white/40 hover:text-white/60'
+              }`}>
+              {g === 'paystack' ? 'Paystack' : 'Lemon Squeezy'}
+            </button>
+          ))}
         </div>
         <p className="text-[10px] text-white/25 font-mono mb-4">
-          Supports cards, bank transfer, USSD — great for Nigeria &amp; Africa
+          {gateway === 'paystack' ? 'Charged in Naira — cards, bank transfer, USSD' : 'Supports cards worldwide, PayPal'}
         </p>
 
         {!isAuthed && (

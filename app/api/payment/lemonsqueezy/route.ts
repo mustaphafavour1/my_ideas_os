@@ -11,12 +11,23 @@ const VARIANT_IDS: Record<string, string> = {
 };
 
 export async function POST(req: NextRequest) {
-  const user = await getUserFromRequest(req);
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-
-  const { plan } = await req.json();
+  const { plan, email: guestEmail } = await req.json();
   const variantId = VARIANT_IDS[plan];
   if (!variantId) return NextResponse.json({ error: 'Invalid plan or variant not configured' }, { status: 400 });
+
+  // Authenticated purchase (in-dashboard upgrade, or already-signed-in website visitor)
+  // falls back to guest checkout by email (anonymous website visitor pays first, signs in after).
+  const user = await getUserFromRequest(req);
+  const email = user?.email || (typeof guestEmail === 'string' ? guestEmail.trim() : '');
+  if (!email) return NextResponse.json({ error: 'Email is required' }, { status: 400 });
+
+  const custom: Record<string, unknown> = { plan };
+  if (user) custom.user_id = user.id;
+  else custom.email = email;
+
+  const redirectUrl = user
+    ? `${process.env.NEXT_PUBLIC_APP_URL}/app?payment=success`
+    : `${process.env.NEXT_PUBLIC_APP_URL}/checkout/success`;
 
   const res = await fetch('https://api.lemonsqueezy.com/v1/checkouts', {
     method: 'POST',
@@ -29,13 +40,8 @@ export async function POST(req: NextRequest) {
       data: {
         type: 'checkouts',
         attributes: {
-          checkout_data: {
-            email: user.email,
-            custom: { user_id: user.id, plan },
-          },
-          product_options: {
-            redirect_url: `${process.env.NEXT_PUBLIC_APP_URL}/app?payment=success`,
-          },
+          checkout_data: { email, custom },
+          product_options: { redirect_url: redirectUrl },
         },
         relationships: {
           store:   { data: { type: 'stores',   id: LS_STORE_ID } },

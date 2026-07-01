@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { Modal } from '@/components/ui/Modal';
@@ -26,17 +26,24 @@ export function TopBar({ title, subtitle, lastSynced, userPlan }: TopBarProps) {
   const [showUpgrade, setShowUpgrade] = useState(false);
   const isPaid = PAID_PLANS.has(userPlan ?? '');
 
-  const formatLastSynced = (ts: string | null | undefined) => {
-    if (!ts) return null;
-    const d = new Date(ts);
-    const diff = Date.now() - d.getTime();
-    if (diff < 60000) return 'Just now';
-    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
-    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
-    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-  };
+  // Computed client-side only (Date.now() would otherwise differ between the
+  // server render and hydration, causing a hydration mismatch).
+  const [syncLabel, setSyncLabel] = useState<string | null>(null);
 
-  const syncLabel = formatLastSynced(lastSynced);
+  useEffect(() => {
+    const update = () => {
+      if (!lastSynced) { setSyncLabel(null); return; }
+      const diff = Date.now() - new Date(lastSynced).getTime();
+      if (diff < 60000) setSyncLabel('Just now');
+      else if (diff < 3600000) setSyncLabel(`${Math.floor(diff / 60000)}m ago`);
+      else if (diff < 86400000) setSyncLabel(`${Math.floor(diff / 3600000)}h ago`);
+      else setSyncLabel(new Date(lastSynced).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }));
+    };
+
+    update();
+    const interval = setInterval(update, 60000);
+    return () => clearInterval(interval);
+  }, [lastSynced]);
 
   return (
     <>
@@ -66,9 +73,12 @@ export function TopBar({ title, subtitle, lastSynced, userPlan }: TopBarProps) {
             {!isPaid && (
               <button
                 onClick={() => setShowUpgrade(true)}
-                className="text-[11px] font-semibold text-[#F7C948] hover:text-[#F7C948]/80 border border-[#F7C948]/30 hover:border-[#F7C948]/50 rounded-lg px-2.5 py-1.5 transition-colors cursor-pointer"
+                className="flex items-center gap-1.5 text-[12px] font-bold text-[#F7C948] border-2 border-[#F7C948] hover:bg-[#F7C948]/10 rounded-lg px-3.5 py-2 transition-colors cursor-pointer"
               >
-                Upgrade
+                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                </svg>
+                Upgrade to Pro
               </button>
             )}
 
@@ -86,7 +96,7 @@ export function TopBar({ title, subtitle, lastSynced, userPlan }: TopBarProps) {
       <Modal
         open={showSync}
         onClose={() => setShowSync(false)}
-        title="Sync Ideas from Claude"
+        title="Sync your conversations"
         width="lg"
       >
         <SyncUploader

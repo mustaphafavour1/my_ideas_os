@@ -5,6 +5,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/Button';
 import { toast } from 'sonner';
 import { SyncResult } from '@/lib/types';
+import { parseConversationExport, ParsedConversation } from '@/lib/parser';
+import { HowToExportModal } from './HowToExportModal';
 
 interface SyncUploaderProps {
   onComplete?: (result: SyncResult) => void;
@@ -24,87 +26,6 @@ interface FileEntry {
   progressLabel?: string;
 }
 
-interface ClientConversation {
-  uuid: string;
-  name: string;
-  created_at: string;
-  fullText: string;
-}
-
-/* eslint-disable @typescript-eslint/no-explicit-any */
-function extractOldMsgText(m: any): string {
-  if (typeof m.text === 'string' && m.text.trim()) return m.text.trim();
-  if (Array.isArray(m.content)) {
-    return m.content.filter((c: any) => c.type === 'text' && c.text?.trim()).map((c: any) => c.text).join('\n').trim();
-  }
-  if (typeof m.content === 'string' && m.content.trim()) return m.content.trim();
-  return '';
-}
-
-function extractNewMsgText(m: any): string {
-  const parts: string[] = [];
-  if (typeof m.content?.content === 'string' && m.content.content.trim()) {
-    parts.push(m.content.content.trim());
-  }
-  if (Array.isArray(m.content?.contentBlocks)) {
-    for (const b of m.content.contentBlocks) {
-      if (b.type === 'text' && b.text?.trim()) parts.push(b.text.trim());
-    }
-  }
-  if (parts.length === 0 && Array.isArray(m.content?.attachments)) {
-    for (const a of m.content.attachments) {
-      if (a.content?.trim()) parts.push(a.content.trim().slice(0, 3000));
-    }
-  }
-  return parts.join('\n\n');
-}
-
-function parseConversationsClient(content: string): ClientConversation[] {
-  try {
-    const data = JSON.parse(content);
-    const results: ClientConversation[] = [];
-
-    function parseItem(item: any, idx: number): ClientConversation | null {
-      if (!item || typeof item !== 'object') return null;
-
-      // Old format: chat_messages array
-      if (Array.isArray(item.chat_messages) && item.chat_messages.length > 0) {
-        const fullText = item.chat_messages
-          .map((m: any) => { const t = extractOldMsgText(m); return t ? `[${m.sender}]: ${t}` : null; })
-          .filter(Boolean).join('\n\n');
-        if (fullText.trim().length <= 50) return null;
-        return { uuid: item.uuid || `unknown-${Date.now()}-${idx}`, name: item.name || 'Unnamed', created_at: item.created_at || new Date().toISOString(), fullText };
-      }
-
-      // New format: messages array (Projects / Design chats)
-      if (Array.isArray(item.messages) && item.messages.length > 0) {
-        const fullText = item.messages
-          .map((m: any) => { const t = extractNewMsgText(m); return t ? `[${m.role}]: ${t}` : null; })
-          .filter(Boolean).join('\n\n');
-        if (fullText.trim().length <= 50) return null;
-        const name = item.title || item.name || item.project?.name || 'Unnamed';
-        return { uuid: item.uuid || `unknown-${Date.now()}-${idx}`, name, created_at: item.created_at || new Date().toISOString(), fullText };
-      }
-
-      return null;
-    }
-
-    if (Array.isArray(data)) {
-      data.forEach((item, i) => { const p = parseItem(item, i); if (p) results.push(p); });
-    } else if (data?.conversations && Array.isArray(data.conversations)) {
-      data.conversations.forEach((item: any, i: number) => { const p = parseItem(item, i); if (p) results.push(p); });
-    } else {
-      const p = parseItem(data, 0);
-      if (p) results.push(p);
-    }
-
-    return results;
-  } catch {
-    return [];
-  }
-}
-/* eslint-enable @typescript-eslint/no-explicit-any */
-
 const BATCH_SIZE = 8;
 
 const PAID_PLANS = new Set(['one-time', 'monthly', 'enterprise']);
@@ -113,7 +34,13 @@ export function SyncUploader({ onComplete, userPlan, onUpgradeClick }: SyncUploa
   const [files, setFiles] = useState<FileEntry[]>([]);
   const [dragging, setDragging] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [showHowTo, setShowHowTo] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+
+  // Tracks in-flight requests and user-requested skips, keyed by file name,
+  // so "Skip" can abort a currently-processing file and stop its batch loop.
+  const activeControllers = useRef<Map<string, AbortController>>(new Map());
+  const skipRequested = useRef<Set<string>>(new Set());
 
   // API key — ephemeral, held only in component state, never persisted
   const [apiKey, setApiKey] = useState('');
@@ -164,6 +91,17 @@ export function SyncUploader({ onComplete, userPlan, onUpgradeClick }: SyncUploa
   const removeFile = (name: string) =>
     setFiles((prev) => prev.filter((f) => f.name !== name));
 
+  const skipFile = (name: string) => {
+    skipRequested.current.add(name);
+    activeControllers.current.get(name)?.abort();
+  };
+
+  const clearAll = () => {
+    setFiles([]);
+    skipRequested.current.clear();
+    activeControllers.current.clear();
+  };
+
   const runSync = async () => {
     const pending = files.filter((f) => f.status === 'pending' && f.content);
     if (pending.length === 0) return;
@@ -179,18 +117,31 @@ export function SyncUploader({ onComplete, userPlan, onUpgradeClick }: SyncUploa
     let totalAdded = 0, totalUpdated = 0, totalSkipped = 0, totalAlreadySynced = 0;
 
     for (const file of pending) {
-      const conversations = parseConversationsClient(file.content);
+      let conversations: ParsedConversation[];
+      try {
+        conversations = parseConversationExport(file.content);
+      } catch {
+        setFiles((prev) =>
+          prev.map((f) => f.name === file.name ? { ...f, status: 'error', error: 'This file isn\'t valid JSON.' } : f)
+        );
+        continue;
+      }
 
       if (conversations.length === 0) {
-        // Valid JSON but no parseable conversations — let server decide
+        // Valid JSON but no recognisable Claude/ChatGPT conversations — let server decide
         setFiles((prev) =>
           prev.map((f) => f.name === file.name ? { ...f, status: 'processing', progress: 0, progressLabel: 'Validating…' } : f)
         );
+
+        const controller = new AbortController();
+        activeControllers.current.set(file.name, controller);
+
         try {
           const res = await fetch('/api/sync', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ conversationJson: file.content, ...(apiKeyHeader ? { apiKey: apiKeyHeader } : {}) }),
+            signal: controller.signal,
           });
           const result = await res.json();
           if (!res.ok) throw new Error(result.error || 'Sync failed');
@@ -204,15 +155,18 @@ export function SyncUploader({ onComplete, userPlan, onUpgradeClick }: SyncUploa
             prev.map((f) => f.name === file.name ? { ...f, status: 'done', progress: 100, subLabel: result.message || 'No conversations found' } : f)
           );
         } catch (err) {
+          const skipped = skipRequested.current.has(file.name);
           setFiles((prev) =>
-            prev.map((f) => f.name === file.name ? { ...f, status: 'error', error: (err as Error).message } : f)
+            prev.map((f) => f.name === file.name ? { ...f, status: 'error', error: skipped ? 'Skipped' : (err as Error).message } : f)
           );
+        } finally {
+          activeControllers.current.delete(file.name);
         }
         continue;
       }
 
       // Split into batches for progress tracking
-      const batches: ClientConversation[][] = [];
+      const batches: ParsedConversation[][] = [];
       for (let i = 0; i < conversations.length; i += BATCH_SIZE) {
         batches.push(conversations.slice(i, i + BATCH_SIZE));
       }
@@ -230,6 +184,14 @@ export function SyncUploader({ onComplete, userPlan, onUpgradeClick }: SyncUploa
       let hadError = false;
 
       for (let i = 0; i < batches.length; i++) {
+        if (skipRequested.current.has(file.name)) {
+          setFiles((prev) =>
+            prev.map((f) => f.name === file.name ? { ...f, status: 'error', error: 'Skipped' } : f)
+          );
+          hadError = true;
+          break;
+        }
+
         // Update label BEFORE the call so the user sees which batch is being analysed
         const prePct = Math.round((i / totalBatches) * 100);
         setFiles((prev) =>
@@ -240,11 +202,15 @@ export function SyncUploader({ onComplete, userPlan, onUpgradeClick }: SyncUploa
           )
         );
 
+        const controller = new AbortController();
+        activeControllers.current.set(file.name, controller);
+
         try {
           const res = await fetch('/api/sync', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ conversationBatch: batches[i], ...(apiKeyHeader ? { apiKey: apiKeyHeader } : {}) }),
+            signal: controller.signal,
           });
 
           const result = await res.json();
@@ -272,14 +238,17 @@ export function SyncUploader({ onComplete, userPlan, onUpgradeClick }: SyncUploa
           );
         } catch (err) {
           hadError = true;
+          const skipped = skipRequested.current.has(file.name);
           setFiles((prev) =>
             prev.map((f) =>
               f.name === file.name
-                ? { ...f, status: 'error', error: (err as Error).message }
+                ? { ...f, status: 'error', error: skipped ? 'Skipped' : (err as Error).message }
                 : f
             )
           );
           break;
+        } finally {
+          activeControllers.current.delete(file.name);
         }
       }
 
@@ -396,7 +365,7 @@ export function SyncUploader({ onComplete, userPlan, onUpgradeClick }: SyncUploa
                 </svg>
               </div>
               <p className="text-sm font-medium text-[#F0F0F5] mb-1">
-                Drop your Claude export files here
+                Drop your conversation files here
               </p>
               <p className="text-xs text-[#4A4A60]">
                 or click to browse — accepts multiple .json files
@@ -406,22 +375,17 @@ export function SyncUploader({ onComplete, userPlan, onUpgradeClick }: SyncUploa
         </AnimatePresence>
       </div>
 
-      {/* How to export hint */}
-      <details className="group">
-        <summary className="text-xs text-[#4A4A60] cursor-pointer hover:text-[#8888A0] transition-colors list-none flex items-center gap-1">
-          <svg className="w-3 h-3 transition-transform group-open:rotate-90" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-          How to export from Claude
-        </summary>
-        <div className="mt-2 pl-4 space-y-1 text-xs text-[#4A4A60] border-l border-[#1E1E2E]">
-          <p>1. Go to <span className="text-[#8888A0]">claude.ai</span> → click your avatar → <span className="text-[#8888A0]">Settings</span></p>
-          <p>2. Scroll to <span className="text-[#8888A0]">Data export</span> → click <span className="text-[#8888A0]">Export data</span></p>
-          <p>3. Wait for the email, download the ZIP</p>
-          <p>4. Extract the ZIP → find <span className="font-mono text-[#8888A0]">conversations.json</span></p>
-          <p>5. Drop it here — you can add multiple exports at once</p>
-        </div>
-      </details>
+      {/* How to export */}
+      <button
+        type="button"
+        onClick={() => setShowHowTo(true)}
+        className="text-xs text-[#4A4A60] hover:text-[#8888A0] transition-colors cursor-pointer flex items-center gap-1"
+      >
+        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        How to export your conversations
+      </button>
 
       {/* File list */}
       <AnimatePresence>
@@ -490,6 +454,15 @@ export function SyncUploader({ onComplete, userPlan, onUpgradeClick }: SyncUploa
                       </svg>
                     </button>
                   )}
+
+                  {file.status === 'processing' && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); skipFile(file.name); }}
+                      className="shrink-0 text-[10px] font-medium text-[#8888A0] hover:text-[#F0F0F5] border border-[#2A2A3A] hover:border-[#3A3A55] rounded-md px-2 py-1 transition-colors cursor-pointer"
+                    >
+                      Skip
+                    </button>
+                  )}
                 </div>
 
                 {/* Progress bar */}
@@ -519,7 +492,7 @@ export function SyncUploader({ onComplete, userPlan, onUpgradeClick }: SyncUploa
             <Button
               size="sm"
               variant="ghost"
-              onClick={() => setFiles([])}
+              onClick={clearAll}
               disabled={syncing}
             >
               Clear all
@@ -534,6 +507,8 @@ export function SyncUploader({ onComplete, userPlan, onUpgradeClick }: SyncUploa
           </div>
         </div>
       )}
+
+      <HowToExportModal open={showHowTo} onClose={() => setShowHowTo(false)} />
     </div>
   );
 }
