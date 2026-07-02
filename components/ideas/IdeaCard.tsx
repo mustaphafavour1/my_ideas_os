@@ -10,12 +10,13 @@ import { GradeRing } from '@/components/ui/GradeRing';
 interface IdeaCardProps {
   idea: Idea;
   showDescription?: boolean;
+  baseUrl?: string;
 }
 
-export function IdeaCard({ idea, showDescription = false }: IdeaCardProps) {
+export function IdeaCard({ idea, showDescription = false, baseUrl = '/ideas' }: IdeaCardProps) {
   return (
     <motion.div whileHover={{ y: -2 }} transition={{ duration: 0.15 }}>
-      <Link href={`/ideas/${idea.id}`} className="block h-full">
+      <Link href={`${baseUrl}/${idea.id}`} className="block h-full">
         <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-5 h-full card-glow hover:border-[#252535] transition-all duration-200">
           <div className="flex items-start justify-between gap-3 mb-2">
             <h3 className="text-[12px] font-semibold text-[#D0D0DA] leading-snug line-clamp-2 flex-1">

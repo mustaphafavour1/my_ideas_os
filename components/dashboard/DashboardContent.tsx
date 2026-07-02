@@ -56,6 +56,7 @@ export interface DashboardContentProps {
   rangeTo?: string;
   rangeOffset?: string;
   isDemo?: boolean;
+  basePath?: string;
 }
 
 function MiniRing({ value, max, displayLabel, color = '#F7C948' }: {
@@ -102,7 +103,7 @@ export function DashboardContent({
   mostPausedSector, mostPausedCount, mostCompletedType, mostCompletedCount, mostBlockersType, mostBlockersCount,
   productivityScore, productivityLabel,
   range = 'all', rangeFrom, rangeTo, rangeOffset,
-  isDemo = false,
+  isDemo = false, basePath = '',
 }: DashboardContentProps) {
   const [vis, setVis] = useState<SectionVisibility>(DEFAULT_VIS);
   const [filterPending, setFilterPending] = useState(false);
@@ -213,7 +214,7 @@ export function DashboardContent({
                   ringLabel: `${productivityScore}%`,
                   title: 'AI Productivity',
                   sub: productivityLabel || 'Score',
-                  href: '/profile',
+                  href: `${basePath}/profile`,
                 },
                 {
                   value: stats.avg_grade * 20, max: 100,
@@ -255,7 +256,7 @@ export function DashboardContent({
       if (!vis.showRecentIdeas) return null;
       return (
         <section key="recentIdeas">
-          <SectionLabel label="Recent Ideas" href="/ideas" linkText="All ideas" />
+          <SectionLabel label="Recent Ideas" href={`${basePath}/ideas`} linkText="All ideas" />
           {recent.length === 0 ? (
             <div className="bg-[#111118] border border-[#1E1E2E] rounded-xl p-16 text-center">
               <p className="text-[12px] text-[#3A3A55] font-mono mb-2">No ideas yet</p>
@@ -265,7 +266,7 @@ export function DashboardContent({
             <div className="flex gap-4 overflow-x-auto pb-2 snap-x scroll-smooth">
               {recent.map((idea) => (
                 <div key={idea.id} className="w-[280px] shrink-0 snap-start">
-                  <IdeaCard idea={idea} showDescription />
+                  <IdeaCard idea={idea} showDescription baseUrl={`${basePath}/ideas`} />
                 </div>
               ))}
             </div>
@@ -302,7 +303,7 @@ export function DashboardContent({
                 </div>
                 <div className="space-y-3">
                   {needsAttention.map((idea) => (
-                    <Link key={idea.id} href={`/ideas/${idea.id}`} className="block">
+                    <Link key={idea.id} href={`${basePath}/ideas/${idea.id}`} className="block">
                       <div className="bg-[#111118] border border-[#1E1E2E] hover:border-[#252535] rounded-xl px-5 py-4 min-h-[96px] flex flex-col justify-center transition-all card-glow">
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
@@ -337,13 +338,13 @@ export function DashboardContent({
                     <span className="text-[#F7C948]">✦</span>
                     AI Suggestions
                   </h2>
-                  <Link href="/suggestions" className="text-[10px] font-mono text-[#3A3A55] hover:text-[#F7C948] transition-colors">
+                  <Link href={`${basePath}/insights`} className="text-[10px] font-mono text-[#3A3A55] hover:text-[#F7C948] transition-colors">
                     All →
                   </Link>
                 </div>
                 <div className="space-y-3">
                   {withSuggestions.map((idea) => (
-                    <Link key={idea.id} href={`/ideas/${idea.id}`} className="block">
+                    <Link key={idea.id} href={`${basePath}/ideas/${idea.id}`} className="block">
                       <div className="bg-[#111118] border border-[#1E1E2E] hover:border-[#252535] rounded-xl px-5 py-4 min-h-[96px] flex flex-col justify-center transition-all card-glow">
                         <p className="text-[12px] font-medium text-[#D0D0DA] mb-1.5 truncate">{idea.title}</p>
                         <p className="text-[11px] text-[#5E5E7A] line-clamp-2 leading-relaxed">{idea.ai_suggestions}</p>
@@ -373,7 +374,7 @@ export function DashboardContent({
               unprocessed idea{unprocessedCount !== 1 ? 's' : ''} in your inbox
             </p>
           </div>
-          <Link href="/inbox" className="text-[10px] font-mono text-[#F7C948] hover:text-[#E6B830] transition-colors">
+          <Link href={`${basePath}/inbox`} className="text-[10px] font-mono text-[#F7C948] hover:text-[#E6B830] transition-colors">
             Process →
           </Link>
         </div>
