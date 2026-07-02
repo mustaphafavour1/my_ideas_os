@@ -28,7 +28,7 @@ export default async function DemoPage({
         subtitle={`${contentProps.stats.total} ideas total`}
         lastSynced={lastSynced}
       />
-      <DashboardContent {...contentProps} />
+      <DashboardContent {...contentProps} isDemo />
     </div>
   );
 }

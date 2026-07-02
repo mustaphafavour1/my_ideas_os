@@ -55,6 +55,7 @@ export interface DashboardContentProps {
   rangeFrom?: string;
   rangeTo?: string;
   rangeOffset?: string;
+  isDemo?: boolean;
 }
 
 function MiniRing({ value, max, displayLabel, color = '#F7C948' }: {
@@ -101,6 +102,7 @@ export function DashboardContent({
   mostPausedSector, mostPausedCount, mostCompletedType, mostCompletedCount, mostBlockersType, mostBlockersCount,
   productivityScore, productivityLabel,
   range = 'all', rangeFrom, rangeTo, rangeOffset,
+  isDemo = false,
 }: DashboardContentProps) {
   const [vis, setVis] = useState<SectionVisibility>(DEFAULT_VIS);
   const [filterPending, setFilterPending] = useState(false);
@@ -278,7 +280,7 @@ export function DashboardContent({
         <section key="askAI">
           <SectionLabel label="Ask AI" />
           <div className="max-w-2xl mx-auto">
-            <AskBox />
+            <AskBox isDemo={isDemo} />
           </div>
         </section>
       );

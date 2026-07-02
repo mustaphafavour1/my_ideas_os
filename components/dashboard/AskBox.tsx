@@ -9,7 +9,7 @@ const QUICK_PROMPTS = [
   'Suggest a new idea based on my interests',
 ];
 
-export function AskBox() {
+export function AskBox({ isDemo = false }: { isDemo?: boolean }) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
   const [response, setResponse] = useState<string | null>(null);
@@ -17,6 +17,13 @@ export function AskBox() {
   const ask = async (msg: string) => {
     const q = msg || input.trim();
     if (!q) return;
+
+    if (isDemo) {
+      setInput('');
+      setResponse('Responses disabled. Upgrade to use AI chats — sign up to unlock the full AI assistant.');
+      return;
+    }
+
     setLoading(true);
     setResponse(null);
     try {
@@ -85,6 +92,14 @@ export function AskBox() {
                 ✕
               </button>
               <p className="text-[12px] text-[#8888A0] leading-relaxed whitespace-pre-wrap pr-4">{response}</p>
+              {isDemo && (
+                <a
+                  href="/#pricing" target="_blank" rel="noopener"
+                  className="inline-flex items-center text-[10px] font-semibold text-[#F7C948] border border-[#F7C948]/30 hover:border-[#F7C948]/50 hover:bg-[#F7C948]/5 rounded-md px-2.5 py-1 mt-3 transition-colors"
+                >
+                  Upgrade to unlock AI chats
+                </a>
+              )}
             </div>
           )}
 
