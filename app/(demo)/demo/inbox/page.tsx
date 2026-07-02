@@ -1,15 +1,13 @@
-import { TopBar } from '@/components/layout/TopBar';
+'use client';
 
-const ITEMS = [
-  { id: '1', raw_text: 'What if we built a real-time tracker for danfo routes using crowdsourced GPS from commuters? Could completely change how people navigate Lagos transit.', created_at: '2025-11-03T12:10:00Z', processed: true },
-  { id: '2', raw_text: 'AI tutor that adapts to individual JAMB curriculum gaps — most students fail not for lack of study but wrong focus areas. Spaced repetition + past questions.', created_at: '2025-10-28T09:22:00Z', processed: true },
-  { id: '3', raw_text: 'No-code WhatsApp bot builder for Lagos SMEs — they\'re all already on WA but have zero automation. Drag and drop flow builder, Paystack checkout built in.', created_at: '2025-10-20T14:55:00Z', processed: false },
-  { id: '4', raw_text: 'Remote jobs board specifically for African devs — salary transparency in USD, visa guides per country, remote-verified listings only.', created_at: '2025-09-15T11:30:00Z', processed: false },
-];
+import { toast } from 'sonner';
+import { TopBar } from '@/components/layout/TopBar';
+import { Button } from '@/components/ui/Button';
+import { DEMO_INBOX_ITEMS } from '@/lib/demo-data';
 
 export default function DemoInboxPage() {
-  const unprocessed = ITEMS.filter((i) => !i.processed);
-  const processed = ITEMS.filter((i) => i.processed);
+  const unprocessed = DEMO_INBOX_ITEMS.filter((i) => !i.processed);
+  const processed = DEMO_INBOX_ITEMS.filter((i) => i.processed);
 
   return (
     <div className="flex flex-col flex-1">
@@ -28,7 +26,24 @@ export default function DemoInboxPage() {
           <p className="text-[10px] font-mono text-[#3A3A55] mt-2">Read-only in demo mode · sign in to capture</p>
         </section>
 
-        {/* Unprocessed */}
+        {/* Process button — disabled in demo */}
+        {unprocessed.length > 0 && (
+          <div className="flex items-center justify-between bg-[#111118] border border-[#1E1E2E] rounded-xl px-5 py-4">
+            <div>
+              <p className="text-sm font-medium text-[#F0F0F5]">
+                {unprocessed.length} item{unprocessed.length !== 1 ? 's' : ''} ready to process
+              </p>
+              <p className="text-xs text-[#4A4A60] mt-0.5">
+                Claude will classify and structure your raw ideas
+              </p>
+            </div>
+            <Button onClick={() => toast.error('Sign in to process your inbox — this is read-only demo data.')}>
+              Process Inbox
+            </Button>
+          </div>
+        )}
+
+        {/* Unprocessed items */}
         {unprocessed.length > 0 && (
           <section>
             <h2 className="text-xs font-mono text-[#4A4A60] uppercase tracking-wide mb-3">
@@ -49,7 +64,7 @@ export default function DemoInboxPage() {
           </section>
         )}
 
-        {/* Processed */}
+        {/* Processed items */}
         {processed.length > 0 && (
           <section>
             <h2 className="text-xs font-mono text-[#4A4A60] uppercase tracking-wide mb-3">
