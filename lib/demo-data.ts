@@ -1,4 +1,4 @@
-import { Idea, ConversationLog, UserStats, Signal, SignalType } from './types';
+import { Idea, ConversationLog, UserStats, Signal, SignalType, InboxItem } from './types';
 
 export const DEMO_IDEAS: Idea[] = [
   { id: 'di-01', user_id: 'demo', title: 'Lagos Transit Tracker MVP', description: 'Real-time bus tracking for danfo routes using crowdsourced GPS data from commuters.', raw_source: null, source_type: 'claude_chat', source_ref: 'demo_mode', sector: 'Mobility', idea_type: 'product', status: 'in_progress', grade_novelty: 4.5, grade_feasibility: 3.5, grade_personal_fit: 4.0, grade_market_potential: 4.5, grade_urgency: 4.0, grade_overall: 4.1, next_steps: ['Partner with BRT operators', 'Launch beta in Ikeja'], blockers: [], ai_suggestions: 'Consider a Whatsapp bot interface for low-data users', ai_next_steps: ['Research existing transit data APIs', 'Prototype the route visualisation'], tags: ['fintech', 'mobile', 'web'], chat_date: '2025-11-03T14:22:00Z', created_at: '2025-11-03T14:22:00Z', updated_at: '2025-11-03T14:22:00Z', parent_idea_id: null, user_complaints: [], rephrasing_suggestions: [] },
@@ -112,3 +112,27 @@ export const DEMO_USER_STATS: UserStats = {
   last_conversation_at: '2025-12-01T10:00:00Z',
   updated_at: new Date().toISOString(),
 };
+
+// Static stand-ins for the General Insights section — same voice as the real
+// AI-generated version, but fixed so the public demo never makes a live
+// Claude call. Grounded in DEMO_IDEAS' actual sector/type/status patterns.
+export const DEMO_GENERAL_INSIGHTS: string[] = [
+  "Product is your most common idea type (5 of 10), but neither of your two completed ideas is a 'product' — Freelance Invoice Parser (automation) and Build in Lagos Newsletter (content) both shipped instead. Worth asking whether 'product' ideas are scoped too big to finish.",
+  'Fintech is your strongest sector by outcome — all 3 ideas (Danfo Pay, Freelance Invoice Parser, Ajo Digital) have moved past captured into prototyping, validated, or completed, and it carries your highest average grade. That is a signal worth leaning into.',
+  '4 of your 10 ideas are blocked, and none of the blockers are "need more thinking" — they are hardware costs, data licensing, API rate limits, and finding a design partner. Those need a partner or a workaround, not another planning session.',
+  'Your one community idea (Afro Design System) and one side_quest (Remote Jobs Board) are both stalled at paused or captured — solo, no-clear-payer ideas are losing momentum faster than the ones with revenue attached from day one.',
+];
+
+export const DEMO_INBOX_ITEMS: InboxItem[] = [
+  { id: 'demo-inbox-01', user_id: 'demo', raw_text: 'What if we built a real-time tracker for danfo routes using crowdsourced GPS from commuters? Could completely change how people navigate Lagos transit.', source: 'manual', created_at: '2025-11-03T12:10:00Z', processed: true },
+  { id: 'demo-inbox-02', user_id: 'demo', raw_text: 'AI tutor that adapts to individual JAMB curriculum gaps — most students fail not for lack of study but wrong focus areas. Spaced repetition + past questions.', source: 'manual', created_at: '2025-10-28T09:22:00Z', processed: true },
+  { id: 'demo-inbox-03', user_id: 'demo', raw_text: 'No-code WhatsApp bot builder for Lagos SMEs — they\'re all already on WA but have zero automation. Drag and drop flow builder, Paystack checkout built in.', source: 'manual', created_at: '2025-10-20T14:55:00Z', processed: false },
+  { id: 'demo-inbox-04', user_id: 'demo', raw_text: 'Remote jobs board specifically for African devs — salary transparency in USD, visa guides per country, remote-verified listings only.', source: 'manual', created_at: '2025-09-15T11:30:00Z', processed: false },
+];
+
+export const DEMO_NEXT_IDEA_QUESTIONS: string[] = [
+  'Is this a product in scope, or could it ship faster as an automation or a piece of content first — like the two ideas that actually reached completed?',
+  'Does this depend on a partner, a license, or hardware I do not control yet — the same kind of blocker stalling Danfo Pay, the JAMB app, and the WhatsApp flow?',
+  'Is there a clear payer for this from day one, the way Ajo Digital and Danfo Pay have one, or is it closer to Afro Design System — good idea, no one funding the time?',
+  'If I only had the time I spent on Remote Jobs Board — captured, never touched again — would I rather have spent it validating this new idea instead?',
+];

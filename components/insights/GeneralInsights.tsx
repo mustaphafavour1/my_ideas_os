@@ -26,9 +26,20 @@ function timeAgo(iso: string): string {
   return `${Math.round(hours / 24)}d ago`;
 }
 
-export function GeneralInsights() {
-  const [data, setData] = useState<GeneralInsightsData | null>(null);
-  const [loading, setLoading] = useState(true);
+interface GeneralInsightsProps {
+  // When set, renders these fixed insights/questions with no fetch and no
+  // Refresh/Generate controls — used by the public demo so it never makes a
+  // live Claude call.
+  demoData?: { insights: string[]; questions: string[] };
+}
+
+export function GeneralInsights({ demoData }: GeneralInsightsProps = {}) {
+  const [data, setData] = useState<GeneralInsightsData | null>(
+    demoData
+      ? { insights: demoData.insights, questions: demoData.questions, generated_at: null, eligible: true, ideas_count: 0, is_paid: true }
+      : null
+  );
+  const [loading, setLoading] = useState(!demoData);
   const [generating, setGenerating] = useState(false);
   const [apiKey, setApiKey] = useState('');
 
@@ -41,7 +52,7 @@ export function GeneralInsights() {
     }
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { if (!demoData) fetchData(); }, [fetchData, demoData]);
 
   const generate = async () => {
     setGenerating(true);
@@ -77,6 +88,7 @@ export function GeneralInsights() {
 
   if (!data) return null;
 
+  const isDemo = !!demoData;
   const hasInsights = !!(data.insights && data.insights.length > 0);
   const hasQuestions = !!(data.questions && data.questions.length > 0);
 
@@ -84,18 +96,22 @@ export function GeneralInsights() {
     <section>
       <div className="flex items-center justify-between mb-4">
         <h2 className="text-[10px] font-mono text-[#4A4A60] uppercase tracking-widest">General Insights</h2>
-        {data.eligible && data.is_paid && hasInsights && (
-          <button
-            onClick={generate}
-            disabled={generating}
-            className="flex items-center gap-1.5 text-[10px] font-mono text-[#3A3A55] hover:text-[#6A6A80] transition-colors disabled:opacity-50 cursor-pointer"
-          >
-            <svg className={`w-3 h-3 ${generating ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-            </svg>
-            {generating ? 'Refreshing…' : data.generated_at ? `Refresh · updated ${timeAgo(data.generated_at)}` : 'Refresh'}
-          </button>
+        {isDemo ? (
+          <span className="text-[10px] font-mono text-[#3A3A55]">Demo data</span>
+        ) : (
+          data.eligible && data.is_paid && hasInsights && (
+            <button
+              onClick={generate}
+              disabled={generating}
+              className="flex items-center gap-1.5 text-[10px] font-mono text-[#3A3A55] hover:text-[#6A6A80] transition-colors disabled:opacity-50 cursor-pointer"
+            >
+              <svg className={`w-3 h-3 ${generating ? 'animate-spin' : ''}`} fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+              </svg>
+              {generating ? 'Refreshing…' : data.generated_at ? `Refresh · updated ${timeAgo(data.generated_at)}` : 'Refresh'}
+            </button>
+          )
         )}
       </div>
 
