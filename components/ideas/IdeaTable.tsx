@@ -18,14 +18,20 @@ const TYPES: IdeaType[] = [
   'personal_development', 'automation', 'community', 'framework', 'experiment', 'partnership',
 ];
 
-function StatusSelect({ ideaId, status, onUpdate }: { ideaId: string; status: IdeaStatus; onUpdate: (s: IdeaStatus) => void }) {
+function StatusSelect({ ideaId, status, onUpdate, isDemo }: { ideaId: string; status: IdeaStatus; onUpdate: (s: IdeaStatus) => void; isDemo?: boolean }) {
   const [open, setOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 
   const handlePick = async (s: IdeaStatus) => {
     if (s === status) { setOpen(false); return; }
-    setSaving(true);
     setOpen(false);
+
+    if (isDemo) {
+      toast.error('Sign in to change status — this is read-only demo data.');
+      return;
+    }
+
+    setSaving(true);
     try {
       const res = await fetch(`/api/ideas/${ideaId}`, {
         method: 'PATCH',
@@ -185,9 +191,10 @@ function getPaginationPages(current: number, total: number): (number | '...')[] 
 interface IdeaTableProps {
   ideas: Idea[];
   baseUrl?: string;
+  isDemo?: boolean;
 }
 
-export function IdeaTable({ ideas: initialIdeas, baseUrl = '/ideas' }: IdeaTableProps) {
+export function IdeaTable({ ideas: initialIdeas, baseUrl = '/ideas', isDemo = false }: IdeaTableProps) {
   const router = useRouter();
   const [ideas, setIdeas] = useState<Idea[]>(initialIdeas);
   const [search, setSearch] = useState('');
@@ -217,6 +224,10 @@ export function IdeaTable({ ideas: initialIdeas, baseUrl = '/ideas' }: IdeaTable
   };
 
   const handleArchive = async (idea: Idea) => {
+    if (isDemo) {
+      toast.error('Sign in to archive ideas — this is read-only demo data.');
+      return;
+    }
     const res = await fetch(`/api/ideas/${idea.id}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -386,7 +397,7 @@ export function IdeaTable({ ideas: initialIdeas, baseUrl = '/ideas' }: IdeaTable
                     </td>
                   )}
                   <td className="px-4 py-4 whitespace-nowrap">
-                    <StatusSelect ideaId={idea.id} status={idea.status} onUpdate={(s) => handleStatusUpdate(idea.id, s)} />
+                    <StatusSelect ideaId={idea.id} status={idea.status} onUpdate={(s) => handleStatusUpdate(idea.id, s)} isDemo={isDemo} />
                   </td>
                   {cols.grade && (
                     <td className="px-4 py-4 whitespace-nowrap">
